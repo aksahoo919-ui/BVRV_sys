@@ -16,7 +16,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href="/api/auth/google"
+          href={`${import.meta.env.VITE_API_URL || '/api'}/auth/google`}
           className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-lg px-4 py-3 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
           <GoogleIcon />
