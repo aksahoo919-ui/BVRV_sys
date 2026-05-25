@@ -17,6 +17,11 @@ dotenv.config();
 
 const app = express();
 
+// Render (and most cloud hosts) sit behind a reverse proxy.
+// Trust the first proxy so express-rate-limit can read the real client IP
+// from the X-Forwarded-For header instead of throwing a ValidationError.
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginEmbedderPolicy: false }));
 app.use(compression());
 app.use(cors({
