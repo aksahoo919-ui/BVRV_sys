@@ -21,8 +21,7 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, status, avatar_url, created_at,
-              roll_number, employee_id, phone, date_of_birth, department_id
+      `SELECT id, name, email, role, status, avatar_url, created_at
        FROM users ORDER BY created_at DESC`
     );
     res.json(result.rows);

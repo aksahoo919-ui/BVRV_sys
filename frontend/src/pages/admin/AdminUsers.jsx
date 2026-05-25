@@ -26,13 +26,17 @@ export default function AdminUsers() {
   const [deleteTarget, setDeleteTarget] = useState(null); // user object
   const [deleting, setDeleting]         = useState(false);
   const [actionError, setActionError]   = useState('');
+  const [loadError, setLoadError]       = useState('');
 
   const fileRef = useRef();
 
   async function load() {
+    setLoadError('');
     try {
       const r = await api.get('/admin/users');
-      setUsers(r.data);
+      setUsers(Array.isArray(r.data) ? r.data : []);
+    } catch (err) {
+      setLoadError(err.response?.data?.error || 'Failed to load users. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -136,6 +140,12 @@ export default function AdminUsers() {
           <option value="admin">Admins</option>
         </select>
       </div>
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm mb-4">
+          {loadError}
+        </div>
+      )}
 
       {actionError && (
         <p className="text-sm text-red-600 mb-3">{actionError}</p>
