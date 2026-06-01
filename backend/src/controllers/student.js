@@ -194,10 +194,10 @@ export async function getMarks(req, res) {
              sem.number AS semester_number, ay.label AS year_label
       FROM marks m
       JOIN subjects s ON s.id = m.subject_id
-      JOIN semesters sem ON sem.id = m.semester_id
-      JOIN academic_years ay ON ay.id = sem.academic_year_id
+      LEFT JOIN semesters sem ON sem.id = m.semester_id
+      LEFT JOIN academic_years ay ON ay.id = sem.academic_year_id
       WHERE m.student_id=$1 ${semClause}
-      ORDER BY sem.number DESC, s.name, m.assessment_type`,
+      ORDER BY sem.number DESC NULLS LAST, s.name, m.assessment_type`,
       params
     );
     res.json(r.rows);

@@ -235,7 +235,7 @@ export default function AdminDashboard() {
                 return (
                   <SubjectRow
                     key={i}
-                    name={dept.department || dept.course_name || dept.name || 'Unknown'}
+                    name={dept.department_name || dept.department || dept.course_name || dept.name || 'Unknown'}
                     value={pct + '%'}
                     chip={{ label: pct >= 75 ? 'Good' : pct >= 60 ? 'Average' : 'Low', color: chipColor }}
                   />

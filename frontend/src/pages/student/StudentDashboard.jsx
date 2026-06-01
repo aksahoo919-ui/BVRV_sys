@@ -255,7 +255,7 @@ export default function StudentDashboard() {
           icon="📝"
           label="Mark Attendance"
           color="blue"
-          onClick={() => navigate('/student/mark-attendance')}
+          onClick={() => navigate('/student/attendance')}
         />
         <QuickAction
           icon="📅"

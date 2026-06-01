@@ -119,7 +119,7 @@ export default function TeacherDashboard() {
   const todayDow = (new Date().getDay() + 6) % 7;
   const todaySlots = timetable.filter(slot => slot.day_of_week === todayDow);
 
-  const totalStudents = subjects.reduce((sum, s) => sum + (s.student_count ?? 0), 0);
+  const totalStudents = subjects.reduce((sum, s) => sum + Number(s.student_count ?? 0), 0);
 
   function isSlotNow(slot) {
     const now = new Date();
