@@ -27,9 +27,8 @@ function StepBadge({ n, active, done, label }) {
 
 export default function TeacherMarks() {
   const [subjects, setSubjects] = useState([]);
-  const [academicYears, setAcademicYears] = useState([]);
   const [ctx, setCtx] = useState({
-    subject_id: '', academic_year_id: '',
+    subject_id: '',
     assessment_kind: 'OBE', assessment_number: '', assessed_on: '', max_marks: '',
   });
   const [step, setStep] = useState(1);
@@ -44,24 +43,26 @@ export default function TeacherMarks() {
       setSubjects(r.data);
       if (r.data[0]) setCtx(c => ({ ...c, subject_id: String(r.data[0].id) }));
     }).catch(() => {});
-    api.get('/teacher/academic-years').then(r => {
-      setAcademicYears(r.data);
-      const cur = r.data.find(ay => ay.is_current) || r.data[0];
-      if (cur) setCtx(c => ({ ...c, academic_year_id: String(cur.id) }));
-    }).catch(() => {});
   }, []);
+
+  // The academic year is the subject's own year — never chosen manually.
+  const selectedSubject = subjects.find(s => String(s.id) === ctx.subject_id);
+  const academicYearId = selectedSubject?.academic_year_id || '';
 
   async function loadStudents(e) {
     e.preventDefault();
     setError('');
-    if (!ctx.subject_id || !ctx.academic_year_id || !ctx.assessment_kind || !ctx.max_marks) {
-      setError('Subject, academic year, assessment type and max marks are required.'); return;
+    if (!ctx.subject_id || !ctx.assessment_kind || !ctx.max_marks) {
+      setError('Subject, assessment type and max marks are required.'); return;
+    }
+    if (!academicYearId) {
+      setError('This subject has no academic year set. Ask an admin to assign one.'); return;
     }
     const assessmentType = composeAssessmentType(ctx.assessment_kind, ctx.assessment_number);
     setLoadingStudents(true);
     try {
-      const perf = await api.get(`/teacher/students/${ctx.subject_id}?academic_year_id=${ctx.academic_year_id}`);
-      const existing = await api.get(`/teacher/marks/${ctx.subject_id}?academic_year_id=${ctx.academic_year_id}`)
+      const perf = await api.get(`/teacher/students/${ctx.subject_id}?academic_year_id=${academicYearId}`);
+      const existing = await api.get(`/teacher/marks/${ctx.subject_id}?academic_year_id=${academicYearId}`)
         .then(r => r.data).catch(() => []);
       const marksMap = {};
       for (const m of existing) {
@@ -91,7 +92,7 @@ export default function TeacherMarks() {
     setSaving(true);
     try {
       const r = await api.post('/teacher/marks', {
-        subject_id: ctx.subject_id, academic_year_id: ctx.academic_year_id,
+        subject_id: ctx.subject_id,
         assessment_type: composeAssessmentType(ctx.assessment_kind, ctx.assessment_number),
         assessed_on: ctx.assessed_on || null,
         max_marks: max, entries,
@@ -101,9 +102,10 @@ export default function TeacherMarks() {
     finally { setSaving(false); }
   }
 
-  const subjectName = subjects.find(s => String(s.id) === ctx.subject_id)?.name || '';
-  const ayObj = academicYears.find(ay => String(ay.id) === ctx.academic_year_id);
-  const ayLabel = ayObj ? ayObj.label + (ayObj.is_current ? ' (Current)' : '') : '';
+  const subjectName = selectedSubject?.name || '';
+  const ayLabel = selectedSubject?.academic_year_label
+    ? selectedSubject.academic_year_label + (selectedSubject.academic_year_is_current ? ' (Current)' : '')
+    : '— not set —';
 
   return (
     <div>
@@ -130,12 +132,8 @@ export default function TeacherMarks() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-              <select className="input" required value={ctx.academic_year_id} onChange={e => setCtx(c => ({...c, academic_year_id: e.target.value}))}>
-                <option value="">— Select —</option>
-                {academicYears.map(ay => (
-                  <option key={ay.id} value={ay.id}>{ay.label}{ay.is_current ? ' (Current)' : ''}</option>
-                ))}
-              </select>
+              <div className="input bg-gray-50 text-gray-600 flex items-center">{ayLabel}</div>
+              <p className="text-xs text-gray-400 mt-1">Taken from the subject — set by admin.</p>
             </div>
             <div className="flex gap-3">
               <div className="flex-1">

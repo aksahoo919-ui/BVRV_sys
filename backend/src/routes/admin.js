@@ -88,7 +88,7 @@ router.get('/results/:semester_id', ...guard, (req, res, next) => {
 router.post('/results', ...guard, acad.upsertResult);
 router.post('/results/publish', ...guard, acad.publishResults);
 router.post('/results/generate/:semester_id', ...guard, acad.generateResultsSemester);
-router.post('/results/generate-year/:academic_year_id', ...guard, acad.generateResultsYear);
+router.post('/results/generate-year/:academic_year_id/:course_id', ...guard, acad.generateResultsYear);
 
 // ── Course Enrollments ────────────────────────────────────────────────────
 router.post('/enroll', ...guard, acad.enrollInCourse);

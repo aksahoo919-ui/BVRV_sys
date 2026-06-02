@@ -9,13 +9,19 @@ import { logAudit } from '../middleware/audit.js';
 export async function getSubjects(req, res) {
   const r = await query(`
     SELECT s.id, s.code, s.name, s.created_at,
+      s.academic_year_id, s.course_id,
+      ay.label AS academic_year_label, ay.is_current AS academic_year_is_current,
+      c.name AS course_name, c.code AS course_code,
       COUNT(DISTINCT ce2.student_id) AS student_count,
       MAX(sess.opened_at) AS last_session_date
     FROM subjects s
     JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.instructor_id = $1
     LEFT JOIN class_enrollments ce2 ON ce2.subject_id = s.id AND ce2.student_id IS NOT NULL
     LEFT JOIN sessions sess ON sess.subject_id = s.id
-    GROUP BY s.id ORDER BY s.name`,
+    LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
+    LEFT JOIN courses c ON c.id = s.course_id
+    GROUP BY s.id, ay.label, ay.is_current, c.name, c.code
+    ORDER BY s.name`,
     [req.user.id]
   );
   res.json(r.rows);
@@ -246,9 +252,11 @@ export async function getTimetable(req, res) {
 // ── Marks ─────────────────────────────────────────────────────────────────
 
 export async function uploadMarks(req, res) {
-  // Body: { subject_id, academic_year_id, assessment_type, max_marks, assessed_on?, entries: [{student_id, scored_marks}] }
-  const { subject_id, academic_year_id, assessment_type, max_marks, assessed_on, entries } = req.body;
-  if (!subject_id || !academic_year_id || !assessment_type || !max_marks || !Array.isArray(entries))
+  // Body: { subject_id, assessment_type, max_marks, assessed_on?, entries: [{student_id, scored_marks}] }
+  // The academic year is derived from the subject itself, NOT the client, so marks
+  // always belong to the subject's own academic year (prevents cross-year mixing).
+  const { subject_id, assessment_type, max_marks, assessed_on, entries } = req.body;
+  if (!subject_id || !assessment_type || !max_marks || !Array.isArray(entries))
     return res.status(400).json({ error: 'Missing required fields' });
 
   const owned = await query(
@@ -256,6 +264,12 @@ export async function uploadMarks(req, res) {
     [subject_id, req.user.id]
   );
   if (!owned.rows.length) return res.status(403).json({ error: 'Not your subject' });
+
+  // Resolve the subject's academic year (fall back to the client value if unset)
+  const subjRow = await query('SELECT academic_year_id FROM subjects WHERE id=$1', [subject_id]);
+  const academic_year_id = subjRow.rows[0]?.academic_year_id || req.body.academic_year_id;
+  if (!academic_year_id)
+    return res.status(400).json({ error: 'This subject has no academic year set. Ask an admin to assign one.' });
 
   let inserted = 0;
   for (const e of entries) {

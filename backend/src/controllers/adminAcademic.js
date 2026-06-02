@@ -255,16 +255,22 @@ export async function removeMentorAssignment(req, res) {
 // ── Results (admin publishes) ──────────────────────────────────────────────
 
 export async function getResults(req, res) {
-  const { academic_year_id } = req.query;
+  const { academic_year_id, course_id } = req.query;
+  const conds = [];
+  const params = [];
+  if (academic_year_id) conds.push(`r.academic_year_id=$${params.push(academic_year_id)}`);
+  if (course_id)        conds.push(`r.course_id=$${params.push(course_id)}`);
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const r = await query(`
     SELECT r.*, u.name AS student_name, u.email AS student_email,
-           ay.label AS year_label
+           ay.label AS year_label, c.name AS course_name, c.code AS course_code
     FROM results r
     JOIN users u ON u.id = r.student_id
     LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
-    ${academic_year_id ? 'WHERE r.academic_year_id=$1' : ''}
+    LEFT JOIN courses c ON c.id = r.course_id
+    ${where}
     ORDER BY r.rank NULLS LAST, u.name
-  `, academic_year_id ? [academic_year_id] : []);
+  `, params);
   res.json(r.rows);
 }
 
@@ -282,13 +288,15 @@ export async function upsertResult(req, res) {
 }
 
 export async function publishResults(req, res) {
-  const { academic_year_id } = req.body;
-  if (!academic_year_id) return res.status(400).json({ error: 'academic_year_id required' });
+  const { academic_year_id, course_id } = req.body;
+  if (!academic_year_id || !course_id)
+    return res.status(400).json({ error: 'academic_year_id and course_id required' });
   const r = await query(
-    `UPDATE results SET published=true, published_at=NOW() WHERE academic_year_id=$1 RETURNING id`,
-    [academic_year_id]
+    `UPDATE results SET published=true, published_at=NOW()
+     WHERE academic_year_id=$1 AND course_id=$2 RETURNING id`,
+    [academic_year_id, course_id]
   );
-  await logAudit(req.user.id, 'publish_results', 'academic_year', academic_year_id, { count: r.rows.length });
+  await logAudit(req.user.id, 'publish_results', 'course_year', course_id, { academic_year_id, count: r.rows.length });
   res.json({ published: r.rows.length });
 }
 
@@ -332,22 +340,30 @@ export async function enrollInCourse(req, res) {
 
 export async function getCourseEnrollments(req, res) {
   const { course_id, academic_year_id } = req.query;
-  const conditions = ['1=1'];
-  const params = [];
-  if (course_id) { conditions.push(`ce.course_id=$${params.push(course_id)}`); }
-  if (academic_year_id) { conditions.push(`ce.academic_year_id=$${params.push(academic_year_id)}`); }
+  if (!course_id || !academic_year_id)
+    return res.status(400).json({ error: 'course_id and academic_year_id required' });
+
+  // Show every student enrolled in any class (subject) that belongs to this
+  // course for this academic year — sourced from class_enrollments, which is
+  // what teachers actually use. Each row also lists the subjects the student
+  // is enrolled in under the course.
   const r = await query(`
-    SELECT ce.*,
-           u.name AS student_name, u.email AS student_email, u.roll_number,
-           c.name AS course_name, c.code AS course_code,
-           ay.label AS year_label
-    FROM course_enrollments ce
-    JOIN users u ON u.id = ce.student_id
-    JOIN courses c ON c.id = ce.course_id
-    JOIN academic_years ay ON ay.id = ce.academic_year_id
-    WHERE ${conditions.join(' AND ')}
+    SELECT
+      u.id   AS student_id,
+      u.name AS student_name,
+      u.email AS student_email,
+      u.roll_number,
+      STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
+      COUNT(DISTINCT s.id) AS subject_count
+    FROM class_enrollments ce
+    JOIN subjects s ON s.id = ce.subject_id
+    JOIN users u    ON u.id = ce.student_id
+    WHERE ce.student_id IS NOT NULL
+      AND s.course_id = $1
+      AND s.academic_year_id = $2
+    GROUP BY u.id, u.name, u.email, u.roll_number
     ORDER BY u.name
-  `, params);
+  `, [course_id, academic_year_id]);
   res.json(r.rows);
 }
 
@@ -526,11 +542,13 @@ export async function generateResultsSemester(req, res) {
 
 export async function generateResultsYear(req, res) {
   const { academic_year_id } = req.params;
+  const course_id = req.params.course_id || req.body.course_id || req.query.course_id;
+  if (!course_id) return res.status(400).json({ error: 'course_id required' });
   try {
-    const { generateResultsForAcademicYear } = await import('../services/gradeService.js');
-    const results = await generateResultsForAcademicYear(academic_year_id, req.user.id);
+    const { generateResultsForCourseYear } = await import('../services/gradeService.js');
+    const results = await generateResultsForCourseYear(academic_year_id, course_id, req.user.id);
 
-    await logAudit(req.user.id, 'generate_results', 'academic_year', academic_year_id, { count: results.length });
+    await logAudit(req.user.id, 'generate_results', 'course_year', course_id, { academic_year_id, count: results.length });
 
     // Fire-and-forget: email mentors whose students have low GPA
     _emailMentorsLowGpa(results).catch(err => console.warn('[results] email error:', err.message));

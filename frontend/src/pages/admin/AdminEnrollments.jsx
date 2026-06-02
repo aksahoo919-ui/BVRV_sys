@@ -101,7 +101,7 @@ export default function AdminEnrollments() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Name','Email','Roll No','Enrolled At'].map(h => (
+                {['Name','Email','Roll No','Classes'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -110,11 +110,11 @@ export default function AdminEnrollments() {
               {enrollments.length === 0 ? (
                 <tr><td colSpan={4} className="text-center py-10 text-gray-400">No students enrolled{!courseId || !yearId ? ' — select a course and year' : ''}.</td></tr>
               ) : enrollments.map(e => (
-                <tr key={e.id} className="hover:bg-gray-50">
+                <tr key={e.student_id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{e.student_name}</td>
                   <td className="px-4 py-3 text-gray-500">{e.student_email}</td>
                   <td className="px-4 py-3 text-gray-500 font-mono text-xs">{e.roll_number || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{new Date(e.enrolled_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{e.subject_codes || '—'}</td>
                 </tr>
               ))}
             </tbody>

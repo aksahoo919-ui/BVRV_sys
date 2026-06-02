@@ -150,16 +150,16 @@ export async function generateResultsForSemester(semesterId, actorId) {
 }
 
 /**
- * generateResultsForAcademicYear(academicYearId, actorId)
- * Academic-year-based equivalent of generateResultsForSemester.
- * Marks are tagged with academic_year_id (not semester_id) in the current model.
- *  1. Aggregates subject-wise marks → percentage → credit-weighted GPA
- *  2. CGPA = mean of this year's GPA + all other years' GPAs for the student
- *  3. Upserts into results keyed by (student_id, academic_year_id)
- *  4. Assigns sequential ranks (by GPA desc)
+ * generateResultsForCourseYear(academicYearId, courseId, actorId)
+ * Results are scoped to a single (academic_year, course) so different
+ * courses and years never merge.
+ *  1. Aggregates marks for subjects in this course + year → credit-weighted GPA
+ *  2. CGPA = mean of this student's GPAs across all years for the SAME course
+ *  3. Upserts into results keyed by (student_id, academic_year_id, course_id)
+ *  4. Ranks within the course + year (by GPA desc)
  * Returns array of { studentId, gpa, cgpa, rank }
  */
-export async function generateResultsForAcademicYear(academicYearId, actorId) {
+export async function generateResultsForCourseYear(academicYearId, courseId, actorId) {
   const settingsR = await query(
     'SELECT gpa_scale, grade_boundaries, min_attendance_threshold FROM institution_settings LIMIT 1'
   );
@@ -167,7 +167,7 @@ export async function generateResultsForAcademicYear(academicYearId, actorId) {
   const gpaScale        = Number(settings.gpa_scale) || 10;
   const gradeBoundaries = settings.grade_boundaries || { S:90, A:80, B:70, C:60, D:50, F:0 };
 
-  // Aggregate marks per student per subject for this academic year
+  // Aggregate marks per student per subject for this course + academic year
   const marksR = await query(`
     SELECT m.student_id, m.subject_id,
            COALESCE(s.credits, 3)       AS credits,
@@ -175,9 +175,9 @@ export async function generateResultsForAcademicYear(academicYearId, actorId) {
            SUM(m.max_marks)::numeric    AS total_max
     FROM marks m
     JOIN subjects s ON s.id = m.subject_id
-    WHERE m.academic_year_id = $1
+    WHERE m.academic_year_id = $1 AND s.course_id = $2
     GROUP BY m.student_id, m.subject_id, s.credits
-  `, [academicYearId]);
+  `, [academicYearId, courseId]);
 
   if (!marksR.rows.length) return [];
 
@@ -206,10 +206,11 @@ export async function generateResultsForAcademicYear(academicYearId, actorId) {
       ? Math.round(weightedGPASum / totalCredits * 100) / 100
       : 0;
 
-    // CGPA: average across all academic years for this student
+    // CGPA: average across all years for this student within the SAME course
     const prevR = await query(
-      `SELECT gpa FROM results WHERE student_id = $1 AND academic_year_id IS DISTINCT FROM $2`,
-      [studentId, academicYearId]
+      `SELECT gpa FROM results
+       WHERE student_id = $1 AND course_id = $2 AND academic_year_id IS DISTINCT FROM $3`,
+      [studentId, courseId, academicYearId]
     );
     const cgpa = calculateCGPA([...prevR.rows.map(r => r.gpa), yearGPA]);
 
@@ -222,11 +223,11 @@ export async function generateResultsForAcademicYear(academicYearId, actorId) {
 
   for (const s of computed) {
     await query(
-      `INSERT INTO results (id, student_id, academic_year_id, gpa, cgpa, rank)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (student_id, academic_year_id) DO UPDATE
-         SET gpa=$4, cgpa=$5, rank=$6`,
-      [uuidv4(), s.studentId, academicYearId, s.gpa, s.cgpa, s.rank]
+      `INSERT INTO results (id, student_id, academic_year_id, course_id, gpa, cgpa, rank)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (student_id, academic_year_id, course_id) DO UPDATE
+         SET gpa=$5, cgpa=$6, rank=$7`,
+      [uuidv4(), s.studentId, academicYearId, courseId, s.gpa, s.cgpa, s.rank]
     );
   }
 

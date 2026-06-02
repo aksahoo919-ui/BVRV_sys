@@ -13,10 +13,12 @@ function GpaBadge({ gpa }) {
 
 export default function AdminResults() {
   const [years, setYears] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [results, setResults] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
   const [loading, setLoading] = useState(false);
-  const [yearLoading, setYearLoading] = useState(true);
+  const [metaLoading, setMetaLoading] = useState(true);
   const [error, setError] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genInfo, setGenInfo] = useState('');
@@ -24,55 +26,61 @@ export default function AdminResults() {
   const [publishInfo, setPublishInfo] = useState('');
 
   useEffect(() => {
-    setYearLoading(true);
-    api.get('/admin/academic-years')
-      .then(r => {
-        setYears(r.data);
-        const cur = r.data.find(y => y.is_current) || r.data[0];
+    setMetaLoading(true);
+    Promise.all([
+      api.get('/admin/academic-years'),
+      api.get('/admin/courses'),
+    ])
+      .then(([yr, cr]) => {
+        setYears(yr.data);
+        setCourses(cr.data);
+        const cur = yr.data.find(y => y.is_current) || yr.data[0];
         if (cur) setSelectedYear(String(cur.id));
+        if (cr.data[0]) setSelectedCourse(String(cr.data[0].id));
       })
-      .catch(() => setError('Failed to load academic years'))
-      .finally(() => setYearLoading(false));
+      .catch(() => setError('Failed to load academic years / courses'))
+      .finally(() => setMetaLoading(false));
   }, []);
 
-  async function loadResults(yearId) {
-    if (!yearId) return;
+  async function loadResults(yearId, courseId) {
+    if (!yearId || !courseId) { setResults([]); return; }
     setLoading(true); setError('');
     try {
-      const r = await api.get(`/admin/results?academic_year_id=${yearId}`);
+      const r = await api.get(`/admin/results?academic_year_id=${yearId}&course_id=${courseId}`);
       setResults(r.data);
     } catch (e) { setError(e.response?.data?.error || 'Failed to load'); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { loadResults(selectedYear); }, [selectedYear]);
+  useEffect(() => { loadResults(selectedYear, selectedCourse); }, [selectedYear, selectedCourse]);
 
   async function handleGenerate() {
-    if (!selectedYear) return;
+    if (!selectedYear || !selectedCourse) return;
     if (!window.confirm('Generate results from marks data? Existing results will be overwritten.')) return;
     setGenerating(true); setGenInfo(''); setError('');
     try {
-      const r = await api.post(`/admin/results/generate-year/${selectedYear}`);
+      const r = await api.post(`/admin/results/generate-year/${selectedYear}/${selectedCourse}`);
       setGenInfo(`Generated results for ${r.data.generated} student(s).`);
-      await loadResults(selectedYear);
+      await loadResults(selectedYear, selectedCourse);
     } catch (e) { setError(e.response?.data?.error || 'Generation failed'); }
     finally { setGenerating(false); }
   }
 
   async function handlePublish() {
-    if (!selectedYear) return;
-    if (!window.confirm('Publish all results for this academic year? Students will be able to see them.')) return;
+    if (!selectedYear || !selectedCourse) return;
+    if (!window.confirm('Publish all results for this course & year? Students will be able to see them.')) return;
     setPublishing(true); setPublishInfo(''); setError('');
     try {
-      const r = await api.post('/admin/results/publish', { academic_year_id: selectedYear });
+      const r = await api.post('/admin/results/publish', { academic_year_id: selectedYear, course_id: selectedCourse });
       setPublishInfo(`Published ${r.data.published} results.`);
-      await loadResults(selectedYear);
+      await loadResults(selectedYear, selectedCourse);
     } catch (e) { setError(e.response?.data?.error || 'Publish failed'); }
     finally { setPublishing(false); }
   }
 
   const publishedCount = useMemo(() => results.filter(r => r.published).length, [results]);
   const year = years.find(y => String(y.id) === selectedYear);
+  const course = courses.find(c => String(c.id) === selectedCourse);
 
   return (
     <div className="space-y-6">
@@ -82,11 +90,11 @@ export default function AdminResults() {
       {genInfo && <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg">✓ {genInfo}</div>}
       {publishInfo && <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg">✓ {publishInfo}</div>}
 
-      {/* Academic year selector + actions */}
+      {/* Academic year + course selector + actions */}
       <div className="card flex flex-wrap items-end gap-4">
-        <div className="flex-1 min-w-48">
+        <div className="flex-1 min-w-44">
           <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-          {yearLoading ? <div className="input text-gray-400 text-sm">Loading…</div> : (
+          {metaLoading ? <div className="input text-gray-400 text-sm">Loading…</div> : (
             <select className="input" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
               <option value="">— Select academic year —</option>
               {years.map(y => (
@@ -97,11 +105,22 @@ export default function AdminResults() {
             </select>
           )}
         </div>
+        <div className="flex-1 min-w-44">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+          {metaLoading ? <div className="input text-gray-400 text-sm">Loading…</div> : (
+            <select className="input" value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
+              <option value="">— Select course —</option>
+              {courses.map(c => (
+                <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className="flex gap-2 flex-wrap">
-          <button className="btn-secondary" onClick={handleGenerate} disabled={!selectedYear || generating}>
+          <button className="btn-secondary" onClick={handleGenerate} disabled={!selectedYear || !selectedCourse || generating}>
             {generating ? '⚙ Generating…' : '⚙ Generate Results'}
           </button>
-          <button className="btn-primary" onClick={handlePublish} disabled={!selectedYear || publishing || results.length === 0}>
+          <button className="btn-primary" onClick={handlePublish} disabled={!selectedYear || !selectedCourse || publishing || results.length === 0}>
             {publishing ? 'Publishing…' : '🚀 Publish'}
           </button>
         </div>
@@ -110,7 +129,7 @@ export default function AdminResults() {
       {results.length > 0 && (
         <p className="text-sm text-gray-500">
           {results.length} students · {publishedCount} published · {results.length - publishedCount} draft
-          {year ? ` · ${year.label}` : ''}
+          {year ? ` · ${year.label}` : ''}{course ? ` · ${course.code}` : ''}
         </p>
       )}
 
@@ -128,7 +147,7 @@ export default function AdminResults() {
             <tbody className="divide-y divide-gray-50">
               {results.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-12 text-gray-400">
-                  No results yet. Select an academic year and click "Generate Results".
+                  No results yet. Select an academic year and course, then click "Generate Results".
                 </td></tr>
               ) : results.map((row, i) => (
                 <tr key={row.id || i} className="hover:bg-gray-50">

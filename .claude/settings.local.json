@@ -9,7 +9,11 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "PowerShell(Get-ChildItem -Path \"A:\\\\do_not_delete\\\\bvrv_attendance\" -Directory | Select-Object -First 20 | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"A:\\\\do_not_delete\\\\bvrv_attendance\" -Directory | Select-Object -First 20 | ForEach-Object { $_.FullName })",
+      "Bash(node --check src/services/gradeService.js)",
+      "Bash(node --check src/controllers/adminAcademic.js)",
+      "Bash(node --check src/controllers/teacher.js)",
+      "Bash(node --check src/controllers/student.js)"
     ]
   }
 }

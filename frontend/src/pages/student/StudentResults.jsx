@@ -44,13 +44,13 @@ export default function StudentResults() {
     return <p className="text-red-500 text-sm">{error}</p>;
   }
 
-  const sortedResults = [...results].sort((a, b) => a.semester_number - b.semester_number);
+  const sortedResults = [...results].sort((a, b) => (b.year_label || '').localeCompare(a.year_label || ''));
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My Results</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Published semester results</p>
+        <p className="text-sm text-gray-400 mt-0.5">Published results by course</p>
       </div>
 
       {sortedResults.length === 0 ? (
@@ -73,7 +73,7 @@ export default function StudentResults() {
                       {r.year_label}
                     </p>
                     <p className="text-sm font-semibold text-gray-700 mt-0.5">
-                      Semester {r.semester_number}
+                      {r.course_name || 'Course'}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">

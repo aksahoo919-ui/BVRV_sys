@@ -213,12 +213,12 @@ export async function getMarks(req, res) {
 export async function getResults(req, res) {
   try {
     const r = await query(`
-      SELECT r.*, sem.number AS semester_number, ay.label AS year_label
+      SELECT r.*, ay.label AS year_label, c.name AS course_name, c.code AS course_code
       FROM results r
-      JOIN semesters sem ON sem.id = r.semester_id
-      JOIN academic_years ay ON ay.id = sem.academic_year_id
+      LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
+      LEFT JOIN courses c ON c.id = r.course_id
       WHERE r.student_id=$1 AND r.published=true
-      ORDER BY sem.number DESC`,
+      ORDER BY ay.start_date DESC NULLS LAST`,
       [req.user.id]
     );
     res.json(r.rows);
