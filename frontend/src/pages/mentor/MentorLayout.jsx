@@ -5,6 +5,8 @@ import TopNav from '../../components/TopNav';
 const navItems = [
   { to: '/mentor/home',       label: 'Dashboard',  icon: HomeIcon },
   { to: '/mentor/students',   label: 'Students',   icon: StudentsIcon },
+  { to: '/mentor/attendance', label: 'Attendance', icon: MeetingsIcon },
+  { to: '/mentor/defaulters', label: 'Defaulters', icon: AlertIcon },
   { to: '/mentor/alerts',     label: 'Alerts',     icon: AlertIcon },
   { to: '/mentor/messages',   label: 'Messages',   icon: MailIcon },
   { to: '/mentor/counseling', label: 'Counseling', icon: CounselingIcon },

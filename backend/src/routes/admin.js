@@ -80,6 +80,11 @@ router.get('/mentor-assignments', ...guard, acad.getMentorAssignments);
 router.post('/mentor-assignments', ...guard, acad.assignMentor);
 router.delete('/mentor-assignments/:student_id', ...guard, acad.removeMentorAssignment);
 
+// Per-class mentor assignment
+router.get('/mentors', ...guard, acad.getMentorsList);
+router.get('/subjects/:subject_id/mentor-assignments', ...guard, acad.getSubjectMentorAssignments);
+router.post('/class-mentors', ...guard, acad.assignClassMentor);
+
 router.get('/results', ...guard, acad.getResults);
 router.get('/results/:semester_id', ...guard, (req, res, next) => {
   req.query.semester_id = req.params.semester_id;

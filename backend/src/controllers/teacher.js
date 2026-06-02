@@ -405,6 +405,46 @@ export async function editMark(req, res) {
   res.json(r.rows[0]);
 }
 
+// ── Manual attendance marking (roster, no PIN) ────────────────────────────
+
+export async function markAttendanceManual(req, res) {
+  // Body: { subject_id, session_date?, entries: [{ student_id, status: 'present'|'absent' }] }
+  const { subject_id, session_date, entries } = req.body;
+  if (!subject_id || !Array.isArray(entries))
+    return res.status(400).json({ error: 'subject_id and entries are required' });
+
+  const owned = await query(
+    'SELECT id FROM class_enrollments WHERE subject_id=$1 AND instructor_id=$2',
+    [subject_id, req.user.id]
+  );
+  if (!owned.rows.length) return res.status(403).json({ error: 'Not your subject' });
+
+  // Create a closed, manual session to anchor the logs.
+  const sessionId = uuidv4();
+  const opened = session_date ? new Date(session_date) : new Date();
+  await query(
+    `INSERT INTO sessions (id, subject_id, instructor_id, token_hash, pin_display, opened_at, expires_at, closed, manual)
+     VALUES ($1,$2,$3,'manual','MANUAL',$4,$4,true,true)`,
+    [sessionId, subject_id, req.user.id, opened.toISOString()]
+  );
+
+  // Only present students get a log row (absence stays implicit, matching the rest of the app).
+  let present = 0, absent = 0;
+  for (const e of entries) {
+    if (!e.student_id) continue;
+    if (e.status === 'absent') { absent++; continue; }
+    await query(
+      `INSERT INTO attendance_logs (id, session_id, student_id, status, replayed)
+       VALUES ($1,$2,$3,'present',false)
+       ON CONFLICT (session_id, student_id) DO NOTHING`,
+      [uuidv4(), sessionId, e.student_id]
+    );
+    present++;
+  }
+  await logAudit(req.user.id, 'mark_attendance_manual', 'session', sessionId, { subject_id, present, absent });
+  res.status(201).json({ session_id: sessionId, present, absent });
+}
+
 // ── Student performance per subject ──────────────────────────────────────
 
 export async function getStudentPerformance(req, res) {

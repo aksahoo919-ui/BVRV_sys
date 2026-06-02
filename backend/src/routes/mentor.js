@@ -23,4 +23,13 @@ router.patch('/meetings/:id',              ...guard, mc.updateMeeting);
 router.get('/alerts',                      ...guard, mc.getAlerts);
 router.post('/messages',                   ...guard, mc.sendMentorMessage);
 
+// Mentor weekly classes + manual attendance
+router.get('/subjects',                       ...guard, mc.getMentorSubjects);
+router.get('/subjects/:subject_id/students',  ...guard, mc.getMentorSubjectStudents);
+router.get('/sessions',                       ...guard, mc.getMentorSessions);
+router.post('/sessions',                      ...guard, mc.createMentorSession);
+router.get('/sessions/:id/attendance',        ...guard, mc.getMentorSessionAttendance);
+router.post('/sessions/:id/attendance',       ...guard, mc.markMentorAttendance);
+router.get('/defaulters',                     ...guard, mc.getMentorDefaulters);
+
 export default router;

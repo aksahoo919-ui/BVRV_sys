@@ -367,6 +367,55 @@ export async function getCourseEnrollments(req, res) {
   res.json(r.rows);
 }
 
+// ── Class Mentors (per-class mentor assignment) ───────────────────────────
+
+export async function getMentorsList(req, res) {
+  const r = await query(
+    `SELECT id, name, email FROM users WHERE role='mentor' AND status='active' ORDER BY name`
+  );
+  res.json(r.rows);
+}
+
+// For a subject: every enrolled student + their currently assigned mentor (if any)
+export async function getSubjectMentorAssignments(req, res) {
+  const { subject_id } = req.params;
+  const r = await query(`
+    SELECT u.id AS student_id, u.name AS student_name, u.email AS student_email, u.roll_number,
+           cma.id AS assignment_id, cma.mentor_id, m.name AS mentor_name
+    FROM class_enrollments ce
+    JOIN users u ON u.id = ce.student_id
+    LEFT JOIN class_mentor_assignments cma ON cma.subject_id = ce.subject_id AND cma.student_id = u.id
+    LEFT JOIN users m ON m.id = cma.mentor_id
+    WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL
+    ORDER BY u.name
+  `, [subject_id]);
+  res.json(r.rows);
+}
+
+// Assign (or change) a mentor for a student in a subject. mentor_id null clears it.
+export async function assignClassMentor(req, res) {
+  const { subject_id, student_id, mentor_id } = req.body;
+  if (!subject_id || !student_id) return res.status(400).json({ error: 'subject_id and student_id required' });
+  try {
+    if (!mentor_id) {
+      await query('DELETE FROM class_mentor_assignments WHERE subject_id=$1 AND student_id=$2', [subject_id, student_id]);
+      return res.json({ message: 'Mentor cleared' });
+    }
+    const r = await query(
+      `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id=$3, assigned_at=NOW()
+       RETURNING *`,
+      [uuidv4(), subject_id, mentor_id, student_id]
+    );
+    await logAudit(req.user.id, 'assign_class_mentor', 'class_mentor_assignment', r.rows[0].id, { subject_id, student_id, mentor_id });
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid subject, student, or mentor' });
+    throw err;
+  }
+}
+
 // ── Rank List ─────────────────────────────────────────────────────────────
 
 export async function getRankList(req, res) {

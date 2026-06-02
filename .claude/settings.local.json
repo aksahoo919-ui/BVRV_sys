@@ -13,7 +13,11 @@
       "Bash(node --check src/services/gradeService.js)",
       "Bash(node --check src/controllers/adminAcademic.js)",
       "Bash(node --check src/controllers/teacher.js)",
-      "Bash(node --check src/controllers/student.js)"
+      "Bash(node --check src/controllers/student.js)",
+      "Bash(node --check src/controllers/mentor.js)",
+      "Bash(node --check src/routes/mentor.js)",
+      "Bash(node --check src/routes/teacher.js)",
+      "Bash(node --check src/routes/admin.js)"
     ]
   }
 }

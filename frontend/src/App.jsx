@@ -26,6 +26,7 @@ import AdminCourses from './pages/admin/AdminCourses';
 import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminMentorAssignments from './pages/admin/AdminMentorAssignments';
+import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
 import AdminLeaveRequests from './pages/admin/AdminLeaveRequests';
@@ -42,6 +43,7 @@ import TeacherReports from './pages/teacher/TeacherReports';
 import TeacherMessages from './pages/teacher/TeacherMessages';
 import TeacherMarks from './pages/teacher/TeacherMarks';
 import TeacherMarksHistory from './pages/teacher/TeacherMarksHistory';
+import TeacherManualAttendance from './pages/teacher/TeacherManualAttendance';
 import TeacherTimetable from './pages/teacher/TeacherTimetable';
 import TeacherLeaveRequests from './pages/teacher/TeacherLeaveRequests';
 import TeacherStudentPerformance from './pages/teacher/TeacherStudentPerformance';
@@ -52,6 +54,8 @@ import TeacherAttendanceCorrections from './pages/teacher/TeacherAttendanceCorre
 import MentorLayout from './pages/mentor/MentorLayout';
 import MentorDashboard from './pages/mentor/MentorDashboard';
 import MentorStudents from './pages/mentor/MentorStudents';
+import MentorAttendance from './pages/mentor/MentorAttendance';
+import MentorDefaulters from './pages/mentor/MentorDefaulters';
 import MentorStudentDetail from './pages/mentor/MentorStudentDetail';
 import MentorCounseling from './pages/mentor/MentorCounseling';
 import MentorParentContacts from './pages/mentor/MentorParentContacts';
@@ -114,6 +118,7 @@ export default function App() {
         <Route path="classes" element={<AdminClasses />} />
         <Route path="timetable" element={<AdminTimetable />} />
         <Route path="mentor-assignments" element={<AdminMentorAssignments />} />
+        <Route path="class-mentors" element={<AdminClassMentors />} />
         <Route path="enrollments" element={<AdminEnrollments />} />
         <Route path="corrections" element={<AdminAttendanceCorrections />} />
         <Route path="leave" element={<AdminLeaveRequests />} />
@@ -135,6 +140,7 @@ export default function App() {
         <Route path="messages" element={<TeacherMessages />} />
         <Route path="marks" element={<TeacherMarks />} />
         <Route path="marks-history" element={<TeacherMarksHistory />} />
+        <Route path="manual-attendance" element={<TeacherManualAttendance />} />
         <Route path="performance" element={<TeacherStudentPerformance />} />
         <Route path="defaulters" element={<TeacherDefaulters />} />
         <Route path="timetable" element={<TeacherTimetable />} />
@@ -153,6 +159,8 @@ export default function App() {
         <Route path="counseling" element={<MentorCounseling />} />
         <Route path="contacts" element={<MentorParentContacts />} />
         <Route path="meetings" element={<MentorMeetings />} />
+        <Route path="attendance" element={<MentorAttendance />} />
+        <Route path="defaulters" element={<MentorDefaulters />} />
       </Route>
 
       {/* ── Student ── */}

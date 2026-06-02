@@ -1,43 +1,50 @@
 import { query } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
+// A student is "mine" if I mentor them in at least one class.
+async function isMyStudent(mentorId, studentId) {
+  const r = await query(
+    'SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 AND student_id=$2 LIMIT 1',
+    [mentorId, studentId]
+  );
+  return r.rows.length > 0;
+}
+
 // ── Assigned Students ────────────────────────────────────────────────────
+// Attendance % shown to the mentor is based on the mentor's OWN weekly
+// sessions (mentor_sessions / mentor_attendance), not academic sessions.
 
 export async function getAssignedStudents(req, res) {
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
 
   const r = await query(`
-    SELECT u.id, u.name, u.email, u.avatar_url, ma.assigned_at,
-      (
-        SELECT COUNT(DISTINCT sess.id) FROM class_enrollments ce
-        JOIN sessions sess ON sess.subject_id=ce.subject_id AND sess.closed=true
-        WHERE ce.student_id=u.id
-      ) AS total_sessions,
-      (
-        SELECT COUNT(DISTINCT al.session_id) FROM attendance_logs al
-        JOIN sessions sess ON sess.id=al.session_id AND sess.closed=true
-        WHERE al.student_id=u.id AND al.status='present' AND al.replayed=false
-      ) AS attended_sessions
-    FROM mentor_assignments ma JOIN users u ON u.id=ma.student_id
-    WHERE ma.mentor_id=$1 ORDER BY u.name`,
+    SELECT u.id, u.name, u.email, u.avatar_url, u.roll_number,
+      MIN(cma.assigned_at) AS assigned_at,
+      STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
+      COUNT(DISTINCT ms.id) AS total_sessions,
+      COUNT(DISTINCT ma.session_id) FILTER (WHERE ma.status='present') AS attended_sessions
+    FROM class_mentor_assignments cma
+    JOIN users u    ON u.id = cma.student_id
+    JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN mentor_sessions ms   ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
+    LEFT JOIN mentor_attendance ma ON ma.session_id = ms.id AND ma.student_id = u.id
+    WHERE cma.mentor_id = $1
+    GROUP BY u.id
+    ORDER BY u.name`,
     [req.user.id]
   );
 
   res.json(r.rows.map(s => {
     const pct = s.total_sessions > 0 ? Math.round(s.attended_sessions / s.total_sessions * 100) : 0;
-    return { ...s, attendance_percentage: pct, below_threshold: pct < threshold };
+    return { ...s, attendance_percentage: pct, below_threshold: s.total_sessions > 0 && pct < threshold };
   }));
 }
 
 export async function getStudentSummary(req, res) {
   const { student_id } = req.params;
-  // Verify this student is assigned to this mentor
-  const check = await query(
-    'SELECT id FROM mentor_assignments WHERE mentor_id=$1 AND student_id=$2',
-    [req.user.id, student_id]
-  );
-  if (!check.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  if (!(await isMyStudent(req.user.id, student_id)))
+    return res.status(403).json({ error: 'Student not assigned to you' });
 
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
@@ -58,11 +65,11 @@ export async function getStudentSummary(req, res) {
       [student_id]
     ),
     query(`
-      SELECT m.*, s.name AS subject_name, sem.number AS semester_number
+      SELECT m.*, s.name AS subject_name, ay.label AS year_label
       FROM marks m
       JOIN subjects s ON s.id=m.subject_id
-      JOIN semesters sem ON sem.id=m.semester_id
-      WHERE m.student_id=$1 ORDER BY sem.number DESC, s.name, m.assessment_type`,
+      LEFT JOIN academic_years ay ON ay.id=m.academic_year_id
+      WHERE m.student_id=$1 ORDER BY ay.start_date DESC NULLS LAST, s.name, m.assessment_type`,
       [student_id]
     ),
     query(`SELECT * FROM counseling_notes WHERE mentor_id=$1 AND student_id=$2 ORDER BY meeting_date DESC LIMIT 5`, [req.user.id, student_id]),
@@ -95,8 +102,7 @@ export async function getCounselingNotes(req, res) {
 export async function createCounselingNote(req, res) {
   const { student_id, note, meeting_date } = req.body;
   if (!student_id || !note || !meeting_date) return res.status(400).json({ error: 'Missing fields' });
-  const check = await query('SELECT id FROM mentor_assignments WHERE mentor_id=$1 AND student_id=$2', [req.user.id, student_id]);
-  if (!check.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const r = await query(
     'INSERT INTO counseling_notes (id,mentor_id,student_id,note,meeting_date) VALUES ($1,$2,$3,$4,$5) RETURNING *',
     [uuidv4(), req.user.id, student_id, note, meeting_date]
@@ -137,8 +143,7 @@ export async function getParentContacts(req, res) {
 export async function createParentContact(req, res) {
   const { student_id, contact_date, medium, summary } = req.body;
   if (!student_id || !contact_date || !medium || !summary) return res.status(400).json({ error: 'Missing fields' });
-  const check = await query('SELECT id FROM mentor_assignments WHERE mentor_id=$1 AND student_id=$2', [req.user.id, student_id]);
-  if (!check.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const r = await query(
     'INSERT INTO parent_contact_records (id,mentor_id,student_id,contact_date,medium,summary) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
     [uuidv4(), req.user.id, student_id, contact_date, medium, summary]
@@ -167,8 +172,7 @@ export async function getMeetings(req, res) {
 export async function createMeeting(req, res) {
   const { student_id, scheduled_at, agenda } = req.body;
   if (!student_id || !scheduled_at || !agenda) return res.status(400).json({ error: 'Missing fields' });
-  const check = await query('SELECT id FROM mentor_assignments WHERE mentor_id=$1 AND student_id=$2', [req.user.id, student_id]);
-  if (!check.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const r = await query(
     'INSERT INTO meeting_schedules (id,mentor_id,student_id,scheduled_at,agenda) VALUES ($1,$2,$3,$4,$5) RETURNING *',
     [uuidv4(), req.user.id, student_id, scheduled_at, agenda]
@@ -198,33 +202,24 @@ export async function getAlerts(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  // Get all assigned students with latest GPA and overall attendance
+  // All mentored students, with mentor-class attendance and latest GPA.
   const r = await query(`
     SELECT
       u.id, u.name, u.email, u.avatar_url, u.roll_number,
-      -- Overall attendance
-      (
-        SELECT COUNT(DISTINCT sess.id)
-        FROM class_enrollments ce2
-        JOIN sessions sess ON sess.subject_id = ce2.subject_id AND sess.closed = true
-        WHERE ce2.student_id = u.id
-      ) AS total_sessions,
-      (
-        SELECT COUNT(DISTINCT al.session_id)
-        FROM attendance_logs al
-        JOIN sessions sess ON sess.id = al.session_id AND sess.closed = true
-        WHERE al.student_id = u.id AND al.status = 'present' AND al.replayed = false
-      ) AS attended_sessions,
-      -- Latest GPA (most recent published result)
+      COUNT(DISTINCT ms.id) AS total_sessions,
+      COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status = 'present') AS attended_sessions,
       (
         SELECT r.gpa FROM results r
-        JOIN semesters sem ON sem.id = r.semester_id
+        LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
         WHERE r.student_id = u.id AND r.published = true
-        ORDER BY sem.start_date DESC LIMIT 1
+        ORDER BY ay.start_date DESC NULLS LAST LIMIT 1
       ) AS latest_gpa
-    FROM mentor_assignments ma
-    JOIN users u ON u.id = ma.student_id
-    WHERE ma.mentor_id = $1
+    FROM class_mentor_assignments cma
+    JOIN users u ON u.id = cma.student_id
+    LEFT JOIN mentor_sessions ms    ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
+    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id AND mat.student_id = u.id
+    WHERE cma.mentor_id = $1
+    GROUP BY u.id
   `, [req.user.id]);
 
   const alerts = r.rows
@@ -250,12 +245,8 @@ export async function sendMentorMessage(req, res) {
   if (!body) return res.status(400).json({ error: 'body required' });
 
   // If student_id provided, verify assignment
-  if (student_id) {
-    const check = await query(
-      'SELECT id FROM mentor_assignments WHERE mentor_id=$1 AND student_id=$2',
-      [req.user.id, student_id]
-    );
-    if (!check.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  if (student_id && !(await isMyStudent(req.user.id, student_id))) {
+    return res.status(403).json({ error: 'Student not assigned to you' });
   }
 
   const r = await query(
@@ -267,4 +258,151 @@ export async function sendMentorMessage(req, res) {
   // If targeting a specific student, insert a targeted message_read placeholder via notification
   // (existing messages table is used as-is; the student's inbox query already handles 'assigned_students')
   res.status(201).json(r.rows[0]);
+}
+
+// ── Mentor classes (subjects the mentor is assigned to) ───────────────────
+
+export async function getMentorSubjects(req, res) {
+  const r = await query(`
+    SELECT DISTINCT s.id, s.code, s.name,
+      s.academic_year_id, ay.label AS academic_year_label,
+      COUNT(DISTINCT cma.student_id) AS student_count
+    FROM class_mentor_assignments cma
+    JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
+    WHERE cma.mentor_id = $1
+    GROUP BY s.id, ay.label
+    ORDER BY s.name`,
+    [req.user.id]
+  );
+  res.json(r.rows);
+}
+
+// Students the mentor mentors within a given subject
+export async function getMentorSubjectStudents(req, res) {
+  const { subject_id } = req.params;
+  const r = await query(`
+    SELECT u.id, u.name, u.email, u.roll_number
+    FROM class_mentor_assignments cma
+    JOIN users u ON u.id = cma.student_id
+    WHERE cma.mentor_id = $1 AND cma.subject_id = $2
+    ORDER BY u.name`,
+    [req.user.id, subject_id]
+  );
+  res.json(r.rows);
+}
+
+// ── Mentor weekly sessions ────────────────────────────────────────────────
+
+export async function createMentorSession(req, res) {
+  const { subject_id, title, session_date } = req.body;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  // Verify the mentor actually mentors students in this subject
+  const owns = await query(
+    'SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 AND subject_id=$2 LIMIT 1',
+    [req.user.id, subject_id]
+  );
+  if (!owns.rows.length) return res.status(403).json({ error: 'You are not a mentor for this class' });
+  const r = await query(
+    `INSERT INTO mentor_sessions (id, subject_id, mentor_id, title, session_date)
+     VALUES ($1,$2,$3,$4,COALESCE($5, CURRENT_DATE)) RETURNING *`,
+    [uuidv4(), subject_id, req.user.id, title || null, session_date || null]
+  );
+  res.status(201).json(r.rows[0]);
+}
+
+export async function getMentorSessions(req, res) {
+  const { subject_id } = req.query;
+  const params = [req.user.id];
+  const clause = subject_id ? `AND ms.subject_id=$${params.push(subject_id)}` : '';
+  const r = await query(`
+    SELECT ms.*, s.code AS subject_code, s.name AS subject_name,
+      COUNT(mat.id) FILTER (WHERE mat.status='present') AS present_count,
+      COUNT(mat.id) FILTER (WHERE mat.status='absent')  AS absent_count
+    FROM mentor_sessions ms
+    JOIN subjects s ON s.id = ms.subject_id
+    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id
+    WHERE ms.mentor_id=$1 ${clause}
+    GROUP BY ms.id, s.code, s.name
+    ORDER BY ms.session_date DESC, ms.created_at DESC`,
+    params
+  );
+  res.json(r.rows);
+}
+
+// Attendance roster for one session (mentor's students in that subject + their marks)
+export async function getMentorSessionAttendance(req, res) {
+  const { id } = req.params;
+  const sess = await query('SELECT * FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [id, req.user.id]);
+  if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
+  const session = sess.rows[0];
+  const r = await query(`
+    SELECT u.id, u.name, u.roll_number, mat.status
+    FROM class_mentor_assignments cma
+    JOIN users u ON u.id = cma.student_id
+    LEFT JOIN mentor_attendance mat ON mat.session_id = $1 AND mat.student_id = u.id
+    WHERE cma.mentor_id = $2 AND cma.subject_id = $3
+    ORDER BY u.name`,
+    [id, req.user.id, session.subject_id]
+  );
+  res.json({ session, roster: r.rows });
+}
+
+// Bulk upsert manual attendance for a session
+export async function markMentorAttendance(req, res) {
+  const { id } = req.params;
+  const { entries } = req.body; // [{ student_id, status: 'present'|'absent' }]
+  if (!Array.isArray(entries)) return res.status(400).json({ error: 'entries array required' });
+  const sess = await query('SELECT id FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [id, req.user.id]);
+  if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
+
+  let saved = 0;
+  for (const e of entries) {
+    if (!e.student_id) continue;
+    const status = e.status === 'absent' ? 'absent' : 'present';
+    await query(
+      `INSERT INTO mentor_attendance (id, session_id, student_id, status)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, marked_at=NOW()`,
+      [uuidv4(), id, e.student_id, status]
+    );
+    saved++;
+  }
+  res.json({ saved });
+}
+
+// ── Mentor defaulters (based on mentor-class attendance) ──────────────────
+
+export async function getMentorDefaulters(req, res) {
+  const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
+  const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
+
+  const { subject_id } = req.query;
+  const params = [req.user.id];
+  const clause = subject_id ? `AND cma.subject_id=$${params.push(subject_id)}` : '';
+
+  const r = await query(`
+    SELECT u.id, u.name, u.email, u.roll_number,
+      STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
+      COUNT(DISTINCT ms.id) AS total_sessions,
+      COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status='present') AS attended_sessions
+    FROM class_mentor_assignments cma
+    JOIN users u    ON u.id = cma.student_id
+    JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN mentor_sessions ms    ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
+    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id AND mat.student_id = u.id
+    WHERE cma.mentor_id = $1 ${clause}
+    GROUP BY u.id
+    ORDER BY u.name`,
+    params
+  );
+
+  const defaulters = r.rows
+    .map(s => {
+      const pct = s.total_sessions > 0 ? Math.round(s.attended_sessions / s.total_sessions * 100) : 0;
+      return { ...s, attendance_percentage: pct };
+    })
+    .filter(s => s.total_sessions > 0 && s.attendance_percentage < threshold);
+
+  res.json({ threshold, defaulters });
 }

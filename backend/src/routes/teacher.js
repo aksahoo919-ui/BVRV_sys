@@ -20,6 +20,7 @@ router.post('/marks',                            ...guard, tc.uploadMarks);
 router.get('/marks/:subject_id',                 ...guard, tc.getMarksForSubject);
 router.patch('/marks/:id',                       ...guard, tc.editMark);
 router.get('/students/:subject_id',              ...guard, tc.getStudentPerformance);
+router.post('/attendance/manual',                ...guard, tc.markAttendanceManual);
 router.get('/reports/defaulters/:subject_id',    ...guard, tc.getDefaulters);
 router.get('/leave-requests',                    ...guard, tc.getLeaveRequestsForMySubjects);
 router.patch('/leave-requests/:id',              ...guard, tc.reviewLeaveRequest);

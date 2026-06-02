@@ -16,6 +16,7 @@ const NAV = [
   { to: '/admin/classes', label: 'Class Management', icon: '🏫' },
   { to: '/admin/timetable', label: 'Timetable', icon: '🕐' },
   { to: '/admin/mentor-assignments', label: 'Mentor Assignments', icon: '🤝' },
+  { to: '/admin/class-mentors', label: 'Class Mentors', icon: '🧑‍🏫' },
   { to: '/admin/enrollments', label: 'Enrollments', icon: '📝' },
   { section: 'Operations' },
   { to: '/admin/corrections', label: 'Attend. Corrections', icon: '✏️' },
