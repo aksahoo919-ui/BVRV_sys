@@ -255,17 +255,16 @@ export async function removeMentorAssignment(req, res) {
 // ── Results (admin publishes) ──────────────────────────────────────────────
 
 export async function getResults(req, res) {
-  const { semester_id } = req.query;
+  const { academic_year_id } = req.query;
   const r = await query(`
     SELECT r.*, u.name AS student_name, u.email AS student_email,
-           s.number AS semester_number, ay.label AS year_label
+           ay.label AS year_label
     FROM results r
     JOIN users u ON u.id = r.student_id
-    JOIN semesters s ON s.id = r.semester_id
-    JOIN academic_years ay ON ay.id = s.academic_year_id
-    ${semester_id ? 'WHERE r.semester_id=$1' : ''}
+    LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
+    ${academic_year_id ? 'WHERE r.academic_year_id=$1' : ''}
     ORDER BY r.rank NULLS LAST, u.name
-  `, semester_id ? [semester_id] : []);
+  `, academic_year_id ? [academic_year_id] : []);
   res.json(r.rows);
 }
 
@@ -283,13 +282,13 @@ export async function upsertResult(req, res) {
 }
 
 export async function publishResults(req, res) {
-  const { semester_id } = req.body;
-  if (!semester_id) return res.status(400).json({ error: 'semester_id required' });
+  const { academic_year_id } = req.body;
+  if (!academic_year_id) return res.status(400).json({ error: 'academic_year_id required' });
   const r = await query(
-    `UPDATE results SET published=true, published_at=NOW() WHERE semester_id=$1 RETURNING id`,
-    [semester_id]
+    `UPDATE results SET published=true, published_at=NOW() WHERE academic_year_id=$1 RETURNING id`,
+    [academic_year_id]
   );
-  await logAudit(req.user.id, 'publish_results', 'semester', semester_id, { count: r.rows.length });
+  await logAudit(req.user.id, 'publish_results', 'academic_year', academic_year_id, { count: r.rows.length });
   res.json({ published: r.rows.length });
 }
 
@@ -521,6 +520,24 @@ export async function generateResultsSemester(req, res) {
     res.json({ generated: results.length, results });
   } catch (err) {
     console.error('[generateResultsSemester]', err);
+    res.status(500).json({ error: err.message || 'Failed to generate results' });
+  }
+}
+
+export async function generateResultsYear(req, res) {
+  const { academic_year_id } = req.params;
+  try {
+    const { generateResultsForAcademicYear } = await import('../services/gradeService.js');
+    const results = await generateResultsForAcademicYear(academic_year_id, req.user.id);
+
+    await logAudit(req.user.id, 'generate_results', 'academic_year', academic_year_id, { count: results.length });
+
+    // Fire-and-forget: email mentors whose students have low GPA
+    _emailMentorsLowGpa(results).catch(err => console.warn('[results] email error:', err.message));
+
+    res.json({ generated: results.length, results });
+  } catch (err) {
+    console.error('[generateResultsYear]', err);
     res.status(500).json({ error: err.message || 'Failed to generate results' });
   }
 }

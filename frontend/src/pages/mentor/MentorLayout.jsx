@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 
 const navItems = [
-  { to: '/mentor',            label: 'Dashboard',  icon: HomeIcon },
+  { to: '/mentor/home',       label: 'Dashboard',  icon: HomeIcon },
   { to: '/mentor/students',   label: 'Students',   icon: StudentsIcon },
   { to: '/mentor/alerts',     label: 'Alerts',     icon: AlertIcon },
   { to: '/mentor/messages',   label: 'Messages',   icon: MailIcon },

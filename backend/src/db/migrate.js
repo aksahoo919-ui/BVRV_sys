@@ -16,6 +16,7 @@ const migrations = [
   '005_remove_semesters.sql',
   '006_fix_user_fk_cascades.sql',
   '007_fix_remaining_fk.sql',
+  '008_marks_assessment_text.sql',
 ];
 
 async function migrate() {

@@ -246,8 +246,8 @@ export async function getTimetable(req, res) {
 // ── Marks ─────────────────────────────────────────────────────────────────
 
 export async function uploadMarks(req, res) {
-  // Body: { subject_id, academic_year_id, assessment_type, max_marks, entries: [{student_id, scored_marks}] }
-  const { subject_id, academic_year_id, assessment_type, max_marks, entries } = req.body;
+  // Body: { subject_id, academic_year_id, assessment_type, max_marks, assessed_on?, entries: [{student_id, scored_marks}] }
+  const { subject_id, academic_year_id, assessment_type, max_marks, assessed_on, entries } = req.body;
   if (!subject_id || !academic_year_id || !assessment_type || !max_marks || !Array.isArray(entries))
     return res.status(400).json({ error: 'Missing required fields' });
 
@@ -261,11 +261,11 @@ export async function uploadMarks(req, res) {
   for (const e of entries) {
     if (!e.student_id || e.scored_marks == null) continue;
     await query(
-      `INSERT INTO marks (id,student_id,subject_id,academic_year_id,assessment_type,max_marks,scored_marks,uploaded_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO marks (id,student_id,subject_id,academic_year_id,assessment_type,max_marks,scored_marks,assessed_on,uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT (student_id,subject_id,academic_year_id,assessment_type)
-       DO UPDATE SET scored_marks=$7, max_marks=$6, uploaded_by=$8, uploaded_at=NOW()`,
-      [uuidv4(), e.student_id, subject_id, academic_year_id, assessment_type, max_marks, e.scored_marks, req.user.id]
+       DO UPDATE SET scored_marks=$7, max_marks=$6, assessed_on=$8, uploaded_by=$9, uploaded_at=NOW()`,
+      [uuidv4(), e.student_id, subject_id, academic_year_id, assessment_type, max_marks, e.scored_marks, assessed_on || null, req.user.id]
     );
     inserted++;
   }
@@ -290,10 +290,10 @@ export async function getMarksForSubject(req, res) {
     filterClause = `AND m.semester_id=$${params.push(semester_id)}`;
   }
   const r = await query(`
-    SELECT m.*, u.name AS student_name, u.email AS student_email
+    SELECT m.*, u.name AS student_name, u.email AS student_email, u.roll_number
     FROM marks m JOIN users u ON u.id=m.student_id
     WHERE m.subject_id=$1 ${filterClause}
-    ORDER BY u.name, m.assessment_type`,
+    ORDER BY m.assessment_type, u.name`,
     params
   );
   res.json(r.rows);

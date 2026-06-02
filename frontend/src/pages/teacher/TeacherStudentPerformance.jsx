@@ -16,30 +16,30 @@ function GradeBadge({ pct }) {
 
 export default function TeacherStudentPerformance() {
   const [subjects, setSubjects] = useState([]);
-  const [semesters, setSemesters] = useState([]);
+  const [years, setYears] = useState([]);
   const [subjectId, setSubjectId] = useState('');
-  const [semesterId, setSemesterId] = useState('');
+  const [yearId, setYearId] = useState('');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/teacher/subjects').then(r => { setSubjects(r.data); if (r.data[0]) setSubjectId(String(r.data[0].id)); }).catch(() => {});
-    api.get('/teacher/semesters').then(r => { setSemesters(r.data); const c = r.data.find(s=>s.is_current)||r.data[0]; if (c) setSemesterId(String(c.id)); }).catch(() => {});
+    api.get('/teacher/academic-years').then(r => { setYears(r.data); const c = r.data.find(y=>y.is_current)||r.data[0]; if (c) setYearId(String(c.id)); }).catch(() => {});
   }, []);
 
   async function load() {
     if (!subjectId) return;
     setLoading(true); setError('');
     try {
-      const q = semesterId ? `?semester_id=${semesterId}` : '';
+      const q = yearId ? `?academic_year_id=${yearId}` : '';
       const r = await api.get(`/teacher/students/${subjectId}${q}`);
       setStudents(r.data);
     } catch (e) { setError(e.response?.data?.error || 'Failed to load'); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { load(); }, [subjectId, semesterId]);
+  useEffect(() => { load(); }, [subjectId, yearId]);
 
   const subjectName = subjects.find(s => String(s.id) === subjectId)?.name || '';
 
@@ -56,10 +56,10 @@ export default function TeacherStudentPerformance() {
           </select>
         </div>
         <div className="flex-1 min-w-40">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-          <select className="input" value={semesterId} onChange={e => setSemesterId(e.target.value)}>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+          <select className="input" value={yearId} onChange={e => setYearId(e.target.value)}>
             <option value="">All</option>
-            {semesters.map(s => <option key={s.id} value={s.id}>Sem {s.number} — {s.year_label}</option>)}
+            {years.map(y => <option key={y.id} value={y.id}>{y.label}{y.is_current ? ' (current)' : ''}</option>)}
           </select>
         </div>
       </div>

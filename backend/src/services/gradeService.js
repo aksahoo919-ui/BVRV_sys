@@ -148,3 +148,87 @@ export async function generateResultsForSemester(semesterId, actorId) {
 
   return computed;
 }
+
+/**
+ * generateResultsForAcademicYear(academicYearId, actorId)
+ * Academic-year-based equivalent of generateResultsForSemester.
+ * Marks are tagged with academic_year_id (not semester_id) in the current model.
+ *  1. Aggregates subject-wise marks → percentage → credit-weighted GPA
+ *  2. CGPA = mean of this year's GPA + all other years' GPAs for the student
+ *  3. Upserts into results keyed by (student_id, academic_year_id)
+ *  4. Assigns sequential ranks (by GPA desc)
+ * Returns array of { studentId, gpa, cgpa, rank }
+ */
+export async function generateResultsForAcademicYear(academicYearId, actorId) {
+  const settingsR = await query(
+    'SELECT gpa_scale, grade_boundaries, min_attendance_threshold FROM institution_settings LIMIT 1'
+  );
+  const settings        = settingsR.rows[0] || {};
+  const gpaScale        = Number(settings.gpa_scale) || 10;
+  const gradeBoundaries = settings.grade_boundaries || { S:90, A:80, B:70, C:60, D:50, F:0 };
+
+  // Aggregate marks per student per subject for this academic year
+  const marksR = await query(`
+    SELECT m.student_id, m.subject_id,
+           COALESCE(s.credits, 3)       AS credits,
+           SUM(m.scored_marks)::numeric AS total_scored,
+           SUM(m.max_marks)::numeric    AS total_max
+    FROM marks m
+    JOIN subjects s ON s.id = m.subject_id
+    WHERE m.academic_year_id = $1
+    GROUP BY m.student_id, m.subject_id, s.credits
+  `, [academicYearId]);
+
+  if (!marksR.rows.length) return [];
+
+  const byStudent = {};
+  for (const row of marksR.rows) {
+    if (!byStudent[row.student_id]) byStudent[row.student_id] = [];
+    byStudent[row.student_id].push(row);
+  }
+
+  const computed = [];
+  for (const [studentId, subjects] of Object.entries(byStudent)) {
+    let weightedGPASum = 0;
+    let totalCredits   = 0;
+
+    for (const subj of subjects) {
+      const pct = subj.total_max > 0
+        ? (Number(subj.total_scored) / Number(subj.total_max)) * 100
+        : 0;
+      const subjectGPA = calculateGPA(pct, gpaScale, gradeBoundaries);
+      const credits    = Number(subj.credits) || 3;
+      weightedGPASum  += subjectGPA * credits;
+      totalCredits    += credits;
+    }
+
+    const yearGPA = totalCredits > 0
+      ? Math.round(weightedGPASum / totalCredits * 100) / 100
+      : 0;
+
+    // CGPA: average across all academic years for this student
+    const prevR = await query(
+      `SELECT gpa FROM results WHERE student_id = $1 AND academic_year_id IS DISTINCT FROM $2`,
+      [studentId, academicYearId]
+    );
+    const cgpa = calculateCGPA([...prevR.rows.map(r => r.gpa), yearGPA]);
+
+    computed.push({ studentId, gpa: yearGPA, cgpa });
+  }
+
+  computed.sort((a, b) => b.gpa - a.gpa);
+  let rank = 1;
+  for (const s of computed) s.rank = rank++;
+
+  for (const s of computed) {
+    await query(
+      `INSERT INTO results (id, student_id, academic_year_id, gpa, cgpa, rank)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (student_id, academic_year_id) DO UPDATE
+         SET gpa=$4, cgpa=$5, rank=$6`,
+      [uuidv4(), s.studentId, academicYearId, s.gpa, s.cgpa, s.rank]
+    );
+  }
+
+  return computed;
+}

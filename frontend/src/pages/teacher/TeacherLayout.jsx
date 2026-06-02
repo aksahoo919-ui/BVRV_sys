@@ -3,9 +3,10 @@ import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 
 const NAV = [
-  { to: '/teacher',                label: 'Dashboard',     icon: HomeIcon },
+  { to: '/teacher/home',           label: 'Dashboard',     icon: HomeIcon },
   { to: '/teacher/classes',        label: 'Classes',       icon: ClassesIcon },
   { to: '/teacher/marks',          label: 'Marks',         icon: MarksIcon },
+  { to: '/teacher/marks-history',  label: 'Marks History', icon: MarksIcon },
   { to: '/teacher/performance',    label: 'Performance',   icon: PerformanceIcon },
   { to: '/teacher/defaulters',     label: 'Defaulters',    icon: AlertIcon },
   { to: '/teacher/timetable',      label: 'Timetable',     icon: CalendarIcon },

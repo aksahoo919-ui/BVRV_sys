@@ -41,6 +41,7 @@ import TeacherSession from './pages/teacher/TeacherSession';
 import TeacherReports from './pages/teacher/TeacherReports';
 import TeacherMessages from './pages/teacher/TeacherMessages';
 import TeacherMarks from './pages/teacher/TeacherMarks';
+import TeacherMarksHistory from './pages/teacher/TeacherMarksHistory';
 import TeacherTimetable from './pages/teacher/TeacherTimetable';
 import TeacherLeaveRequests from './pages/teacher/TeacherLeaveRequests';
 import TeacherStudentPerformance from './pages/teacher/TeacherStudentPerformance';
@@ -133,6 +134,7 @@ export default function App() {
         <Route path="reports" element={<TeacherReports />} />
         <Route path="messages" element={<TeacherMessages />} />
         <Route path="marks" element={<TeacherMarks />} />
+        <Route path="marks-history" element={<TeacherMarksHistory />} />
         <Route path="performance" element={<TeacherStudentPerformance />} />
         <Route path="defaulters" element={<TeacherDefaulters />} />
         <Route path="timetable" element={<TeacherTimetable />} />

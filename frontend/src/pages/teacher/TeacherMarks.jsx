@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 
-const ASSESSMENT_TYPES = [
-  { value: 'internal', label: 'Internal' },
-  { value: 'assignment', label: 'Assignment' },
-  { value: 'midterm', label: 'Midterm' },
-  { value: 'final', label: 'Final' },
-];
+const ASSESSMENT_KINDS = ['OBE', 'CBE', 'Sloka'];
+
+// Compose the stored assessment_type label from kind + optional number, e.g. "OBE-2".
+function composeAssessmentType(kind, number) {
+  const n = String(number ?? '').trim();
+  return n ? `${kind}-${n}` : kind;
+}
 
 function Spinner() {
   return <div className="flex justify-center py-8"><div className="w-7 h-7 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -27,7 +28,10 @@ function StepBadge({ n, active, done, label }) {
 export default function TeacherMarks() {
   const [subjects, setSubjects] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
-  const [ctx, setCtx] = useState({ subject_id: '', academic_year_id: '', assessment_type: 'internal', max_marks: '' });
+  const [ctx, setCtx] = useState({
+    subject_id: '', academic_year_id: '',
+    assessment_kind: 'OBE', assessment_number: '', assessed_on: '', max_marks: '',
+  });
   const [step, setStep] = useState(1);
   const [students, setStudents] = useState([]); // [{id, name, roll_number, scored_marks}]
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -50,9 +54,10 @@ export default function TeacherMarks() {
   async function loadStudents(e) {
     e.preventDefault();
     setError('');
-    if (!ctx.subject_id || !ctx.academic_year_id || !ctx.assessment_type || !ctx.max_marks) {
-      setError('All fields are required.'); return;
+    if (!ctx.subject_id || !ctx.academic_year_id || !ctx.assessment_kind || !ctx.max_marks) {
+      setError('Subject, academic year, assessment type and max marks are required.'); return;
     }
+    const assessmentType = composeAssessmentType(ctx.assessment_kind, ctx.assessment_number);
     setLoadingStudents(true);
     try {
       const perf = await api.get(`/teacher/students/${ctx.subject_id}?academic_year_id=${ctx.academic_year_id}`);
@@ -60,7 +65,7 @@ export default function TeacherMarks() {
         .then(r => r.data).catch(() => []);
       const marksMap = {};
       for (const m of existing) {
-        if (m.assessment_type === ctx.assessment_type) marksMap[m.student_id] = m;
+        if (m.assessment_type === assessmentType) marksMap[m.student_id] = m;
       }
       setStudents(perf.data.map(s => ({
         id: s.id, name: s.name, roll_number: s.roll_number || '',
@@ -87,7 +92,9 @@ export default function TeacherMarks() {
     try {
       const r = await api.post('/teacher/marks', {
         subject_id: ctx.subject_id, academic_year_id: ctx.academic_year_id,
-        assessment_type: ctx.assessment_type, max_marks: max, entries,
+        assessment_type: composeAssessmentType(ctx.assessment_kind, ctx.assessment_number),
+        assessed_on: ctx.assessed_on || null,
+        max_marks: max, entries,
       });
       setSavedCount(r.data?.saved ?? entries.length);
     } catch (err) { setError(err.response?.data?.error || 'Save failed.'); }
@@ -130,15 +137,27 @@ export default function TeacherMarks() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assessment Type</label>
-              <select className="input" value={ctx.assessment_type} onChange={e => setCtx(c => ({...c, assessment_type: e.target.value}))}>
-                {ASSESSMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assessment Type</label>
+                <select className="input" value={ctx.assessment_kind} onChange={e => setCtx(c => ({...c, assessment_kind: e.target.value}))}>
+                  {ASSESSMENT_KINDS.map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div className="w-28">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Number</label>
+                <input type="number" className="input" min={1} placeholder="e.g. 1" value={ctx.assessment_number} onChange={e => setCtx(c => ({...c, assessment_number: e.target.value}))} />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Marks</label>
-              <input type="number" className="input" min={1} required placeholder="e.g. 50" value={ctx.max_marks} onChange={e => setCtx(c => ({...c, max_marks: e.target.value}))} />
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Assessment <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input type="date" className="input" value={ctx.assessed_on} onChange={e => setCtx(c => ({...c, assessed_on: e.target.value}))} />
+              </div>
+              <div className="w-28">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Max Marks</label>
+                <input type="number" className="input" min={1} required placeholder="50" value={ctx.max_marks} onChange={e => setCtx(c => ({...c, max_marks: e.target.value}))} />
+              </div>
             </div>
             <button type="submit" disabled={loadingStudents} className="btn-primary w-full">
               {loadingStudents ? 'Loading students…' : 'Load Students →'}
@@ -152,7 +171,7 @@ export default function TeacherMarks() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-gray-800">Enter Marks</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{subjectName} · {ASSESSMENT_TYPES.find(t=>t.value===ctx.assessment_type)?.label} · Max: {ctx.max_marks} · {ayLabel}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{subjectName} · {composeAssessmentType(ctx.assessment_kind, ctx.assessment_number)} · Max: {ctx.max_marks} · {ayLabel}</p>
             </div>
             <button className="btn-secondary text-sm" onClick={() => { setStep(1); setStudents([]); setSavedCount(null); }}>← Change</button>
           </div>

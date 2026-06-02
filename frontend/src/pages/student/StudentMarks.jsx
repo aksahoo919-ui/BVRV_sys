@@ -57,23 +57,26 @@ export default function StudentMarks() {
     load();
   }, []);
 
-  // Group by semester
+  // Group by academic year (falling back to semester when present)
   const semesterMap = {};
   for (const m of marks) {
-    const key = `${m.semester_number}||${m.year_label}`;
+    const key = `${m.semester_number ?? ''}||${m.year_label ?? ''}`;
     if (!semesterMap[key]) {
       semesterMap[key] = {
         key,
         semester_id: m.semester_id,
         semester_number: m.semester_number,
         year_label: m.year_label,
+        title: m.semester_number != null
+          ? `Semester ${m.semester_number}${m.year_label ? ` — ${m.year_label}` : ''}`
+          : (m.year_label || 'Marks'),
         rows: [],
       };
     }
     semesterMap[key].rows.push(m);
   }
   const semesters = Object.values(semesterMap).sort(
-    (a, b) => a.semester_number - b.semester_number
+    (a, b) => (b.year_label || '').localeCompare(a.year_label || '')
   );
 
   const displaySemesters = selectedSemester
@@ -110,16 +113,16 @@ export default function StudentMarks() {
         <>
           {/* Semester selector */}
           <div className="card mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
             <select
               value={selectedSemester}
               onChange={(e) => setSelectedSemester(e.target.value)}
               className="input"
             >
-              <option value="">All Semesters</option>
+              <option value="">All</option>
               {semesters.map((s) => (
                 <option key={s.key} value={s.key}>
-                  Semester {s.semester_number} — {s.year_label}
+                  {s.title}
                 </option>
               ))}
             </select>
@@ -136,8 +139,7 @@ export default function StudentMarks() {
                     {/* Semester header */}
                     <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                       <p className="font-semibold text-gray-800 text-sm">
-                        Semester {sem.semester_number}
-                        <span className="ml-2 text-gray-400 font-normal">{sem.year_label}</span>
+                        {sem.title}
                       </p>
                       {sem.semester_id && (
                         <button

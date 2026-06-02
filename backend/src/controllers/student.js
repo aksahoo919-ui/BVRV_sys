@@ -191,11 +191,13 @@ export async function getMarks(req, res) {
     const semClause = semester_id ? `AND m.semester_id=$${params.push(semester_id)}` : '';
     const r = await query(`
       SELECT m.*, s.name AS subject_name, s.code AS subject_code,
-             sem.number AS semester_number, ay.label AS year_label
+             sem.number AS semester_number,
+             COALESCE(ay.label, ay2.label) AS year_label
       FROM marks m
       JOIN subjects s ON s.id = m.subject_id
       LEFT JOIN semesters sem ON sem.id = m.semester_id
       LEFT JOIN academic_years ay ON ay.id = sem.academic_year_id
+      LEFT JOIN academic_years ay2 ON ay2.id = m.academic_year_id
       WHERE m.student_id=$1 ${semClause}
       ORDER BY sem.number DESC NULLS LAST, s.name, m.assessment_type`,
       params
