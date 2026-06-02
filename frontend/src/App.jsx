@@ -25,7 +25,6 @@ import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
-import AdminMentorAssignments from './pages/admin/AdminMentorAssignments';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
@@ -117,7 +116,6 @@ export default function App() {
         <Route path="subjects" element={<AdminSubjects />} />
         <Route path="classes" element={<AdminClasses />} />
         <Route path="timetable" element={<AdminTimetable />} />
-        <Route path="mentor-assignments" element={<AdminMentorAssignments />} />
         <Route path="class-mentors" element={<AdminClassMentors />} />
         <Route path="enrollments" element={<AdminEnrollments />} />
         <Route path="corrections" element={<AdminAttendanceCorrections />} />

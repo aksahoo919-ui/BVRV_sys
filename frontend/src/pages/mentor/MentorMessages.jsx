@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -11,8 +11,6 @@ function formatDate(dateStr) {
 }
 
 export default function MentorMessages() {
-  const { token } = useAuth();
-
   const [students, setStudents] = useState([]);
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -30,31 +28,25 @@ export default function MentorMessages() {
 
   const loadStudents = useCallback(async () => {
     try {
-      const res = await fetch('/mentor/students', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) return;
-      setStudents(await res.json());
+      const res = await api.get('/mentor/students');
+      setStudents(Array.isArray(res.data) ? res.data : []);
     } catch {
       // non-critical
     }
-  }, [token]);
+  }, []);
 
   const loadMessages = useCallback(async () => {
     setLoadingMessages(true);
     setMessagesError('');
     try {
-      const res = await fetch('/mentor/messages', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) throw new Error();
-      setMessages(await res.json());
+      const res = await api.get('/mentor/messages');
+      setMessages(Array.isArray(res.data) ? res.data : (res.data?.messages ?? []));
     } catch {
       setMessagesError('Failed to load messages.');
     } finally {
       setLoadingMessages(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     loadStudents();
@@ -76,15 +68,7 @@ export default function MentorMessages() {
       if (recipientType === 'student' && studentId) {
         payload.student_id = studentId;
       }
-      const res = await fetch('/mentor/messages', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error();
+      await api.post('/mentor/messages', payload);
       setSubject('');
       setBody('');
       setStudentId('');

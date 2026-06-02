@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 function Avatar({ name }) {
   const initial = name ? name.charAt(0).toUpperCase() : '?';
@@ -12,7 +12,6 @@ function Avatar({ name }) {
 }
 
 export default function MentorAlerts() {
-  const { token } = useAuth();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,17 +22,15 @@ export default function MentorAlerts() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/mentor/alerts', {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) throw new Error();
-      setAlerts(await res.json());
+      const res = await api.get('/mentor/alerts');
+      // endpoint returns { thresholds, alerts }
+      setAlerts(res.data?.alerts ?? (Array.isArray(res.data) ? res.data : []));
     } catch {
       setError('Failed to load alerts. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -42,7 +39,7 @@ export default function MentorAlerts() {
       return (b.alert_reasons?.length || 0) - (a.alert_reasons?.length || 0);
     }
     if (sortBy === 'lowest_attendance') {
-      return (a.attendance_pct ?? 100) - (b.attendance_pct ?? 100);
+      return (a.attendance_percentage ?? 100) - (b.attendance_percentage ?? 100);
     }
     if (sortBy === 'lowest_gpa') {
       return (a.latest_gpa ?? 10) - (b.latest_gpa ?? 10);
@@ -139,10 +136,10 @@ export default function MentorAlerts() {
                 <div className="text-right">
                   <p className="text-xs text-gray-400">Attendance</p>
                   <p className={`text-sm font-semibold ${
-                    (s.attendance_pct || 0) >= 75 ? 'text-green-600' :
-                    (s.attendance_pct || 0) >= 60 ? 'text-amber-600' : 'text-red-500'
+                    (s.attendance_percentage || 0) >= 75 ? 'text-green-600' :
+                    (s.attendance_percentage || 0) >= 60 ? 'text-amber-600' : 'text-red-500'
                   }`}>
-                    {s.attendance_pct != null ? `${Number(s.attendance_pct).toFixed(1)}%` : '—'}
+                    {s.attendance_percentage != null ? `${Number(s.attendance_percentage).toFixed(1)}%` : '—'}
                   </p>
                 </div>
                 <div className="text-right">

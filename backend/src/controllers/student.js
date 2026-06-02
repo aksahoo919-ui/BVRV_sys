@@ -556,14 +556,18 @@ export async function getTodayAttendance(req, res) {
 
 export async function getMyMentor(req, res) {
   try {
+    // One mentor per class — return the per-class list.
     const r = await query(`
-      SELECT u.id, u.name, u.email, u.avatar_url, u.phone
-      FROM mentor_assignments ma
-      JOIN users u ON u.id = ma.mentor_id
-      WHERE ma.student_id = $1
+      SELECT cma.subject_id, s.code AS subject_code, s.name AS subject_name,
+             u.id AS mentor_id, u.name AS mentor_name, u.email AS mentor_email,
+             u.avatar_url, u.phone
+      FROM class_mentor_assignments cma
+      JOIN subjects s ON s.id = cma.subject_id
+      JOIN users u    ON u.id = cma.mentor_id
+      WHERE cma.student_id = $1
+      ORDER BY s.name
     `, [req.user.id]);
-    if (!r.rows.length) return res.json(null);
-    res.json(r.rows[0]);
+    res.json({ mentors: r.rows });
   } catch (err) {
     console.error(err); res.status(500).json({ error: 'Server error' });
   }

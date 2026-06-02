@@ -205,7 +205,8 @@ export async function getAlerts(req, res) {
   // All mentored students, with mentor-class attendance and latest GPA.
   const r = await query(`
     SELECT
-      u.id, u.name, u.email, u.avatar_url, u.roll_number,
+      u.id AS student_id, u.name AS student_name, u.email AS student_email,
+      u.avatar_url, u.roll_number,
       COUNT(DISTINCT ms.id) AS total_sessions,
       COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status = 'present') AS attended_sessions,
       (

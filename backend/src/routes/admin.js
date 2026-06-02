@@ -76,10 +76,6 @@ router.post('/timetable', ...guard, acad.createTimetableSlot);
 router.patch('/timetable/:id', ...guard, acad.updateTimetableSlot);
 router.delete('/timetable/:id', ...guard, acad.deleteTimetableSlot);
 
-router.get('/mentor-assignments', ...guard, acad.getMentorAssignments);
-router.post('/mentor-assignments', ...guard, acad.assignMentor);
-router.delete('/mentor-assignments/:student_id', ...guard, acad.removeMentorAssignment);
-
 // Per-class mentor assignment
 router.get('/mentors', ...guard, acad.getMentorsList);
 router.get('/subjects/:subject_id/mentor-assignments', ...guard, acad.getSubjectMentorAssignments);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 function AttendanceBar({ pct }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
@@ -57,9 +57,9 @@ function StudentCard({ student }) {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
-          {student.profile_photo_url ? (
+          {student.avatar_url ? (
             <img
-              src={student.profile_photo_url}
+              src={student.avatar_url}
               alt={student.name}
               className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
             />
@@ -81,7 +81,7 @@ function StudentCard({ student }) {
         )}
       </div>
 
-      <AttendanceBar pct={student.attendance_pct} />
+      <AttendanceBar pct={student.attendance_percentage} />
 
       <GpaBadge gpa={student.latest_gpa} />
 
@@ -96,7 +96,6 @@ function StudentCard({ student }) {
 }
 
 export default function MentorStudents() {
-  const { token } = useAuth();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -107,12 +106,8 @@ export default function MentorStudents() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('/mentor/students', {
-          headers: { Authorization: 'Bearer ' + token },
-        });
-        if (!res.ok) throw new Error('Request failed');
-        const data = await res.json();
-        setStudents(data);
+        const res = await api.get('/mentor/students');
+        setStudents(Array.isArray(res.data) ? res.data : []);
       } catch {
         setError('Failed to load students. Please try again.');
       } finally {
@@ -120,7 +115,7 @@ export default function MentorStudents() {
       }
     }
     load();
-  }, [token]);
+  }, []);
 
   const filtered = students.filter((s) => {
     const q = search.toLowerCase();
