@@ -446,12 +446,24 @@ export async function getProfile(req, res) {
     const r = await query(`
       SELECT u.id, u.name, u.email, u.avatar_url, u.role, u.roll_number,
              u.employee_id, u.phone, u.date_of_birth, u.profile_updated_at,
-             u.created_at, d.name AS department_name
+             u.created_at
       FROM users u
-      LEFT JOIN departments d ON d.id = u.department_id
       WHERE u.id = $1
     `, [req.user.id]);
-    res.json(r.rows[0]);
+    const profile = r.rows[0] || {};
+
+    // All distinct courses the student is enrolled in (via class enrollments)
+    const coursesR = await query(`
+      SELECT DISTINCT c.id, c.code, c.name
+      FROM class_enrollments ce
+      JOIN subjects s ON s.id = ce.subject_id
+      JOIN courses c ON c.id = s.course_id
+      WHERE ce.student_id = $1
+      ORDER BY c.name
+    `, [req.user.id]);
+    profile.courses = coursesR.rows;
+
+    res.json(profile);
   } catch (err) {
     console.error(err); res.status(500).json({ error: 'Server error' });
   }

@@ -140,18 +140,24 @@ export default function StudentProfile() {
             <p className="text-sm text-gray-500">{profile.roll_number || '—'}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Department</p>
-            <p className="text-sm text-gray-500">{profile.department_name || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Course</p>
-            <p className="text-sm text-gray-500">{profile.course_name || '—'}</p>
-          </div>
-          <div>
             <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Account Status</p>
             <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
               Active
             </span>
+          </div>
+          <div className="sm:col-span-2">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Courses</p>
+            {profile.courses && profile.courses.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profile.courses.map((c) => (
+                  <span key={c.id} className="inline-block bg-primary-50 text-primary-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                    {c.code ? `${c.code} — ` : ''}{c.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Not enrolled in any course yet.</p>
+            )}
           </div>
 
           {/* Divider */}

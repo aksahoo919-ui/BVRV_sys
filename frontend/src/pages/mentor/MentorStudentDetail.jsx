@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 const TABS = ['Overview', 'Attendance', 'Marks', 'Counseling', 'Contacts', 'Leave History'];
 
@@ -50,7 +50,7 @@ function EmptyState({ message }) {
   );
 }
 
-function OverviewTab({ studentId, token }) {
+function OverviewTab({ studentId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -59,17 +59,14 @@ function OverviewTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) throw new Error();
-      setData(await res.json());
+      const res = await api.get(`/mentor/students/${studentId}/overview`);
+      setData(res.data);
     } catch {
       setError('Failed to load student overview.');
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -87,10 +84,8 @@ function OverviewTab({ studentId, token }) {
       <div>
         <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
         <p className="text-sm text-gray-500">{data.email} · {data.roll_number}</p>
-        {(data.department_name || data.course_name) && (
-          <p className="text-sm text-gray-400 mt-0.5">
-            {[data.department_name, data.course_name].filter(Boolean).join(' — ')}
-          </p>
+        {data.course_name && (
+          <p className="text-sm text-gray-400 mt-0.5">{data.course_name}</p>
         )}
       </div>
 
@@ -137,7 +132,7 @@ function OverviewTab({ studentId, token }) {
   );
 }
 
-function AttendanceTab({ studentId, token }) {
+function AttendanceTab({ studentId }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -146,17 +141,14 @@ function AttendanceTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/attendance`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) throw new Error();
-      setRows(await res.json());
+      const res = await api.get(`/mentor/students/${studentId}/attendance`);
+      setRows(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError('Failed to load attendance data.');
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -219,7 +211,7 @@ function AttendanceTab({ studentId, token }) {
   );
 }
 
-function MarksTab({ studentId, token }) {
+function MarksTab({ studentId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -229,13 +221,10 @@ function MarksTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/marks`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (!res.ok) throw new Error();
-      const json = await res.json();
+      const res = await api.get(`/mentor/students/${studentId}/marks`);
+      const json = res.data;
       setData(json);
-      // open first semester by default
+      // open first group by default
       if (json.semesters && json.semesters.length > 0) {
         setOpenSemesters({ 0: true });
       }
@@ -244,7 +233,7 @@ function MarksTab({ studentId, token }) {
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -311,7 +300,7 @@ function MarksTab({ studentId, token }) {
   );
 }
 
-function CounselingTab({ studentId, token }) {
+function CounselingTab({ studentId }) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -323,21 +312,14 @@ function CounselingTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/counseling`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (res.status === 404 || res.status === 500) {
-        setNotes([]);
-        return;
-      }
-      if (!res.ok) throw new Error();
-      setNotes(await res.json());
+      const res = await api.get(`/mentor/students/${studentId}/counseling`);
+      setNotes(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError('Failed to load counseling notes.');
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -347,15 +329,7 @@ function CounselingTab({ studentId, token }) {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/counseling`, {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ note: noteText.trim() }),
-      });
-      if (!res.ok) throw new Error();
+      await api.post(`/mentor/students/${studentId}/counseling`, { note: noteText.trim() });
       setNoteText('');
       await load();
     } catch {
@@ -410,7 +384,7 @@ function CounselingTab({ studentId, token }) {
   );
 }
 
-function ContactsTab({ studentId, token }) {
+function ContactsTab({ studentId }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -424,21 +398,14 @@ function ContactsTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/contacts`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (res.status === 404 || res.status === 500) {
-        setContacts([]);
-        return;
-      }
-      if (!res.ok) throw new Error();
-      setContacts(await res.json());
+      const res = await api.get(`/mentor/students/${studentId}/contacts`);
+      setContacts(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError('Failed to load contacts.');
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -447,15 +414,7 @@ function ContactsTab({ studentId, token }) {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/contacts`, {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error();
+      await api.post(`/mentor/students/${studentId}/contacts`, form);
       setForm({ name: '', relationship: '', phone: '', email: '' });
       setShowForm(false);
       await load();
@@ -469,10 +428,7 @@ function ContactsTab({ studentId, token }) {
   async function handleDelete(id) {
     setDeleting(id);
     try {
-      await fetch(`/mentor/students/${studentId}/contacts/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + token },
-      });
+      await api.delete(`/mentor/students/${studentId}/contacts/${id}`);
       await load();
     } catch {
       // silently fail
@@ -563,7 +519,7 @@ function ContactsTab({ studentId, token }) {
   );
 }
 
-function LeaveHistoryTab({ studentId, token }) {
+function LeaveHistoryTab({ studentId }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -572,21 +528,14 @@ function LeaveHistoryTab({ studentId, token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/mentor/students/${studentId}/leave-requests`, {
-        headers: { Authorization: 'Bearer ' + token },
-      });
-      if (res.status === 404 || res.status === 500) {
-        setRecords([]);
-        return;
-      }
-      if (!res.ok) throw new Error();
-      setRecords(await res.json());
+      const res = await api.get(`/mentor/students/${studentId}/leave-requests`);
+      setRecords(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError('Failed to load leave history.');
     } finally {
       setLoading(false);
     }
-  }, [studentId, token]);
+  }, [studentId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -644,7 +593,6 @@ function LeaveHistoryTab({ studentId, token }) {
 export default function MentorStudentDetail() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('Overview');
 
   return (
@@ -680,12 +628,12 @@ export default function MentorStudentDetail() {
       </div>
 
       <div>
-        {activeTab === 'Overview' && <OverviewTab studentId={studentId} token={token} />}
-        {activeTab === 'Attendance' && <AttendanceTab studentId={studentId} token={token} />}
-        {activeTab === 'Marks' && <MarksTab studentId={studentId} token={token} />}
-        {activeTab === 'Counseling' && <CounselingTab studentId={studentId} token={token} />}
-        {activeTab === 'Contacts' && <ContactsTab studentId={studentId} token={token} />}
-        {activeTab === 'Leave History' && <LeaveHistoryTab studentId={studentId} token={token} />}
+        {activeTab === 'Overview' && <OverviewTab studentId={studentId} />}
+        {activeTab === 'Attendance' && <AttendanceTab studentId={studentId} />}
+        {activeTab === 'Marks' && <MarksTab studentId={studentId} />}
+        {activeTab === 'Counseling' && <CounselingTab studentId={studentId} />}
+        {activeTab === 'Contacts' && <ContactsTab studentId={studentId} />}
+        {activeTab === 'Leave History' && <LeaveHistoryTab studentId={studentId} />}
       </div>
     </div>
   );

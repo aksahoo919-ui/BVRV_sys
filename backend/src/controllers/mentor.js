@@ -1,5 +1,6 @@
 import { query } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { calculateGrade } from '../services/gradeService.js';
 
 // A student is "mine" if I mentor them in at least one class.
 async function isMyStudent(mentorId, studentId) {
@@ -406,4 +407,187 @@ export async function getMentorDefaulters(req, res) {
     .filter(s => s.total_sessions > 0 && s.attendance_percentage < threshold);
 
   res.json({ threshold, defaulters });
+}
+
+// ── Student detail tabs (Overview / Attendance / Marks / Counseling / Contacts / Leave) ──
+
+export async function getStudentOverview(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+
+  const settingsR = await query('SELECT min_attendance_threshold, mentor_alert_gpa_threshold FROM institution_settings LIMIT 1');
+  const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
+  const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
+
+  const userR = await query('SELECT name, email, roll_number FROM users WHERE id=$1', [student_id]);
+  if (!userR.rows.length) return res.status(404).json({ error: 'Student not found' });
+  const user = userR.rows[0];
+
+  const courseR = await query(`
+    SELECT STRING_AGG(DISTINCT c.name, ', ') AS course_name
+    FROM class_enrollments ce
+    JOIN subjects s ON s.id = ce.subject_id
+    JOIN courses c ON c.id = s.course_id
+    WHERE ce.student_id = $1
+  `, [student_id]);
+
+  const attR = await query(`
+    SELECT
+      COUNT(DISTINCT sess.id) AS total,
+      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended
+    FROM class_enrollments ce
+    JOIN sessions sess ON sess.subject_id = ce.subject_id AND sess.closed = true
+    LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
+    WHERE ce.student_id = $1
+  `, [student_id]);
+  const total = Number(attR.rows[0]?.total) || 0;
+  const attended = Number(attR.rows[0]?.attended) || 0;
+  const attendance_pct = total > 0 ? Math.round(attended / total * 1000) / 10 : 0;
+
+  const resR = await query(`
+    SELECT r.gpa, r.cgpa, r.rank, r.academic_year_id, r.course_id
+    FROM results r LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
+    WHERE r.student_id = $1 AND r.published = true
+    ORDER BY ay.start_date DESC NULLS LAST LIMIT 1
+  `, [student_id]);
+  const result = resR.rows[0] || {};
+  let total_students = null;
+  if (result.academic_year_id && result.course_id) {
+    const tsR = await query('SELECT COUNT(*)::int AS n FROM results WHERE academic_year_id=$1 AND course_id=$2', [result.academic_year_id, result.course_id]);
+    total_students = tsR.rows[0].n;
+  }
+
+  const alert_reasons = [];
+  if (total > 0 && attendance_pct < attThreshold) alert_reasons.push(`Attendance ${attendance_pct}% < ${attThreshold}%`);
+  if (result.gpa != null && Number(result.gpa) < gpaThreshold) alert_reasons.push(`GPA ${result.gpa} < ${gpaThreshold}`);
+
+  res.json({
+    name: user.name, email: user.email, roll_number: user.roll_number,
+    course_name: courseR.rows[0]?.course_name || null,
+    attendance_pct,
+    latest_gpa: result.gpa ?? null,
+    cgpa: result.cgpa ?? null,
+    rank: result.rank ?? null,
+    total_students,
+    alert_reasons,
+  });
+}
+
+export async function getStudentAttendanceDetail(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query(`
+    SELECT s.code AS subject_code, s.name AS subject_name,
+      COUNT(DISTINCT sess.id) AS total,
+      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended,
+      CASE WHEN COUNT(DISTINCT sess.id) > 0
+        THEN ROUND(COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
+             / COUNT(DISTINCT sess.id) * 100, 1)
+        ELSE 0 END AS percentage
+    FROM subjects s
+    JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.student_id = $1
+    LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
+    LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
+    GROUP BY s.id
+    ORDER BY s.name
+  `, [student_id]);
+  res.json(r.rows);
+}
+
+export async function getStudentMarksDetail(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const settingsR = await query('SELECT grade_boundaries FROM institution_settings LIMIT 1');
+  const gb = settingsR.rows[0]?.grade_boundaries || { S:90, A:80, B:70, C:60, D:50, F:0 };
+  const r = await query(`
+    SELECT ay.id AS year_id, ay.label AS year_label, ay.start_date,
+           s.code, s.name,
+           SUM(m.scored_marks)::numeric AS total_scored,
+           SUM(m.max_marks)::numeric    AS total_max
+    FROM marks m
+    JOIN subjects s ON s.id = m.subject_id
+    LEFT JOIN academic_years ay ON ay.id = m.academic_year_id
+    WHERE m.student_id = $1
+    GROUP BY ay.id, ay.label, ay.start_date, s.id
+    ORDER BY ay.start_date DESC NULLS LAST, s.name
+  `, [student_id]);
+
+  const map = {};
+  for (const row of r.rows) {
+    const key = row.year_id || 'none';
+    if (!map[key]) map[key] = { label: row.year_label || 'Marks', subjects: [] };
+    const pct = Number(row.total_max) > 0
+      ? Math.round(Number(row.total_scored) / Number(row.total_max) * 1000) / 10
+      : null;
+    map[key].subjects.push({
+      code: row.code, name: row.name,
+      total_marks: Number(row.total_scored),
+      percentage: pct,
+      grade: pct != null ? calculateGrade(pct, gb) : null,
+    });
+  }
+  res.json({ semesters: Object.values(map) });
+}
+
+export async function getStudentCounseling(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query(`
+    SELECT cn.id, cn.note, cn.meeting_date AS created_at, m.name AS created_by_name
+    FROM counseling_notes cn
+    LEFT JOIN users m ON m.id = cn.mentor_id
+    WHERE cn.student_id = $1 AND cn.mentor_id = $2
+    ORDER BY cn.meeting_date DESC
+  `, [student_id, req.user.id]);
+  res.json(r.rows);
+}
+
+export async function addStudentCounseling(req, res) {
+  const { student_id } = req.params;
+  const { note } = req.body;
+  if (!note) return res.status(400).json({ error: 'note required' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query(
+    'INSERT INTO counseling_notes (id, mentor_id, student_id, note, meeting_date) VALUES ($1,$2,$3,$4,CURRENT_DATE) RETURNING *',
+    [uuidv4(), req.user.id, student_id, note]
+  );
+  res.status(201).json(r.rows[0]);
+}
+
+export async function getStudentContacts(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query('SELECT * FROM student_contacts WHERE student_id=$1 ORDER BY created_at DESC', [student_id]);
+  res.json(r.rows);
+}
+
+export async function addStudentContact(req, res) {
+  const { student_id } = req.params;
+  const { name, relationship, phone, email } = req.body;
+  if (!name) return res.status(400).json({ error: 'name required' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query(
+    `INSERT INTO student_contacts (id, student_id, name, relationship, phone, email, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [uuidv4(), student_id, name, relationship || null, phone || null, email || null, req.user.id]
+  );
+  res.status(201).json(r.rows[0]);
+}
+
+export async function deleteStudentContact(req, res) {
+  const { student_id, contact_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  await query('DELETE FROM student_contacts WHERE id=$1 AND student_id=$2', [contact_id, student_id]);
+  res.json({ message: 'Deleted' });
+}
+
+export async function getStudentLeaveRequests(req, res) {
+  const { student_id } = req.params;
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+  const r = await query(
+    `SELECT id, from_date, to_date, reason, status, reviewed_at
+     FROM leave_requests WHERE student_id=$1 ORDER BY from_date DESC`,
+    [student_id]
+  );
+  res.json(r.rows);
 }
