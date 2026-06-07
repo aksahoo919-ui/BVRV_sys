@@ -12,6 +12,8 @@ export default function AdminClasses() {
   const [addTeacherSelect, setAddTeacherSelect] = useState('');
   const [addingTeacher, setAddingTeacher] = useState(false);
   const [removingTeacherId, setRemovingTeacherId] = useState(null);
+  const [studentView, setStudentView] = useState('registered'); // 'registered' | 'add'
+  const [busyStudent, setBusyStudent] = useState(null);
 
   useEffect(() => {
     api.get('/admin/subjects').then(r => setSubjects(r.data));
@@ -77,23 +79,39 @@ export default function AdminClasses() {
   }
 
   const enrolledStudentIds = new Set(members.students.map(s => s.id));
-  const filteredStudents = allStudents.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const q = search.toLowerCase();
+  const matchesSearch = (s) =>
+    (s.name || '').toLowerCase().includes(q) || (s.email || '').toLowerCase().includes(q);
 
-  async function toggleStudent(studentId) {
-    if (enrolledStudentIds.has(studentId)) {
+  // Registered = students enrolled in this subject
+  const registeredStudents = members.students.filter(matchesSearch);
+  // Other = active students not enrolled in this subject
+  const otherStudents = allStudents.filter(s => !enrolledStudentIds.has(s.id)).filter(matchesSearch);
+
+  async function handleAddStudent(studentId) {
+    setBusyStudent(studentId);
+    try {
+      await api.post('/admin/classes/enroll-student', { subject_id: selectedSubject, student_id: studentId });
+      await loadMembers(selectedSubject);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to add student');
+    } finally {
+      setBusyStudent(null);
+    }
+  }
+
+  async function handleRemoveStudent(studentId) {
+    setBusyStudent(studentId);
+    try {
       await api.delete('/admin/classes/remove-student', {
         data: { subject_id: selectedSubject, student_id: studentId },
       });
-    } else {
-      await api.post('/admin/classes/enroll-student', {
-        subject_id: selectedSubject,
-        student_id: studentId,
-      });
+      await loadMembers(selectedSubject);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to remove student');
+    } finally {
+      setBusyStudent(null);
     }
-    loadMembers(selectedSubject);
   }
 
   return (
@@ -171,37 +189,78 @@ export default function AdminClasses() {
 
           {/* Students panel */}
           <div className="card">
-            <h2 className="font-semibold text-gray-800 mb-4">
-              Enrolled Students ({members.students.length})
-            </h2>
+            {/* Tabs */}
+            <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+              <button
+                onClick={() => setStudentView('registered')}
+                className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+                  studentView === 'registered' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Registered ({members.students.length})
+              </button>
+              <button
+                onClick={() => setStudentView('add')}
+                className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+                  studentView === 'add' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Add Students
+              </button>
+            </div>
+
             <input
               className="input mb-3"
               placeholder="Search students…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-            <div className="space-y-1 max-h-64 overflow-y-auto">
-              {filteredStudents.map(s => (
-                <label
-                  key={s.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={enrolledStudentIds.has(s.id)}
-                    onChange={() => toggleStudent(s.id)}
-                    className="rounded"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{s.name}</p>
-                    <p className="text-xs text-gray-400">{s.email}</p>
+
+            {studentView === 'registered' ? (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {registeredStudents.map(s => (
+                  <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveStudent(s.id)}
+                      disabled={busyStudent === s.id}
+                      className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-60"
+                    >
+                      {busyStudent === s.id ? '…' : 'Remove'}
+                    </button>
                   </div>
-                </label>
-              ))}
-              {filteredStudents.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">No students found.</p>
-              )}
-            </div>
+                ))}
+                {registeredStudents.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    {members.students.length === 0 ? 'No students enrolled yet.' : 'No matches.'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {otherStudents.map(s => (
+                  <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddStudent(s.id)}
+                      disabled={busyStudent === s.id}
+                      className="text-xs font-medium py-1 px-2 rounded-md border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors flex-shrink-0 disabled:opacity-60"
+                    >
+                      {busyStudent === s.id ? '…' : 'Add'}
+                    </button>
+                  </div>
+                ))}
+                {otherStudents.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">No other students to add.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
