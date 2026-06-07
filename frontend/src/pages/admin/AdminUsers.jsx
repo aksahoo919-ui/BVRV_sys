@@ -64,7 +64,7 @@ export default function AdminUsers() {
   }
 
   function downloadTemplate() {
-    const csv = 'name,email,role\nJohn Doe,john@example.com,student\nJane Smith,jane@example.com,teacher';
+    const csv = 'name,email,role,phone number\nJohn Doe,john@example.com,student,9876543210\nJane Smith,jane@example.com,teacher,9876500000';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -159,7 +159,7 @@ export default function AdminUsers() {
               <h2 className="font-bold text-gray-900">Bulk Import Users</h2>
               <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <p className="text-sm text-gray-500 mb-3">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role</code></p>
+            <p className="text-sm text-gray-500 mb-3">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number</code> <span className="text-gray-400">(phone optional)</span></p>
             <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (

@@ -143,6 +143,8 @@ export async function bulkImport(req, res) {
   const nameIdx = header.indexOf('name');
   const emailIdx = header.indexOf('email');
   const roleIdx = header.indexOf('role');
+  // Optional phone column — accepts "phone" or "phone number"
+  const phoneIdx = header.indexOf('phone') !== -1 ? header.indexOf('phone') : header.indexOf('phone number');
 
   if (nameIdx === -1 || emailIdx === -1 || roleIdx === -1) {
     return res.status(400).json({ error: 'CSV must have columns: name, email, role' });
@@ -156,6 +158,7 @@ export async function bulkImport(req, res) {
     const name = cols[nameIdx];
     const email = cols[emailIdx];
     const role = cols[roleIdx]?.toLowerCase();
+    const phone = phoneIdx !== -1 ? (cols[phoneIdx] || null) : null;
 
     if (!name || !email || !['student', 'teacher', 'mentor'].includes(role)) {
       skipped.push({ row: i + 1, reason: 'Invalid data', email });
@@ -169,8 +172,8 @@ export async function bulkImport(req, res) {
         continue;
       }
       await query(
-        `INSERT INTO users (id, name, email, role, status) VALUES ($1, $2, $3, $4, 'active')`,
-        [uuidv4(), name, email, role]
+        `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1, $2, $3, $4, $5, 'active')`,
+        [uuidv4(), name, email, role, phone]
       );
       imported++;
     } catch (err) {

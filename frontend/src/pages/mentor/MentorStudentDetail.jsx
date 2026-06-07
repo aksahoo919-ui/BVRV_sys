@@ -262,33 +262,42 @@ function MarksTab({ studentId }) {
             </svg>
           </button>
           {openSemesters[idx] && sem.subjects && sem.subjects.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-white text-left">
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Code</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Subject</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase text-right">Internal</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase text-right">Exam</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase text-right">Total</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase text-right">%</th>
-                    <th className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase text-center">Grade</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {sem.subjects.map((sub, j) => (
-                    <tr key={j} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-500 font-mono text-xs">{sub.code}</td>
-                      <td className="px-4 py-2 text-gray-900">{sub.name}</td>
-                      <td className="px-4 py-2 text-right text-gray-700">{sub.internal ?? '—'}</td>
-                      <td className="px-4 py-2 text-right text-gray-700">{sub.exam ?? '—'}</td>
-                      <td className="px-4 py-2 text-right text-gray-700">{sub.total_marks ?? '—'}</td>
-                      <td className="px-4 py-2 text-right text-gray-600">{sub.percentage != null ? `${Number(sub.percentage).toFixed(1)}%` : '—'}</td>
-                      <td className="px-4 py-2 text-center font-semibold text-gray-800">{sub.grade ?? '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="divide-y divide-gray-100">
+              {sem.subjects.map((sub, j) => (
+                <div key={j} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm">
+                        {sub.name}
+                        {sub.code && <span className="ml-2 text-xs font-mono text-gray-400">{sub.code}</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-semibold text-gray-700">
+                        {sub.total_marks}/{sub.max_marks}
+                      </span>
+                      {sub.percentage != null && (
+                        <span className="text-xs text-gray-500">({Number(sub.percentage).toFixed(1)}%)</span>
+                      )}
+                      {sub.grade && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{sub.grade}</span>
+                      )}
+                    </div>
+                  </div>
+                  {sub.assessments && sub.assessments.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sub.assessments.map((a, k) => (
+                        <span key={k} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs rounded-md px-2 py-1">
+                          <span className="font-medium">{a.type}</span>
+                          <span className="text-gray-500">{a.scored}/{a.max}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">No assessments recorded.</p>
+                  )}
+                </div>
+              ))}
             </div>
           )}
           {openSemesters[idx] && (!sem.subjects || sem.subjects.length === 0) && (

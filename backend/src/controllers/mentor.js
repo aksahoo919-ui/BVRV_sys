@@ -499,34 +499,55 @@ export async function getStudentMarksDetail(req, res) {
   if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const settingsR = await query('SELECT grade_boundaries FROM institution_settings LIMIT 1');
   const gb = settingsR.rows[0]?.grade_boundaries || { S:90, A:80, B:70, C:60, D:50, F:0 };
+  // Individual assessment rows so the UI can show the OBE/CBE/Sloka breakdown.
   const r = await query(`
     SELECT ay.id AS year_id, ay.label AS year_label, ay.start_date,
-           s.code, s.name,
-           SUM(m.scored_marks)::numeric AS total_scored,
-           SUM(m.max_marks)::numeric    AS total_max
+           s.id AS subject_id, s.code, s.name,
+           m.assessment_type, m.scored_marks, m.max_marks, m.assessed_on
     FROM marks m
     JOIN subjects s ON s.id = m.subject_id
     LEFT JOIN academic_years ay ON ay.id = m.academic_year_id
     WHERE m.student_id = $1
-    GROUP BY ay.id, ay.label, ay.start_date, s.id
-    ORDER BY ay.start_date DESC NULLS LAST, s.name
+    ORDER BY ay.start_date DESC NULLS LAST, s.name, m.assessment_type
   `, [student_id]);
 
-  const map = {};
+  const yearMap = {};
   for (const row of r.rows) {
-    const key = row.year_id || 'none';
-    if (!map[key]) map[key] = { label: row.year_label || 'Marks', subjects: [] };
-    const pct = Number(row.total_max) > 0
-      ? Math.round(Number(row.total_scored) / Number(row.total_max) * 1000) / 10
-      : null;
-    map[key].subjects.push({
-      code: row.code, name: row.name,
-      total_marks: Number(row.total_scored),
-      percentage: pct,
-      grade: pct != null ? calculateGrade(pct, gb) : null,
+    const yKey = row.year_id || 'none';
+    if (!yearMap[yKey]) yearMap[yKey] = { label: row.year_label || 'Marks', _subjects: {} };
+    const sKey = row.subject_id;
+    if (!yearMap[yKey]._subjects[sKey]) {
+      yearMap[yKey]._subjects[sKey] = {
+        code: row.code, name: row.name,
+        assessments: [], total_scored: 0, total_max: 0,
+      };
+    }
+    const subj = yearMap[yKey]._subjects[sKey];
+    subj.assessments.push({
+      type: row.assessment_type,
+      scored: Number(row.scored_marks),
+      max: Number(row.max_marks),
+      assessed_on: row.assessed_on,
     });
+    subj.total_scored += Number(row.scored_marks);
+    subj.total_max += Number(row.max_marks);
   }
-  res.json({ semesters: Object.values(map) });
+
+  const semesters = Object.values(yearMap).map(y => ({
+    label: y.label,
+    subjects: Object.values(y._subjects).map(s => {
+      const pct = s.total_max > 0 ? Math.round(s.total_scored / s.total_max * 1000) / 10 : null;
+      return {
+        code: s.code, name: s.name,
+        assessments: s.assessments,
+        total_marks: s.total_scored,
+        max_marks: s.total_max,
+        percentage: pct,
+        grade: pct != null ? calculateGrade(pct, gb) : null,
+      };
+    }),
+  }));
+  res.json({ semesters });
 }
 
 export async function getStudentCounseling(req, res) {
