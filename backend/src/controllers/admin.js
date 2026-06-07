@@ -389,7 +389,9 @@ export async function getSubjects(req, res) {
       `SELECT s.*,
               c.name AS course_name, c.code AS course_code,
               ay.label AS academic_year_label,
-              u.name AS created_by_name
+              u.name AS created_by_name,
+              (SELECT COUNT(*) FROM class_enrollments ce
+                 WHERE ce.subject_id = s.id AND ce.student_id IS NOT NULL) AS student_count
        FROM subjects s
        LEFT JOIN courses c ON c.id = s.course_id
        LEFT JOIN academic_years ay ON ay.id = s.academic_year_id

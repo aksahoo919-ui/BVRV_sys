@@ -196,6 +196,7 @@ export default function AdminSubjects() {
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Course</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Academic Year</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Credits</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500">Students</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
               </tr>
             </thead>
@@ -211,6 +212,11 @@ export default function AdminSubjects() {
                     {s.academic_year_label || <span className="text-gray-400">—</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{s.credits ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {Number(s.student_count ?? 0)}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => openEdit(s)} className="btn-secondary py-1 px-2 text-xs">Edit</button>
