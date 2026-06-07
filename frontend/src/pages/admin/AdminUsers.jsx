@@ -22,6 +22,17 @@ export default function AdminUsers() {
   const [filterRole, setFilterRole] = useState('');
   const [search, setSearch]         = useState('');
 
+  // Participant import (course sheet)
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [participantResult, setParticipantResult] = useState(null);
+  const [participantImporting, setParticipantImporting] = useState(false);
+
+  // Bulk delete by role
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [bulkRole, setBulkRole] = useState('student');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkResult, setBulkResult] = useState('');
+
   // Confirm-delete modal
   const [deleteTarget, setDeleteTarget] = useState(null); // user object
   const [deleting, setDeleting]         = useState(false);
@@ -29,6 +40,7 @@ export default function AdminUsers() {
   const [loadError, setLoadError]       = useState('');
 
   const fileRef = useRef();
+  const participantFileRef = useRef();
 
   async function load() {
     setLoadError('');
@@ -69,6 +81,52 @@ export default function AdminUsers() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'import_template.csv'; a.click();
+  }
+
+  // ── Participant import (course sheet) ──────────────────────────────────────
+  async function handleParticipantImport() {
+    const file = participantFileRef.current?.files[0];
+    if (!file) return;
+    setParticipantImporting(true);
+    setParticipantResult(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const r = await api.post('/admin/users/import-participants', form);
+      setParticipantResult(r.data);
+      load();
+    } catch (err) {
+      setParticipantResult({ error: err.response?.data?.error || 'Import failed' });
+    } finally {
+      setParticipantImporting(false);
+    }
+  }
+
+  function downloadParticipantTemplate() {
+    const csv =
+      'S.No,Course Name,Name,BV Leader Name,Mobile Number,Gender,Email ID,Language of Course\n' +
+      '1,Foundation 1,Manoj Kumar Sahoo,Vimal Pr Ji,9494088416,Male,sahoom39@gmail.com,English\n' +
+      '2,Bhakthi Shastri 2,Tapaswi R,Vimal Pr Ji,8143477107,Female,NA,Telugu\n' +
+      '3,Bhakti Vaibhav 1,Nandakishore Mula,Vimal Pr Ji,8897066793,Male,nandakishore475@gmail.com,English';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'participant_template.csv'; a.click();
+  }
+
+  // ── Bulk delete by role ────────────────────────────────────────────────────
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    setBulkResult('');
+    try {
+      const r = await api.post('/admin/users/bulk-delete', { role: bulkRole });
+      setBulkResult(`Deleted ${r.data.deleted} ${bulkRole}(s).`);
+      load();
+    } catch (err) {
+      setBulkResult(err.response?.data?.error || 'Delete failed');
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   // ── Suspend / Reactivate ─────────────────────────────────────────────────
@@ -115,9 +173,13 @@ export default function AdminUsers() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-gray-900">All Users</h1>
-        <button onClick={() => setShowImport(true)} className="btn-primary text-sm">Bulk Import</button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => { setShowParticipants(true); setParticipantResult(null); }} className="btn-primary text-sm">Import Participants</button>
+          <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">Bulk Import</button>
+          <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Bulk Delete</button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -170,6 +232,79 @@ export default function AdminUsers() {
             <div className="flex gap-2">
               <button onClick={handleImport} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
               <button onClick={() => setShowImport(false)} className="btn-secondary flex-1">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Participant import modal */}
+      {showParticipants && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900">Import Participants</h2>
+              <button onClick={() => { setShowParticipants(false); setParticipantResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-2">
+              Upload the registration sheet. Columns: <code className="bg-gray-100 px-1 rounded text-xs">Course Name, Name, Mobile Number, Email ID, Language of Course</code>.
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              Each participant is created as a student and auto-enrolled into the right subject (course + number + language). Rows with no email get a placeholder so they can still be tracked.
+            </p>
+            <button onClick={downloadParticipantTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
+            <input ref={participantFileRef} type="file" accept=".csv" className="input mb-3" />
+            {participantResult && (
+              <div className={`text-sm mb-3 p-3 rounded-lg ${participantResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                {participantResult.error
+                  ? participantResult.error
+                  : `New students: ${participantResult.created} · Enrolled: ${participantResult.enrolled} · Skipped: ${participantResult.skipped?.length || 0}`}
+                {participantResult.skipped?.length > 0 && (
+                  <ul className="mt-2 text-xs text-red-600 max-h-32 overflow-y-auto list-disc list-inside">
+                    {participantResult.skipped.slice(0, 20).map((s, i) => (
+                      <li key={i}>Row {s.row}: {s.reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={handleParticipantImport} disabled={participantImporting} className="btn-primary flex-1">{participantImporting ? 'Importing…' : 'Import'}</button>
+              <button onClick={() => setShowParticipants(false)} className="btn-secondary flex-1">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete modal */}
+      {showBulkDelete && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-red-600 text-lg">⚠</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-gray-900">Bulk delete users</h2>
+                <p className="text-sm text-gray-500">Permanently removes ALL users of a role.</p>
+              </div>
+            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role to delete</label>
+            <select className="input mb-3" value={bulkRole} onChange={e => setBulkRole(e.target.value)}>
+              <option value="student">All Students</option>
+              <option value="mentor">All Mentors</option>
+              <option value="teacher">All Teachers</option>
+            </select>
+            <p className="text-xs text-red-600 mb-3">This cannot be undone. Admins are never affected.</p>
+            {bulkResult && <p className="text-sm mb-3 text-gray-700">{bulkResult}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {bulkDeleting ? 'Deleting…' : `Delete all ${bulkRole}s`}
+              </button>
+              <button onClick={() => setShowBulkDelete(false)} className="btn-secondary flex-1">Close</button>
             </div>
           </div>
         </div>

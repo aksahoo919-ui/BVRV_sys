@@ -17,6 +17,8 @@ router.patch('/users/:id/suspend',  ...guard, adminCtrl.suspendUser);
 router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
+router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
+router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 router.get('/subjects', ...guard, adminCtrl.getSubjects);

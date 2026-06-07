@@ -184,6 +184,150 @@ export async function bulkImport(req, res) {
   res.json({ imported, skipped });
 }
 
+// ── Participant import (course sheet → auto-enroll into subject) ────────────
+
+// Map a free-text course name + language to a seeded subject code (GF/BS/BV + number + -E/-H/-T)
+function resolveSubjectCode(courseName, language) {
+  const norm = String(courseName || '').toLowerCase().replace(/\s+/g, '');
+  let base;
+  if (norm.includes('foundation') || norm.includes('gita')) base = 'GF';
+  else if (norm.includes('shastri')) base = 'BS';
+  else if (norm.includes('vaibhav')) base = 'BV';
+  else return null;
+
+  const numMatch = norm.match(/(\d+)/);
+  if (!numMatch) return null;
+  const num = parseInt(numMatch[1], 10);
+
+  const lang = String(language || '').trim().toLowerCase();
+  let sfx;
+  if (lang.startsWith('eng')) sfx = 'E';
+  else if (lang.startsWith('hin')) sfx = 'H';
+  else if (lang.startsWith('tel')) sfx = 'T';
+  else return null;
+
+  return `${base}${num}-${sfx}`;
+}
+
+export async function bulkImportParticipants(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'CSV file required' });
+
+  const csv = req.file.buffer.toString('utf8');
+  const lines = csv.split('\n').map((l) => l.replace(/\r$/, '').trim()).filter(Boolean);
+  if (lines.length < 2) return res.status(400).json({ error: 'CSV has no data rows' });
+
+  const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+  const idx = (...names) => {
+    for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; }
+    return -1;
+  };
+  const courseIdx = idx('course name', 'course');
+  const nameIdx   = idx('name');
+  const phoneIdx  = idx('mobile number', 'phone number', 'phone', 'mobile');
+  const emailIdx  = idx('email id', 'email');
+  const langIdx   = idx('language of course', 'language');
+
+  if (courseIdx === -1 || nameIdx === -1 || langIdx === -1) {
+    return res.status(400).json({ error: 'CSV must have columns: Course Name, Name, Language of Course' });
+  }
+
+  let created = 0, enrolled = 0;
+  const skipped = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map((c) => c.trim());
+    const courseName = cols[courseIdx];
+    const name = cols[nameIdx];
+    const language = cols[langIdx];
+    const phoneRaw = phoneIdx !== -1 ? cols[phoneIdx] : '';
+    const emailRaw = emailIdx !== -1 ? cols[emailIdx] : '';
+
+    if (!name) { skipped.push({ row: i + 1, reason: 'Missing name' }); continue; }
+
+    const code = resolveSubjectCode(courseName, language);
+    if (!code) { skipped.push({ row: i + 1, reason: `Could not map course "${courseName}" / language "${language}"`, name }); continue; }
+
+    const phoneDigits = String(phoneRaw || '').replace(/\D/g, '');
+    let email = String(emailRaw || '').trim();
+    if (!email || email.toUpperCase() === 'NA') {
+      email = phoneDigits ? `p${phoneDigits}@noemail.bvrv` : `na-${uuidv4()}@noemail.bvrv`;
+    }
+
+    try {
+      const subjR = await query('SELECT id FROM subjects WHERE code = $1', [code]);
+      if (!subjR.rows.length) { skipped.push({ row: i + 1, reason: `Subject ${code} not found (run migrations)`, name }); continue; }
+      const subjectId = subjR.rows[0].id;
+
+      // Find or create the student
+      let userR = await query('SELECT id FROM users WHERE email = $1', [email]);
+      let studentId;
+      if (userR.rows.length) {
+        studentId = userR.rows[0].id;
+        if (phoneDigits) await query('UPDATE users SET phone = COALESCE(phone, $1) WHERE id = $2', [phoneRaw, studentId]);
+        created += 0;
+      } else {
+        studentId = uuidv4();
+        await query(
+          `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1,$2,$3,'student',$4,'active')`,
+          [studentId, name, email, phoneRaw || null]
+        );
+        created++;
+      }
+
+      const enr = await query(
+        `INSERT INTO class_enrollments (id, subject_id, student_id)
+         VALUES ($1,$2,$3) ON CONFLICT (subject_id, student_id) DO NOTHING RETURNING id`,
+        [uuidv4(), subjectId, studentId]
+      );
+      if (enr.rows.length) enrolled++;
+    } catch (err) {
+      skipped.push({ row: i + 1, reason: err.message, name });
+    }
+  }
+
+  res.json({ created, enrolled, skipped });
+}
+
+// ── Bulk delete all users of a role ────────────────────────────────────────
+
+export async function bulkDeleteByRole(req, res) {
+  const { role } = req.body;
+  if (!['student', 'teacher', 'mentor'].includes(role))
+    return res.status(400).json({ error: 'role must be student, teacher, or mentor' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const idsR = await client.query(`SELECT id FROM users WHERE role = $1`, [role]);
+    const ids = idsR.rows.map((r) => r.id);
+    if (!ids.length) {
+      await client.query('COMMIT');
+      return res.json({ deleted: 0 });
+    }
+
+    // Mirror deleteUser's cleanup, set-based.
+    await client.query(`UPDATE subjects             SET created_by    = NULL WHERE created_by    = ANY($1)`, [ids]);
+    await client.query(`UPDATE institution_settings SET updated_by    = NULL WHERE updated_by    = ANY($1)`, [ids]);
+    await client.query(`UPDATE sessions             SET instructor_id = NULL WHERE instructor_id = ANY($1)`, [ids]);
+    await client.query(`UPDATE messages             SET sender_id     = NULL WHERE sender_id     = ANY($1)`, [ids]);
+    await client.query(`UPDATE marks                SET uploaded_by   = NULL WHERE uploaded_by   = ANY($1)`, [ids]);
+    await client.query(`UPDATE leave_requests       SET reviewed_by   = NULL WHERE reviewed_by   = ANY($1)`, [ids]);
+    await client.query(`UPDATE attendance_corrections SET reviewed_by = NULL WHERE reviewed_by   = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM class_enrollments WHERE instructor_id = ANY($1) OR student_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM users WHERE id = ANY($1)`, [ids]);
+
+    await client.query('COMMIT');
+    await logAudit(req.user.id, 'bulk_delete_users', 'user', null, { role, count: ids.length });
+    res.json({ deleted: ids.length });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('bulkDeleteByRole error:', err.message);
+    res.status(500).json({ error: err.message || 'Server error' });
+  } finally {
+    client.release();
+  }
+}
+
 // ── Subjects ───────────────────────────────────────────────────────────────
 
 export async function getSubjects(req, res) {
