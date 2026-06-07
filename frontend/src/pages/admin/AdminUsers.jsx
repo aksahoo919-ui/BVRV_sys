@@ -33,6 +33,12 @@ export default function AdminUsers() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkResult, setBulkResult] = useState('');
 
+  // Edit email
+  const [emailTarget, setEmailTarget] = useState(null); // user object
+  const [emailValue, setEmailValue] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
   // Confirm-delete modal
   const [deleteTarget, setDeleteTarget] = useState(null); // user object
   const [deleting, setDeleting]         = useState(false);
@@ -112,6 +118,22 @@ export default function AdminUsers() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'participant_template.csv'; a.click();
+  }
+
+  // ── Edit email ─────────────────────────────────────────────────────────────
+  async function saveEmail() {
+    if (!emailTarget) return;
+    setSavingEmail(true);
+    setEmailError('');
+    try {
+      await api.patch(`/admin/users/${emailTarget.id}/email`, { email: emailValue.trim() });
+      setEmailTarget(null);
+      load();
+    } catch (err) {
+      setEmailError(err.response?.data?.error || 'Failed to update email');
+    } finally {
+      setSavingEmail(false);
+    }
   }
 
   // ── Bulk delete by role ────────────────────────────────────────────────────
@@ -310,6 +332,34 @@ export default function AdminUsers() {
         </div>
       )}
 
+      {/* Edit email modal */}
+      {emailTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900">Edit email</h2>
+              <button onClick={() => setEmailTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-1">{emailTarget.name}</p>
+            <input
+              type="email"
+              className="input mb-2"
+              value={emailValue}
+              onChange={e => setEmailValue(e.target.value)}
+              placeholder="name@example.com"
+            />
+            <p className="text-xs text-gray-400 mb-3">Set a real email so this person can sign in with Google.</p>
+            {emailError && <p className="text-sm text-red-600 mb-3">{emailError}</p>}
+            <div className="flex gap-2">
+              <button onClick={saveEmail} disabled={savingEmail || !emailValue.trim()} className="btn-primary flex-1">
+                {savingEmail ? 'Saving…' : 'Save'}
+              </button>
+              <button onClick={() => setEmailTarget(null)} className="btn-secondary flex-1">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirmation modal */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -391,6 +441,13 @@ export default function AdminUsers() {
                         <span className="text-xs text-gray-300">—</span>
                       ) : (
                         <div className="flex gap-1.5 justify-end">
+                          {/* Edit email */}
+                          <button
+                            onClick={() => { setEmailTarget(u); setEmailValue(u.email || ''); setEmailError(''); }}
+                            className="text-xs font-medium py-1 px-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                          >
+                            Email
+                          </button>
                           {/* Suspend / Reactivate */}
                           <button
                             onClick={() => handleSuspend(u)}

@@ -184,6 +184,27 @@ export async function bulkImport(req, res) {
   res.json({ imported, skipped });
 }
 
+// Update a user's email (e.g. to replace a placeholder so they can Google-login)
+export async function updateUserEmail(req, res) {
+  const { id } = req.params;
+  const email = String(req.body.email || '').trim();
+  if (!email || !/^\S+@\S+\.\S+$/.test(email))
+    return res.status(400).json({ error: 'A valid email is required' });
+  try {
+    const r = await query(
+      `UPDATE users SET email = $1 WHERE id = $2 RETURNING id, name, email, role, status`,
+      [email, id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'User not found' });
+    await logAudit(req.user.id, 'update_user_email', 'user', id, { email });
+    res.json(r.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'That email is already in use' });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
 // ── Participant import (course sheet → auto-enroll into subject) ────────────
 
 // Map a free-text course name + language to a seeded subject code (GF/BS/BV + number + -E/-H/-T)

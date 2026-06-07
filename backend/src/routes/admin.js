@@ -14,6 +14,7 @@ router.get('/pending-users', ...guard, adminCtrl.getPendingUsers);
 router.patch('/users/:id/approve',  ...guard, adminCtrl.approveUser);
 router.patch('/users/:id/reject',   ...guard, adminCtrl.rejectUser);
 router.patch('/users/:id/suspend',  ...guard, adminCtrl.suspendUser);
+router.patch('/users/:id/email',    ...guard, adminCtrl.updateUserEmail);
 router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
