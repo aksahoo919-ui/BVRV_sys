@@ -140,17 +140,23 @@ export async function bulkImport(req, res) {
   const lines = csv.split('\n').map((l) => l.trim()).filter(Boolean);
   const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
 
-  const nameIdx = header.indexOf('name');
-  const emailIdx = header.indexOf('email');
-  const roleIdx = header.indexOf('role');
-  // Optional phone column — accepts "phone" or "phone number"
-  const phoneIdx = header.indexOf('phone') !== -1 ? header.indexOf('phone') : header.indexOf('phone number');
+  const idx = (...names) => {
+    for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; }
+    return -1;
+  };
+  const nameIdx = idx('name');
+  const emailIdx = idx('email');
+  const roleIdx = idx('role');
+  const phoneIdx = idx('phone', 'phone number', 'mobile number');
+  // Optional: auto-enroll a student into a subject when course + language are given
+  const courseIdx = idx('course name', 'course');
+  const langIdx = idx('language of course', 'language');
 
   if (nameIdx === -1 || emailIdx === -1 || roleIdx === -1) {
     return res.status(400).json({ error: 'CSV must have columns: name, email, role' });
   }
 
-  let imported = 0;
+  let imported = 0, enrolled = 0;
   const skipped = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -159,6 +165,8 @@ export async function bulkImport(req, res) {
     const email = cols[emailIdx];
     const role = cols[roleIdx]?.toLowerCase();
     const phone = phoneIdx !== -1 ? (cols[phoneIdx] || null) : null;
+    const courseName = courseIdx !== -1 ? cols[courseIdx] : '';
+    const language = langIdx !== -1 ? cols[langIdx] : '';
 
     if (!name || !email || !['student', 'teacher', 'mentor'].includes(role)) {
       skipped.push({ row: i + 1, reason: 'Invalid data', email });
@@ -166,22 +174,46 @@ export async function bulkImport(req, res) {
     }
 
     try {
-      const exists = await query('SELECT id FROM users WHERE email = $1', [email]);
-      if (exists.rows.length > 0) {
-        skipped.push({ row: i + 1, reason: 'Email already exists', email });
-        continue;
+      // Find or create the user (existing users are reused so they can be enrolled)
+      let userR = await query('SELECT id FROM users WHERE email = $1', [email]);
+      let userId;
+      if (userR.rows.length) {
+        userId = userR.rows[0].id;
+        if (phone) await query('UPDATE users SET phone = COALESCE(phone, $1) WHERE id = $2', [phone, userId]);
+      } else {
+        userId = uuidv4();
+        await query(
+          `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1, $2, $3, $4, $5, 'active')`,
+          [userId, name, email, role, phone]
+        );
+        imported++;
       }
-      await query(
-        `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1, $2, $3, $4, $5, 'active')`,
-        [uuidv4(), name, email, role, phone]
-      );
-      imported++;
+
+      // Optional enrollment (students only) when course + language are provided
+      if (role === 'student' && courseName && language) {
+        const code = resolveSubjectCode(courseName, language);
+        if (!code) {
+          skipped.push({ row: i + 1, reason: `Could not map course "${courseName}" / "${language}"`, email });
+        } else {
+          const subjR = await query('SELECT id FROM subjects WHERE code = $1', [code]);
+          if (!subjR.rows.length) {
+            skipped.push({ row: i + 1, reason: `Subject ${code} not found`, email });
+          } else {
+            const enr = await query(
+              `INSERT INTO class_enrollments (id, subject_id, student_id)
+               VALUES ($1,$2,$3) ON CONFLICT (subject_id, student_id) DO NOTHING RETURNING id`,
+              [uuidv4(), subjR.rows[0].id, userId]
+            );
+            if (enr.rows.length) enrolled++;
+          }
+        }
+      }
     } catch (err) {
       skipped.push({ row: i + 1, reason: err.message, email });
     }
   }
 
-  res.json({ imported, skipped });
+  res.json({ imported, enrolled, skipped });
 }
 
 // Update a user's email (e.g. to replace a placeholder so they can Google-login)

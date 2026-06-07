@@ -82,7 +82,11 @@ export default function AdminUsers() {
   }
 
   function downloadTemplate() {
-    const csv = 'name,email,role,phone number\nJohn Doe,john@example.com,student,9876543210\nJane Smith,jane@example.com,teacher,9876500000';
+    const csv =
+      'name,email,role,phone number,course name,language\n' +
+      'John Doe,john@example.com,student,9876543210,Foundation 1,English\n' +
+      'Ravi Kumar,ravi@example.com,student,9876511111,Bhakti Shastri 2,Telugu\n' +
+      'Jane Smith,jane@example.com,teacher,9876500000,,';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -243,12 +247,13 @@ export default function AdminUsers() {
               <h2 className="font-bold text-gray-900">Bulk Import Users</h2>
               <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <p className="text-sm text-gray-500 mb-3">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number</code> <span className="text-gray-400">(phone optional)</span></p>
+            <p className="text-sm text-gray-500 mb-1">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number, course name, language</code></p>
+            <p className="text-xs text-gray-400 mb-3">phone, course name &amp; language are optional. If a student row has course + language, they're auto-enrolled into that subject.</p>
             <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
               <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                {importResult.error || `Imported: ${importResult.imported} | Skipped: ${importResult.skipped?.length || 0}`}
+                {importResult.error || `Imported: ${importResult.imported}${importResult.enrolled != null ? ` | Enrolled: ${importResult.enrolled}` : ''} | Skipped: ${importResult.skipped?.length || 0}`}
               </div>
             )}
             <div className="flex gap-2">
