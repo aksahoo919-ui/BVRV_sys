@@ -84,6 +84,7 @@ router.delete('/timetable/:id', ...guard, acad.deleteTimetableSlot);
 router.get('/mentors', ...guard, acad.getMentorsList);
 router.get('/subjects/:subject_id/mentor-assignments', ...guard, acad.getSubjectMentorAssignments);
 router.post('/class-mentors', ...guard, acad.assignClassMentor);
+router.post('/class-mentors/import', ...guard, upload.single('file'), acad.bulkImportClassMentors);
 
 router.get('/results', ...guard, acad.getResults);
 router.get('/results/:semester_id', ...guard, (req, res, next) => {

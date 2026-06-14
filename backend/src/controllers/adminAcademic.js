@@ -418,6 +418,65 @@ export async function assignClassMentor(req, res) {
   }
 }
 
+// Import student→mentor assignments for a subject from a CSV (student name, mentor name)
+export async function bulkImportClassMentors(req, res) {
+  const { subject_id } = req.body;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  if (!req.file) return res.status(400).json({ error: 'CSV file required' });
+
+  const csv = req.file.buffer.toString('utf8');
+  const lines = csv.split('\n').map(l => l.replace(/\r$/, '').trim()).filter(Boolean);
+  if (lines.length < 2) return res.status(400).json({ error: 'CSV has no data rows' });
+
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const idx = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; };
+  const studentIdx = idx('student name', 'student');
+  const mentorIdx = idx('mentor name', 'mentor');
+  if (studentIdx === -1 || mentorIdx === -1)
+    return res.status(400).json({ error: 'CSV must have columns: student name, mentor name' });
+
+  // Students enrolled in this subject, keyed by lowercased name
+  const studR = await query(`
+    SELECT u.id, u.name FROM class_enrollments ce
+    JOIN users u ON u.id = ce.student_id
+    WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL`, [subject_id]);
+  const studentMap = {};
+  for (const s of studR.rows) { const k = s.name.trim().toLowerCase(); (studentMap[k] = studentMap[k] || []).push(s.id); }
+
+  // Mentors (primary or secondary), keyed by lowercased name
+  const mentR = await query(
+    `SELECT id, name FROM users WHERE (role='mentor' OR secondary_role='mentor') AND status='active'`
+  );
+  const mentorMap = {};
+  for (const m of mentR.rows) { const k = m.name.trim().toLowerCase(); (mentorMap[k] = mentorMap[k] || []).push(m.id); }
+
+  let assigned = 0;
+  const skipped = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim());
+    const sName = cols[studentIdx];
+    const mName = cols[mentorIdx];
+    if (!sName || !mName) { skipped.push({ row: i + 1, reason: 'Missing student or mentor name' }); continue; }
+    const sIds = studentMap[sName.toLowerCase()];
+    const mIds = mentorMap[mName.toLowerCase()];
+    if (!sIds) { skipped.push({ row: i + 1, reason: `Student "${sName}" not enrolled in this subject` }); continue; }
+    if (sIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple students named "${sName}"` }); continue; }
+    if (!mIds) { skipped.push({ row: i + 1, reason: `Mentor "${mName}" not found` }); continue; }
+    if (mIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple mentors named "${mName}"` }); continue; }
+    try {
+      await query(
+        `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id=$3, assigned_at=NOW()`,
+        [uuidv4(), subject_id, mIds[0], sIds[0]]
+      );
+      assigned++;
+    } catch (err) { skipped.push({ row: i + 1, reason: err.message }); }
+  }
+  await logAudit(req.user.id, 'import_class_mentors', 'subject', subject_id, { assigned });
+  res.json({ assigned, skipped });
+}
+
 // ── Rank List ─────────────────────────────────────────────────────────────
 
 export async function getRankList(req, res) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../../utils/api';
 
 function Spinner() {
@@ -14,6 +14,12 @@ export default function AdminClassMentors() {
   const [error, setError] = useState('');
   const [savingId, setSavingId] = useState(null);
   const [savedId, setSavedId] = useState(null);
+
+  // CSV import
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const importFileRef = useRef();
 
   useEffect(() => {
     Promise.all([api.get('/admin/subjects'), api.get('/admin/mentors')])
@@ -50,14 +56,49 @@ export default function AdminClassMentors() {
     finally { setSavingId(null); }
   }
 
+  async function handleImport() {
+    const file = importFileRef.current?.files[0];
+    if (!file || !subjectId) return;
+    setImporting(true); setImportResult(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('subject_id', subjectId);
+      const r = await api.post('/admin/class-mentors/import', form);
+      setImportResult(r.data);
+      load();
+    } catch (err) {
+      setImportResult({ error: err.response?.data?.error || 'Import failed' });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function downloadImportTemplate() {
+    const csv = 'student name,mentor name\nManoj Kumar Sahoo,Vimal Das\nMahesh Pupala,Gita Devi';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'class_mentors_template.csv'; a.click();
+  }
+
   const subject = subjects.find(s => String(s.id) === subjectId);
   const assignedCount = rows.filter(r => r.mentor_id).length;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Class Mentors</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Assign a mentor to each student in a class. A class can have many mentors.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Class Mentors</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Assign a mentor to each student in a class. A class can have many mentors.</p>
+        </div>
+        <button
+          onClick={() => { setShowImport(true); setImportResult(null); }}
+          disabled={!subjectId}
+          className="btn-primary text-sm disabled:opacity-50"
+        >
+          Import CSV
+        </button>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
@@ -118,6 +159,43 @@ export default function AdminClassMentors() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Import modal */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900">Import mentor assignments</h2>
+              <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-1">
+              For <span className="font-medium text-gray-700">{subject ? `${subject.code} — ${subject.name}` : 'this class'}</span>.
+              Columns: <code className="bg-gray-100 px-1 rounded text-xs">student name, mentor name</code>.
+            </p>
+            <p className="text-xs text-gray-400 mb-3">Names are matched against students enrolled in this class and active mentors.</p>
+            <button onClick={downloadImportTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
+            <input ref={importFileRef} type="file" accept=".csv" className="input mb-3" />
+            {importResult && (
+              <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                {importResult.error
+                  ? importResult.error
+                  : `Assigned: ${importResult.assigned} · Skipped: ${importResult.skipped?.length || 0}`}
+                {importResult.skipped?.length > 0 && (
+                  <ul className="mt-2 text-xs text-red-600 max-h-32 overflow-y-auto list-disc list-inside">
+                    {importResult.skipped.slice(0, 20).map((s, i) => (
+                      <li key={i}>Row {s.row}: {s.reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={handleImport} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
+              <button onClick={() => setShowImport(false)} className="btn-secondary flex-1">Close</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
