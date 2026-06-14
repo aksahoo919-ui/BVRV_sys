@@ -198,11 +198,19 @@ export async function bulkImport(req, res) {
 
     try {
       // Find or create the user (existing users are reused so they can be enrolled)
-      let userR = await query('SELECT id FROM users WHERE email = $1', [email]);
+      let userR = await query('SELECT id, role, secondary_role FROM users WHERE email = $1', [email]);
       let userId;
       if (userR.rows.length) {
         userId = userR.rows[0].id;
+        const existingRole = userR.rows[0].role;
         if (phone) await query('UPDATE users SET phone = COALESCE(phone, $1) WHERE id = $2', [phone, userId]);
+        // Two rows for the same person with teacher + mentor → grant dual role automatically
+        if (role !== existingRole &&
+            ['teacher', 'mentor'].includes(role) &&
+            ['teacher', 'mentor'].includes(existingRole) &&
+            userR.rows[0].secondary_role !== role) {
+          await query('UPDATE users SET secondary_role = $1 WHERE id = $2', [role, userId]);
+        }
       } else {
         userId = uuidv4();
         await query(

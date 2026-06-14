@@ -23,9 +23,6 @@ export default function AdminUsers() {
   const [search, setSearch]         = useState('');
 
   // Participant import (course sheet)
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [participantResult, setParticipantResult] = useState(null);
-  const [participantImporting, setParticipantImporting] = useState(false);
 
   // Bulk delete by role
   const [showBulkDelete, setShowBulkDelete] = useState(false);
@@ -51,7 +48,6 @@ export default function AdminUsers() {
   const [loadError, setLoadError]       = useState('');
 
   const fileRef = useRef();
-  const participantFileRef = useRef();
 
   async function load() {
     setLoadError('');
@@ -96,37 +92,6 @@ export default function AdminUsers() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'import_template.csv'; a.click();
-  }
-
-  // ── Participant import (course sheet) ──────────────────────────────────────
-  async function handleParticipantImport() {
-    const file = participantFileRef.current?.files[0];
-    if (!file) return;
-    setParticipantImporting(true);
-    setParticipantResult(null);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const r = await api.post('/admin/users/import-participants', form);
-      setParticipantResult(r.data);
-      load();
-    } catch (err) {
-      setParticipantResult({ error: err.response?.data?.error || 'Import failed' });
-    } finally {
-      setParticipantImporting(false);
-    }
-  }
-
-  function downloadParticipantTemplate() {
-    const csv =
-      'S.No,Course Name,Name,BV Leader Name,Mobile Number,Gender,Email ID,Language of Course\n' +
-      '1,Foundation 1,Manoj Kumar Sahoo,Vimal Pr Ji,9494088416,Male,sahoom39@gmail.com,English\n' +
-      '2,Bhakthi Shastri 2,Tapaswi R,Vimal Pr Ji,8143477107,Female,NA,Telugu\n' +
-      '3,Bhakti Vaibhav 1,Nandakishore Mula,Vimal Pr Ji,8897066793,Male,nandakishore475@gmail.com,English';
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'participant_template.csv'; a.click();
   }
 
   // ── Edit email ─────────────────────────────────────────────────────────────
@@ -223,8 +188,7 @@ export default function AdminUsers() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-gray-900">All Users</h1>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => { setShowParticipants(true); setParticipantResult(null); }} className="btn-primary text-sm">Import Participants</button>
-          <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">Bulk Import</button>
+          <button onClick={() => setShowImport(true)} className="btn-primary text-sm">Bulk Import</button>
           <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Bulk Delete</button>
         </div>
       </div>
@@ -269,7 +233,7 @@ export default function AdminUsers() {
               <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number, course name, language</code></p>
-            <p className="text-xs text-gray-400 mb-3">phone, course name &amp; language are optional. If a student row has course + language, they're auto-enrolled into that subject.</p>
+            <p className="text-xs text-gray-400 mb-3">phone, course name &amp; language are optional. If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and mentor automatically get a dual role.</p>
             <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
@@ -280,44 +244,6 @@ export default function AdminUsers() {
             <div className="flex gap-2">
               <button onClick={handleImport} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
               <button onClick={() => setShowImport(false)} className="btn-secondary flex-1">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Participant import modal */}
-      {showParticipants && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Import Participants</h2>
-              <button onClick={() => { setShowParticipants(false); setParticipantResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            <p className="text-sm text-gray-500 mb-2">
-              Upload the registration sheet. Columns: <code className="bg-gray-100 px-1 rounded text-xs">Course Name, Name, Mobile Number, Email ID, Language of Course</code>.
-            </p>
-            <p className="text-xs text-gray-400 mb-3">
-              Each participant is created as a student and auto-enrolled into the right subject (course + number + language). Rows with no email get a placeholder so they can still be tracked.
-            </p>
-            <button onClick={downloadParticipantTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
-            <input ref={participantFileRef} type="file" accept=".csv" className="input mb-3" />
-            {participantResult && (
-              <div className={`text-sm mb-3 p-3 rounded-lg ${participantResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                {participantResult.error
-                  ? participantResult.error
-                  : `New students: ${participantResult.created} · Enrolled: ${participantResult.enrolled} · Skipped: ${participantResult.skipped?.length || 0}`}
-                {participantResult.skipped?.length > 0 && (
-                  <ul className="mt-2 text-xs text-red-600 max-h-32 overflow-y-auto list-disc list-inside">
-                    {participantResult.skipped.slice(0, 20).map((s, i) => (
-                      <li key={i}>Row {s.row}: {s.reason}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button onClick={handleParticipantImport} disabled={participantImporting} className="btn-primary flex-1">{participantImporting ? 'Importing…' : 'Import'}</button>
-              <button onClick={() => setShowParticipants(false)} className="btn-secondary flex-1">Close</button>
             </div>
           </div>
         </div>
