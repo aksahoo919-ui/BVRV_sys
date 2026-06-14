@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 import StatCard from '../../components/dashboard/StatCard';
 import AlertBanner from '../../components/dashboard/AlertBanner';
+import RoleSwitcher from '../../components/RoleSwitcher';
 
 // ── timeAgo util ────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -153,10 +154,11 @@ export default function MentorDashboard() {
         <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
           {displayName[0]?.toUpperCase()}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold text-gray-900 leading-tight">{displayName}</h1>
           {user?.email && <p className="text-xs text-gray-500">{user.email}</p>}
         </div>
+        <RoleSwitcher />
       </div>
 
       {/* ── Alert banner ── */}

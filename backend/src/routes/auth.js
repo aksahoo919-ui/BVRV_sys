@@ -2,6 +2,7 @@ import { Router } from 'express';
 import passport from '../config/passport.js';
 import { issueJWT } from '../utils/jwt.js';
 import { query } from '../config/db.js';
+import { requireAuth, requireActive } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -139,6 +140,26 @@ router.post('/select-role', async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: 'Server error' });
   }
+});
+
+// ── Switch active role (teacher ↔ mentor) ──────────────────────────────────
+// Issues a fresh token with the role swapped so the user can use the other
+// portal. Only teacher/mentor can switch.
+router.post('/switch-role', requireAuth, requireActive, (req, res) => {
+  const swap = { teacher: 'mentor', mentor: 'teacher' };
+  const target = swap[req.user.role];
+  if (!target) return res.status(403).json({ error: 'Only teachers and mentors can switch roles' });
+
+  const token = issueJWT({
+    id: req.user.id,
+    email: req.user.email,
+    name: req.user.name,
+    role: target,
+    secondary_role: req.user.role,
+    status: req.user.status,
+    avatar_url: req.user.avatar_url,
+  });
+  res.json({ token, role: target });
 });
 
 export default router;
