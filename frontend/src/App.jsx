@@ -11,6 +11,7 @@ import OnboardingPage from './pages/auth/OnboardingPage';
 import PendingPage from './pages/auth/PendingPage';
 import SuspendedPage from './pages/auth/SuspendedPage';
 import NotAdminPage from './pages/auth/NotAdminPage';
+import RoleSelectPage from './pages/auth/RoleSelectPage';
 
 // ── Admin pages ───────────────────────────────────────────────────────────
 import AdminLayout from './pages/admin/AdminLayout';
@@ -103,6 +104,7 @@ export default function App() {
       <Route path="/auth/pending" element={<PendingPage />} />
       <Route path="/auth/suspended" element={<SuspendedPage />} />
       <Route path="/auth/not-admin" element={<NotAdminPage />} />
+      <Route path="/auth/role-select" element={<RoleSelectPage />} />
       <Route path="/auth/error" element={<SuspendedPage message="Authentication failed. Please try again." />} />
 
       {/* ── Admin ── */}

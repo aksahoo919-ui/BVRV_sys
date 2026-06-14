@@ -21,6 +21,7 @@ const migrations = [
   '010_class_mentors_attendance.sql',
   '011_student_contacts.sql',
   '012_seed_courses_subjects.sql',
+  '013_secondary_role.sql',
 ];
 
 async function migrate() {

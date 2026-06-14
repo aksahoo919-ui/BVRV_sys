@@ -39,6 +39,11 @@ export default function AdminUsers() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [emailError, setEmailError] = useState('');
 
+  // Dual role
+  const [dualTarget, setDualTarget] = useState(null); // user object
+  const [savingDual, setSavingDual] = useState(false);
+  const [dualError, setDualError] = useState('');
+
   // Confirm-delete modal
   const [deleteTarget, setDeleteTarget] = useState(null); // user object
   const [deleting, setDeleting]         = useState(false);
@@ -137,6 +142,22 @@ export default function AdminUsers() {
       setEmailError(err.response?.data?.error || 'Failed to update email');
     } finally {
       setSavingEmail(false);
+    }
+  }
+
+  // ── Dual role ─────────────────────────────────────────────────────────────
+  async function saveDual(secondary_role) {
+    if (!dualTarget) return;
+    setSavingDual(true);
+    setDualError('');
+    try {
+      await api.patch(`/admin/users/${dualTarget.id}/secondary-role`, { secondary_role });
+      setDualTarget(null);
+      load();
+    } catch (err) {
+      setDualError(err.response?.data?.error || 'Failed to update');
+    } finally {
+      setSavingDual(false);
     }
   }
 
@@ -365,6 +386,59 @@ export default function AdminUsers() {
         </div>
       )}
 
+      {/* Dual role modal */}
+      {dualTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900">Dual role assignment</h2>
+              <button onClick={() => setDualTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-1">{dualTarget.name}</p>
+            <p className="text-xs text-gray-400 mb-4">
+              Primary role: <span className="font-medium text-gray-700 capitalize">{dualTarget.role}</span>
+              {dualTarget.secondary_role && (
+                <> · Current secondary: <span className="font-medium text-gray-700 capitalize">{dualTarget.secondary_role}</span></>
+              )}
+            </p>
+            {dualError && <p className="text-sm text-red-600 mb-3">{dualError}</p>}
+            <div className="space-y-2">
+              {dualTarget.role === 'teacher' && (
+                <button
+                  onClick={() => saveDual('mentor')}
+                  disabled={savingDual || dualTarget.secondary_role === 'mentor'}
+                  className="w-full text-left px-4 py-3 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <span className="font-medium text-emerald-700">Add Mentor role</span>
+                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and Mentor dashboards.</p>
+                </button>
+              )}
+              {dualTarget.role === 'mentor' && (
+                <button
+                  onClick={() => saveDual('teacher')}
+                  disabled={savingDual || dualTarget.secondary_role === 'teacher'}
+                  className="w-full text-left px-4 py-3 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <span className="font-medium text-blue-700">Add Teacher role</span>
+                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and Mentor dashboards.</p>
+                </button>
+              )}
+              {dualTarget.secondary_role && (
+                <button
+                  onClick={() => saveDual(null)}
+                  disabled={savingDual}
+                  className="w-full text-left px-4 py-3 rounded-lg border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
+                >
+                  <span className="font-medium text-red-600">Remove secondary role</span>
+                  <p className="text-xs text-gray-400 mt-0.5">User will only access their primary role.</p>
+                </button>
+              )}
+            </div>
+            <button onClick={() => setDualTarget(null)} className="btn-secondary w-full mt-3">Close</button>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirmation modal */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -433,7 +507,12 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{u.role || '—'}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{u.role || '—'}</span>
+                        {u.secondary_role && (
+                          <span className={`badge ${ROLE_COLORS[u.secondary_role] || 'bg-gray-100 text-gray-600'} opacity-70`}>+{u.secondary_role}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`badge ${STATUS_COLORS[u.status] || 'bg-gray-100 text-gray-500'}`}>{u.status}</span>
@@ -453,6 +532,19 @@ export default function AdminUsers() {
                           >
                             Email
                           </button>
+                          {/* Dual role — only for teacher/mentor */}
+                          {(u.role === 'teacher' || u.role === 'mentor') && (
+                            <button
+                              onClick={() => { setDualTarget(u); setDualError(''); }}
+                              className={`text-xs font-medium py-1 px-2 rounded-md border transition-colors ${
+                                u.secondary_role
+                                  ? 'border-teal-300 text-teal-700 hover:bg-teal-50'
+                                  : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                              }`}
+                            >
+                              Dual
+                            </button>
+                          )}
                           {/* Suspend / Reactivate */}
                           <button
                             onClick={() => handleSuspend(u)}

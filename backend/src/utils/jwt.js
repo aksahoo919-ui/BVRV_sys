@@ -8,6 +8,7 @@ export function issueJWT(user) {
       email: user.email,
       name: user.name,
       role: user.role,
+      secondary_role: user.secondary_role || null,
       status: user.status,
       avatar_url: user.avatar_url,
     },

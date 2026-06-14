@@ -22,6 +22,12 @@ export default function AuthCallback() {
       const decoded = jwtDecode(token);
       login(token);
 
+      // Dual-role users pick their active view first
+      if (decoded.secondary_role) {
+        navigate('/auth/role-select', { replace: true });
+        return;
+      }
+
       if (decoded.role === 'admin') navigate('/admin', { replace: true });
       else if (decoded.role === 'teacher') navigate('/teacher', { replace: true });
       else if (decoded.role === 'mentor') navigate('/mentor', { replace: true });

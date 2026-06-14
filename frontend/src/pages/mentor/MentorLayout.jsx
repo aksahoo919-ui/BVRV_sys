@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
 const navItems = [
   { to: '/mentor/home',       label: 'Dashboard',  icon: HomeIcon },
@@ -16,6 +18,20 @@ const navItems = [
 
 export default function MentorLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
+
+  async function switchToTeacher() {
+    setSwitching(true);
+    try {
+      const r = await api.post('/auth/select-role', { role: 'teacher' });
+      login(r.data.token);
+      navigate('/teacher', { replace: true });
+    } catch { /* ignore */ } finally {
+      setSwitching(false);
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -66,6 +82,21 @@ export default function MentorLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {user?.secondary_role === 'teacher' && (
+          <div className="px-3 py-3 border-t border-emerald-700 flex-shrink-0">
+            <button
+              onClick={switchToTeacher}
+              disabled={switching}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-emerald-200 hover:bg-emerald-700 transition-colors disabled:opacity-60"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              <span>{switching ? 'Switching…' : 'Switch to Teacher View'}</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Main content */}

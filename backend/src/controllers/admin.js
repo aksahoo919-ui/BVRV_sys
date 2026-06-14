@@ -21,10 +21,33 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, status, avatar_url, created_at
+      `SELECT id, name, email, role, secondary_role, status, avatar_url, created_at
        FROM users ORDER BY created_at DESC`
     );
     res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+export async function setSecondaryRole(req, res) {
+  const { secondary_role } = req.body;
+  const allowed = ['teacher', 'mentor', null];
+  if (!allowed.includes(secondary_role)) {
+    return res.status(400).json({ error: 'secondary_role must be teacher, mentor, or null' });
+  }
+  try {
+    const result = await query(
+      `UPDATE users SET secondary_role=$1 WHERE id=$2
+       AND role IN ('teacher','mentor')
+       RETURNING id, name, email, role, secondary_role, status`,
+      [secondary_role, req.params.id]
+    );
+    if (!result.rows.length) {
+      return res.status(404).json({ error: 'User not found or role not eligible for dual assignment' });
+    }
+    return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
