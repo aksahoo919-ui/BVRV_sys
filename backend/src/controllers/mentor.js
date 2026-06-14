@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateGrade } from '../services/gradeService.js';
+import { generatePin } from '../utils/pin.js';
 
 // A student is "mine" if I mentor them in at least one class.
 async function isMyStudent(mentorId, studentId) {
@@ -350,6 +351,37 @@ export async function getMentorSessionAttendance(req, res) {
   res.json({ session, roster: r.rows });
 }
 
+// Open a code-based (PIN) attendance session — students submit the PIN to mark present.
+export async function openMentorCodeSession(req, res) {
+  const { subject_id, title, session_date } = req.body;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  const owns = await query(
+    'SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 AND subject_id=$2 LIMIT 1',
+    [req.user.id, subject_id]
+  );
+  if (!owns.rows.length) return res.status(403).json({ error: 'You are not a mentor for this class' });
+
+  const { pin } = generatePin(subject_id, req.user.id);
+  const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5-minute window
+  const id = uuidv4();
+  await query(
+    `INSERT INTO mentor_sessions (id, subject_id, mentor_id, title, session_date, pin_display, expires_at, closed)
+     VALUES ($1,$2,$3,$4,COALESCE($5, CURRENT_DATE),$6,$7,false)`,
+    [id, subject_id, req.user.id, title || 'Code attendance', session_date || null, pin, expires_at.toISOString()]
+  );
+  res.status(201).json({ session_id: id, pin, expires_at });
+}
+
+export async function closeMentorCodeSession(req, res) {
+  const { id } = req.params;
+  const r = await query(
+    'UPDATE mentor_sessions SET closed=true WHERE id=$1 AND mentor_id=$2 RETURNING id',
+    [id, req.user.id]
+  );
+  if (!r.rows.length) return res.status(404).json({ error: 'Session not found' });
+  res.json({ message: 'Closed' });
+}
+
 // Bulk upsert manual attendance for a session
 export async function markMentorAttendance(req, res) {
   const { id } = req.params;
@@ -503,18 +535,22 @@ export async function getStudentMarksDetail(req, res) {
   const r = await query(`
     SELECT ay.id AS year_id, ay.label AS year_label, ay.start_date,
            s.id AS subject_id, s.code, s.name,
-           m.assessment_type, m.scored_marks, m.max_marks, m.assessed_on
+           m.semester_no, m.assessment_type, m.scored_marks, m.max_marks, m.assessed_on
     FROM marks m
     JOIN subjects s ON s.id = m.subject_id
     LEFT JOIN academic_years ay ON ay.id = m.academic_year_id
     WHERE m.student_id = $1
-    ORDER BY ay.start_date DESC NULLS LAST, s.name, m.assessment_type
+    ORDER BY ay.start_date DESC NULLS LAST, m.semester_no, s.name, m.assessment_type
   `, [student_id]);
 
   const yearMap = {};
   for (const row of r.rows) {
-    const yKey = row.year_id || 'none';
-    if (!yearMap[yKey]) yearMap[yKey] = { label: row.year_label || 'Marks', _subjects: {} };
+    const sem = row.semester_no || 1;
+    const yKey = `${row.year_id || 'none'}|${sem}`;
+    if (!yearMap[yKey]) {
+      const yl = row.year_label ? ` · ${row.year_label}` : '';
+      yearMap[yKey] = { label: `Semester ${sem}${yl}`, _subjects: {} };
+    }
     const sKey = row.subject_id;
     if (!yearMap[yKey]._subjects[sKey]) {
       yearMap[yKey]._subjects[sKey] = {

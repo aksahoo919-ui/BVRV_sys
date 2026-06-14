@@ -60,11 +60,12 @@ export default function TeacherMarksHistory() {
     finally { setSavingId(null); }
   }
 
-  // Group marks by assessment_type
+  // Group marks by semester + assessment_type
   const groups = {};
   for (const m of marks) {
-    const key = m.assessment_type || 'Other';
-    if (!groups[key]) groups[key] = { type: key, assessed_on: m.assessed_on, max_marks: m.max_marks, rows: [] };
+    const sem = m.semester_no || 1;
+    const key = `${sem}|${m.assessment_type || 'Other'}`;
+    if (!groups[key]) groups[key] = { type: `Sem ${sem} · ${m.assessment_type || 'Other'}`, semester_no: sem, assessed_on: m.assessed_on, max_marks: m.max_marks, rows: [] };
     groups[key].rows.push(m);
   }
   const grouped = Object.values(groups).sort((a, b) => a.type.localeCompare(b.type));

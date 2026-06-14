@@ -29,6 +29,10 @@ export default function MentorAttendance() {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
 
+  // code-based attendance
+  const [code, setCode] = useState(null); // { session_id, pin, expires_at }
+  const [generating, setGenerating] = useState(false);
+
   useEffect(() => {
     api.get('/mentor/subjects').then(r => {
       setSubjects(r.data);
@@ -59,6 +63,17 @@ export default function MentorAttendance() {
       openSession(r.data.id);
     } catch (e) { setError(e.response?.data?.error || 'Failed to create session'); }
     finally { setCreating(false); }
+  }
+
+  async function generateCode() {
+    if (!subjectId) return;
+    setGenerating(true); setError(''); setCode(null);
+    try {
+      const r = await api.post('/mentor/sessions/open-code', { subject_id: subjectId, title: title || null, session_date: date });
+      setCode(r.data);
+      await loadSessions();
+    } catch (e) { setError(e.response?.data?.error || 'Failed to generate code'); }
+    finally { setGenerating(false); }
   }
 
   async function openSession(sessionId) {
@@ -123,9 +138,27 @@ export default function MentorAttendance() {
           <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <button type="submit" className="btn-primary" disabled={!subjectId || creating}>
-          {creating ? 'Creating…' : '+ New Session'}
+          {creating ? 'Creating…' : '+ Manual Session'}
+        </button>
+        <button type="button" onClick={generateCode} className="btn-secondary" disabled={!subjectId || generating}>
+          {generating ? 'Generating…' : '🔢 Generate Code'}
         </button>
       </form>
+
+      {/* Live code display */}
+      {code && (
+        <div className="card bg-emerald-50 border border-emerald-200 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-xs text-emerald-700 uppercase tracking-wider font-semibold">Attendance code (5 min)</p>
+            <p className="text-4xl font-mono font-bold text-emerald-800 tracking-widest mt-1">{code.pin}</p>
+            <p className="text-xs text-emerald-600 mt-1">Students enter this PIN in their Mark Attendance screen.</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => openSession(code.session_id)} className="btn-secondary text-sm">View who's present →</button>
+            <button onClick={() => setCode(null)} className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">Dismiss</button>
+          </div>
+        </div>
+      )}
 
       {/* Marking panel */}
       {activeSession && (

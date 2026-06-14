@@ -256,6 +256,7 @@ export async function uploadMarks(req, res) {
   // The academic year is derived from the subject itself, NOT the client, so marks
   // always belong to the subject's own academic year (prevents cross-year mixing).
   const { subject_id, assessment_type, max_marks, assessed_on, entries } = req.body;
+  const semester_no = [1, 2].includes(Number(req.body.semester)) ? Number(req.body.semester) : 1;
   if (!subject_id || !assessment_type || !max_marks || !Array.isArray(entries))
     return res.status(400).json({ error: 'Missing required fields' });
 
@@ -275,15 +276,15 @@ export async function uploadMarks(req, res) {
   for (const e of entries) {
     if (!e.student_id || e.scored_marks == null) continue;
     await query(
-      `INSERT INTO marks (id,student_id,subject_id,academic_year_id,assessment_type,max_marks,scored_marks,assessed_on,uploaded_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       ON CONFLICT (student_id,subject_id,academic_year_id,assessment_type)
-       DO UPDATE SET scored_marks=$7, max_marks=$6, assessed_on=$8, uploaded_by=$9, uploaded_at=NOW()`,
-      [uuidv4(), e.student_id, subject_id, academic_year_id, assessment_type, max_marks, e.scored_marks, assessed_on || null, req.user.id]
+      `INSERT INTO marks (id,student_id,subject_id,academic_year_id,semester_no,assessment_type,max_marks,scored_marks,assessed_on,uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       ON CONFLICT (student_id,subject_id,academic_year_id,semester_no,assessment_type)
+       DO UPDATE SET scored_marks=$8, max_marks=$7, assessed_on=$9, uploaded_by=$10, uploaded_at=NOW()`,
+      [uuidv4(), e.student_id, subject_id, academic_year_id, semester_no, assessment_type, max_marks, e.scored_marks, assessed_on || null, req.user.id]
     );
     inserted++;
   }
-  await logAudit(req.user.id, 'upload_marks', 'marks', null, { subject_id, academic_year_id, assessment_type, count: inserted });
+  await logAudit(req.user.id, 'upload_marks', 'marks', null, { subject_id, academic_year_id, semester_no, assessment_type, count: inserted });
   res.json({ saved: inserted });
 }
 

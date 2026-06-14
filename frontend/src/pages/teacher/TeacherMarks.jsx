@@ -28,7 +28,7 @@ function StepBadge({ n, active, done, label }) {
 export default function TeacherMarks() {
   const [subjects, setSubjects] = useState([]);
   const [ctx, setCtx] = useState({
-    subject_id: '',
+    subject_id: '', semester: 1,
     assessment_kind: 'OBE', assessment_number: '', assessed_on: '', max_marks: '',
   });
   const [step, setStep] = useState(1);
@@ -66,7 +66,7 @@ export default function TeacherMarks() {
         .then(r => r.data).catch(() => []);
       const marksMap = {};
       for (const m of existing) {
-        if (m.assessment_type === assessmentType) marksMap[m.student_id] = m;
+        if (m.assessment_type === assessmentType && Number(m.semester_no || 1) === Number(ctx.semester)) marksMap[m.student_id] = m;
       }
       setStudents(perf.data.map(s => ({
         id: s.id, name: s.name, roll_number: s.roll_number || '',
@@ -93,6 +93,7 @@ export default function TeacherMarks() {
     try {
       const r = await api.post('/teacher/marks', {
         subject_id: ctx.subject_id,
+        semester: ctx.semester,
         assessment_type: composeAssessmentType(ctx.assessment_kind, ctx.assessment_number),
         assessed_on: ctx.assessed_on || null,
         max_marks: max, entries,
@@ -130,10 +131,18 @@ export default function TeacherMarks() {
                 {subjects.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-              <div className="input bg-gray-50 text-gray-600 flex items-center">{ayLabel}</div>
-              <p className="text-xs text-gray-400 mt-1">Taken from the subject — set by admin.</p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+                <div className="input bg-gray-50 text-gray-600 flex items-center">{ayLabel}</div>
+              </div>
+              <div className="w-40">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                <select className="input" value={ctx.semester} onChange={e => setCtx(c => ({...c, semester: Number(e.target.value)}))}>
+                  <option value={1}>Semester 1</option>
+                  <option value={2}>Semester 2</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
@@ -169,7 +178,7 @@ export default function TeacherMarks() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-gray-800">Enter Marks</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{subjectName} · {composeAssessmentType(ctx.assessment_kind, ctx.assessment_number)} · Max: {ctx.max_marks} · {ayLabel}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{subjectName} · Sem {ctx.semester} · {composeAssessmentType(ctx.assessment_kind, ctx.assessment_number)} · Max: {ctx.max_marks} · {ayLabel}</p>
             </div>
             <button className="btn-secondary text-sm" onClick={() => { setStep(1); setStudents([]); setSavedCount(null); }}>← Change</button>
           </div>

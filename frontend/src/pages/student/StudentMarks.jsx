@@ -57,27 +57,27 @@ export default function StudentMarks() {
     load();
   }, []);
 
-  // Group by academic year (falling back to semester when present)
+  // Group by academic year + semester
   const semesterMap = {};
   for (const m of marks) {
-    const key = `${m.semester_number ?? ''}||${m.year_label ?? ''}`;
+    const sem = m.semester_no || 1;
+    const key = `${m.year_label ?? ''}||${sem}`;
     if (!semesterMap[key]) {
       semesterMap[key] = {
         key,
         semester_id: m.semester_id,
-        semester_number: m.semester_number,
+        semester_no: sem,
         year_label: m.year_label,
-        title: m.semester_number != null
-          ? `Semester ${m.semester_number}${m.year_label ? ` — ${m.year_label}` : ''}`
-          : (m.year_label || 'Marks'),
+        title: `Semester ${sem}${m.year_label ? ` — ${m.year_label}` : ''}`,
         rows: [],
       };
     }
     semesterMap[key].rows.push(m);
   }
-  const semesters = Object.values(semesterMap).sort(
-    (a, b) => (b.year_label || '').localeCompare(a.year_label || '')
-  );
+  const semesters = Object.values(semesterMap).sort((a, b) => {
+    const y = (b.year_label || '').localeCompare(a.year_label || '');
+    return y !== 0 ? y : a.semester_no - b.semester_no;
+  });
 
   const displaySemesters = selectedSemester
     ? semesters.filter((s) => s.key === selectedSemester)

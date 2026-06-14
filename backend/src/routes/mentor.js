@@ -39,6 +39,8 @@ router.get('/subjects',                       ...guard, mc.getMentorSubjects);
 router.get('/subjects/:subject_id/students',  ...guard, mc.getMentorSubjectStudents);
 router.get('/sessions',                       ...guard, mc.getMentorSessions);
 router.post('/sessions',                      ...guard, mc.createMentorSession);
+router.post('/sessions/open-code',            ...guard, mc.openMentorCodeSession);
+router.post('/sessions/:id/close',            ...guard, mc.closeMentorCodeSession);
 router.get('/sessions/:id/attendance',        ...guard, mc.getMentorSessionAttendance);
 router.post('/sessions/:id/attendance',       ...guard, mc.markMentorAttendance);
 router.get('/defaulters',                     ...guard, mc.getMentorDefaulters);
