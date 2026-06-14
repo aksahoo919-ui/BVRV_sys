@@ -68,7 +68,7 @@ export default function AdminClasses() {
     setRemovingTeacherId(teacherId);
     try {
       await api.delete('/admin/classes/remove-instructor', {
-        data: { subject_id: selectedSubject, instructor_id: teacherId },
+        params: { subject_id: selectedSubject, instructor_id: teacherId },
       });
       await loadMembers(selectedSubject);
     } catch (err) {
@@ -104,7 +104,7 @@ export default function AdminClasses() {
     setBusyStudent(studentId);
     try {
       await api.delete('/admin/classes/remove-student', {
-        data: { subject_id: selectedSubject, student_id: studentId },
+        params: { subject_id: selectedSubject, student_id: studentId },
       });
       await loadMembers(selectedSubject);
     } catch (err) {

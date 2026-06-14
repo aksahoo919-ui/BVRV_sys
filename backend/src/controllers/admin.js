@@ -521,7 +521,10 @@ export async function enrollStudent(req, res) {
 }
 
 export async function removeInstructor(req, res) {
-  const { subject_id, instructor_id } = req.body;
+  // Accept from query string (robust through proxies) or body
+  const subject_id = req.query.subject_id || req.body.subject_id;
+  const instructor_id = req.query.instructor_id || req.body.instructor_id;
+  if (!subject_id || !instructor_id) return res.status(400).json({ error: 'subject_id and instructor_id required' });
   try {
     await query(
       'DELETE FROM class_enrollments WHERE subject_id = $1 AND instructor_id = $2',
@@ -535,7 +538,9 @@ export async function removeInstructor(req, res) {
 }
 
 export async function removeStudent(req, res) {
-  const { subject_id, student_id } = req.body;
+  const subject_id = req.query.subject_id || req.body.subject_id;
+  const student_id = req.query.student_id || req.body.student_id;
+  if (!subject_id || !student_id) return res.status(400).json({ error: 'subject_id and student_id required' });
   try {
     await query(
       'DELETE FROM class_enrollments WHERE subject_id = $1 AND student_id = $2',
