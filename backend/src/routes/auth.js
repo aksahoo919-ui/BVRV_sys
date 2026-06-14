@@ -149,6 +149,8 @@ router.post('/switch-role', requireAuth, requireActive, (req, res) => {
   const swap = { teacher: 'mentor', mentor: 'teacher' };
   const target = swap[req.user.role];
   if (!target) return res.status(403).json({ error: 'Only teachers and mentors can switch roles' });
+  if (req.user.secondary_role !== target)
+    return res.status(403).json({ error: 'You do not have a second role to switch to' });
 
   const token = issueJWT({
     id: req.user.id,

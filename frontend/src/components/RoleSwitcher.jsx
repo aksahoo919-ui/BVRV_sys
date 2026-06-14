@@ -12,9 +12,10 @@ export default function RoleSwitcher() {
   const [switching, setSwitching] = useState(false);
 
   const role = user?.role;
-  if (role !== 'teacher' && role !== 'mentor') return null;
+  const target = user?.secondary_role;
+  // Only dual-role teacher/mentor users can switch.
+  if ((role !== 'teacher' && role !== 'mentor') || (target !== 'teacher' && target !== 'mentor')) return null;
 
-  const target = role === 'teacher' ? 'mentor' : 'teacher';
   const targetLabel = target.charAt(0).toUpperCase() + target.slice(1);
 
   async function handleSwitch() {

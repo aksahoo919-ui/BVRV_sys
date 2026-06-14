@@ -209,7 +209,7 @@ export default function AdminUsers() {
 
   // ── Filtering ────────────────────────────────────────────────────────────
   const visible = users.filter(u => {
-    if (filterRole && u.role !== filterRole) return false;
+    if (filterRole && u.role !== filterRole && u.secondary_role !== filterRole) return false;
     if (search) {
       const q = search.toLowerCase();
       return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);

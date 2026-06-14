@@ -371,7 +371,9 @@ export async function getCourseEnrollments(req, res) {
 
 export async function getMentorsList(req, res) {
   const r = await query(
-    `SELECT id, name, email FROM users WHERE role='mentor' AND status='active' ORDER BY name`
+    `SELECT id, name, email FROM users
+     WHERE (role='mentor' OR secondary_role='mentor') AND status='active'
+     ORDER BY name`
   );
   res.json(r.rows);
 }
