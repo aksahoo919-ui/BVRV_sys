@@ -233,12 +233,19 @@ export default function AdminUsers() {
               <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number, course name, language</code></p>
-            <p className="text-xs text-gray-400 mb-3">phone, course name &amp; language are optional. If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and mentor automatically get a dual role.</p>
+            <p className="text-xs text-gray-400 mb-3">Only name &amp; role are required — email, phone, course name &amp; language are optional. Rows without an email still import (a placeholder is generated). If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and mentor automatically get a dual role.</p>
             <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
               <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
                 {importResult.error || `Imported: ${importResult.imported}${importResult.enrolled != null ? ` | Enrolled: ${importResult.enrolled}` : ''} | Skipped: ${importResult.skipped?.length || 0}`}
+                {importResult.skipped?.length > 0 && (
+                  <ul className="mt-2 text-xs text-red-600 max-h-40 overflow-y-auto list-disc list-inside">
+                    {importResult.skipped.map((s, i) => (
+                      <li key={i}>Row {s.row}{s.email ? ` (${s.email})` : ''}: {s.reason}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
             <div className="flex gap-2">

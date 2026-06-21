@@ -185,15 +185,26 @@ export async function bulkImport(req, res) {
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',').map((c) => c.trim());
     const name = cols[nameIdx];
-    const email = cols[emailIdx];
+    const rawEmail = cols[emailIdx];
     const role = cols[roleIdx]?.toLowerCase();
     const phone = phoneIdx !== -1 ? (cols[phoneIdx] || null) : null;
     const courseName = courseIdx !== -1 ? cols[courseIdx] : '';
     const language = langIdx !== -1 ? cols[langIdx] : '';
 
-    if (!name || !email || !['student', 'teacher', 'mentor'].includes(role)) {
-      skipped.push({ row: i + 1, reason: 'Invalid data', email });
+    if (!name) {
+      skipped.push({ row: i + 1, reason: 'Missing name' });
       continue;
+    }
+    if (!['student', 'teacher', 'mentor'].includes(role)) {
+      skipped.push({ row: i + 1, reason: `Invalid role "${cols[roleIdx] || ''}" (must be student, teacher, or mentor)`, email: rawEmail });
+      continue;
+    }
+
+    // Email is optional — generate a placeholder when missing/NA so the row still imports
+    let email = String(rawEmail || '').trim();
+    if (!email || email.toUpperCase() === 'NA') {
+      const digits = String(phone || '').replace(/\D/g, '');
+      email = digits ? `p${digits}@noemail.bvrv` : `na-${uuidv4()}@noemail.bvrv`;
     }
 
     try {
