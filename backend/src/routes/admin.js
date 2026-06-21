@@ -18,6 +18,8 @@ router.patch('/users/:id/email',          ...guard, adminCtrl.updateUserEmail);
 router.patch('/users/:id/secondary-role', ...guard, adminCtrl.setSecondaryRole);
 router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
+router.post('/users', ...guard, adminCtrl.createUser);
+router.patch('/users/:id', ...guard, adminCtrl.updateUser);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
 router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);

@@ -31,10 +31,17 @@ export default function AdminUsers() {
   const [bulkResult, setBulkResult] = useState('');
 
   // Edit email
-  const [emailTarget, setEmailTarget] = useState(null); // user object
-  const [emailValue, setEmailValue] = useState('');
-  const [savingEmail, setSavingEmail] = useState(false);
-  const [emailError, setEmailError] = useState('');
+  // Edit user (email / phone / role)
+  const [editTarget, setEditTarget] = useState(null); // user object
+  const [editForm, setEditForm] = useState({ email: '', phone: '', role: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Add user
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({ name: '', role: 'student', email: '', phone: '' });
+  const [addingUser, setAddingUser] = useState(false);
+  const [addError, setAddError] = useState('');
 
   // Dual role
   const [dualTarget, setDualTarget] = useState(null); // user object
@@ -94,19 +101,45 @@ export default function AdminUsers() {
     a.href = url; a.download = 'import_template.csv'; a.click();
   }
 
-  // ── Edit email ─────────────────────────────────────────────────────────────
-  async function saveEmail() {
-    if (!emailTarget) return;
-    setSavingEmail(true);
-    setEmailError('');
+  // ── Add user ───────────────────────────────────────────────────────────────
+  async function handleAddUser() {
+    if (!addForm.name.trim()) { setAddError('Name is required'); return; }
+    setAddingUser(true);
+    setAddError('');
     try {
-      await api.patch(`/admin/users/${emailTarget.id}/email`, { email: emailValue.trim() });
-      setEmailTarget(null);
+      await api.post('/admin/users', {
+        name: addForm.name.trim(),
+        role: addForm.role,
+        email: addForm.email.trim() || null,
+        phone: addForm.phone.trim() || null,
+      });
+      setShowAdd(false);
+      setAddForm({ name: '', role: 'student', email: '', phone: '' });
       load();
     } catch (err) {
-      setEmailError(err.response?.data?.error || 'Failed to update email');
+      setAddError(err.response?.data?.error || 'Failed to add user');
     } finally {
-      setSavingEmail(false);
+      setAddingUser(false);
+    }
+  }
+
+  // ── Edit user (email / phone / role) ────────────────────────────────────────
+  async function saveEdit() {
+    if (!editTarget) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      await api.patch(`/admin/users/${editTarget.id}`, {
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim() || null,
+        role: editForm.role,
+      });
+      setEditTarget(null);
+      load();
+    } catch (err) {
+      setEditError(err.response?.data?.error || 'Failed to update user');
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -188,7 +221,8 @@ export default function AdminUsers() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-gray-900">All Users</h1>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setShowImport(true)} className="btn-primary text-sm">Bulk Import</button>
+          <button onClick={() => { setShowAdd(true); setAddError(''); }} className="btn-primary text-sm">+ Add User</button>
+          <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">Bulk Import</button>
           <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Bulk Delete</button>
         </div>
       </div>
@@ -291,29 +325,63 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* Edit email modal */}
-      {emailTarget && (
+      {/* Add user modal */}
+      {showAdd && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Edit email</h2>
-              <button onClick={() => setEmailTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <h2 className="font-bold text-gray-900">Add User</h2>
+              <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <p className="text-sm text-gray-500 mb-1">{emailTarget.name}</p>
-            <input
-              type="email"
-              className="input mb-2"
-              value={emailValue}
-              onChange={e => setEmailValue(e.target.value)}
-              placeholder="name@example.com"
-            />
-            <p className="text-xs text-gray-400 mb-3">Set a real email so this person can sign in with Google.</p>
-            {emailError && <p className="text-sm text-red-600 mb-3">{emailError}</p>}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+            <input className="input mb-3" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role <span className="text-red-500">*</span></label>
+            <select className="input mb-3" value={addForm.role} onChange={e => setAddForm(f => ({ ...f, role: e.target.value }))}>
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+              <option value="mentor">Mentor</option>
+            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input type="email" className="input mb-3" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input className="input mb-3" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
+            {addError && <p className="text-sm text-red-600 mb-3">{addError}</p>}
             <div className="flex gap-2">
-              <button onClick={saveEmail} disabled={savingEmail || !emailValue.trim()} className="btn-primary flex-1">
-                {savingEmail ? 'Saving…' : 'Save'}
+              <button onClick={handleAddUser} disabled={addingUser || !addForm.name.trim()} className="btn-primary flex-1">
+                {addingUser ? 'Adding…' : 'Add User'}
               </button>
-              <button onClick={() => setEmailTarget(null)} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={() => setShowAdd(false)} className="btn-secondary flex-1">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit user modal */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-900">Edit user</h2>
+              <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-3">{editTarget.name}</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" className="input mb-3" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input className="input mb-3" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select className="input mb-3" value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+              <option value="mentor">Mentor</option>
+            </select>
+            <p className="text-xs text-gray-400 mb-3">A real email lets this person sign in with Google.</p>
+            {editError && <p className="text-sm text-red-600 mb-3">{editError}</p>}
+            <div className="flex gap-2">
+              <button onClick={saveEdit} disabled={savingEdit || !editForm.email.trim()} className="btn-primary flex-1">
+                {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+              <button onClick={() => setEditTarget(null)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </div>
         </div>
@@ -458,12 +526,12 @@ export default function AdminUsers() {
                         <span className="text-xs text-gray-300">—</span>
                       ) : (
                         <div className="flex gap-1.5 justify-end">
-                          {/* Edit email */}
+                          {/* Edit user */}
                           <button
-                            onClick={() => { setEmailTarget(u); setEmailValue(u.email || ''); setEmailError(''); }}
+                            onClick={() => { setEditTarget(u); setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student' }); setEditError(''); }}
                             className="text-xs font-medium py-1 px-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                           >
-                            Email
+                            Edit
                           </button>
                           {/* Dual role — only for teacher/mentor */}
                           {(u.role === 'teacher' || u.role === 'mentor') && (

@@ -21,7 +21,7 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, secondary_role, status, avatar_url, created_at
+      `SELECT id, name, email, role, secondary_role, status, avatar_url, phone, created_at
        FROM users ORDER BY created_at DESC`
     );
     res.json(result.rows);
@@ -49,6 +49,79 @@ export async function setSecondaryRole(req, res) {
     }
     return res.json(result.rows[0]);
   } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// Manually create a user. Only name + role are required.
+export async function createUser(req, res) {
+  const name = String(req.body.name || '').trim();
+  const role = String(req.body.role || '').toLowerCase();
+  const phone = req.body.phone || null;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+  if (!['student', 'teacher', 'mentor'].includes(role))
+    return res.status(400).json({ error: 'Role must be student, teacher, or mentor' });
+
+  let email = String(req.body.email || '').trim();
+  if (!email || email.toUpperCase() === 'NA') {
+    const digits = String(phone || '').replace(/\D/g, '');
+    email = digits ? `p${digits}@noemail.bvrv` : `na-${uuidv4()}@noemail.bvrv`;
+  } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+
+  try {
+    const r = await query(
+      `INSERT INTO users (id, name, email, role, phone, status)
+       VALUES ($1, $2, $3, $4, $5, 'active')
+       RETURNING id, name, email, role, secondary_role, status, created_at`,
+      [uuidv4(), name, email, role, phone]
+    );
+    await logAudit(req.user.id, 'create_user', 'user', r.rows[0].id, { role });
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A user with that email already exists' });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// Update editable fields: email, phone, role.
+export async function updateUser(req, res) {
+  const { id } = req.params;
+  const { email, phone, role } = req.body;
+  const fields = [];
+  const vals = [];
+  let n = 1;
+
+  if (email !== undefined) {
+    const e = String(email).trim();
+    if (!/^\S+@\S+\.\S+$/.test(e)) return res.status(400).json({ error: 'Invalid email' });
+    fields.push(`email = $${n++}`); vals.push(e);
+  }
+  if (phone !== undefined) { fields.push(`phone = $${n++}`); vals.push(phone || null); }
+  if (role !== undefined) {
+    if (!['student', 'teacher', 'mentor'].includes(role))
+      return res.status(400).json({ error: 'Role must be student, teacher, or mentor' });
+    fields.push(`role = $${n++}`); vals.push(role);
+  }
+  if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
+
+  vals.push(id);
+  try {
+    const r = await query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${n}
+       RETURNING id, name, email, role, secondary_role, status`,
+      vals
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'User not found' });
+    // If the new primary role equals the secondary role, clear the duplicate
+    if (role) await query('UPDATE users SET secondary_role = NULL WHERE id = $1 AND secondary_role = $2', [id, role]);
+    await logAudit(req.user.id, 'update_user', 'user', id, { email, phone, role });
+    res.json(r.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'That email is already in use' });
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
