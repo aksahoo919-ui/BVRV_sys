@@ -418,10 +418,10 @@ export async function assignClassMentor(req, res) {
   }
 }
 
-// Import student→mentor assignments for a subject from a CSV (student name, mentor name)
+// Import student→mentor mappings from a CSV (student name, mentor name).
+// Subject-independent: each student gets the named mentor across EVERY class
+// they are enrolled in. Name matching is case-insensitive.
 export async function bulkImportClassMentors(req, res) {
-  const { subject_id } = req.body;
-  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
   if (!req.file) return res.status(400).json({ error: 'CSV file required' });
 
   const csv = req.file.buffer.toString('utf8');
@@ -435,11 +435,8 @@ export async function bulkImportClassMentors(req, res) {
   if (studentIdx === -1 || mentorIdx === -1)
     return res.status(400).json({ error: 'CSV must have columns: student name, mentor name' });
 
-  // Students enrolled in this subject, keyed by lowercased name
-  const studR = await query(`
-    SELECT u.id, u.name FROM class_enrollments ce
-    JOIN users u ON u.id = ce.student_id
-    WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL`, [subject_id]);
+  // All students, keyed by lowercased name
+  const studR = await query(`SELECT id, name FROM users WHERE role = 'student'`);
   const studentMap = {};
   for (const s of studR.rows) { const k = s.name.trim().toLowerCase(); (studentMap[k] = studentMap[k] || []).push(s.id); }
 
@@ -450,7 +447,8 @@ export async function bulkImportClassMentors(req, res) {
   const mentorMap = {};
   for (const m of mentR.rows) { const k = m.name.trim().toLowerCase(); (mentorMap[k] = mentorMap[k] || []).push(m.id); }
 
-  let assigned = 0;
+  let students = 0;     // students successfully mapped
+  let assignments = 0;  // (student, subject) rows written
   const skipped = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',').map(c => c.trim());
@@ -459,22 +457,32 @@ export async function bulkImportClassMentors(req, res) {
     if (!sName || !mName) { skipped.push({ row: i + 1, reason: 'Missing student or mentor name' }); continue; }
     const sIds = studentMap[sName.toLowerCase()];
     const mIds = mentorMap[mName.toLowerCase()];
-    if (!sIds) { skipped.push({ row: i + 1, reason: `Student "${sName}" not enrolled in this subject` }); continue; }
+    if (!sIds) { skipped.push({ row: i + 1, reason: `Student "${sName}" not found` }); continue; }
     if (sIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple students named "${sName}"` }); continue; }
     if (!mIds) { skipped.push({ row: i + 1, reason: `Mentor "${mName}" not found` }); continue; }
     if (mIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple mentors named "${mName}"` }); continue; }
+
     try {
-      await query(
-        `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id=$3, assigned_at=NOW()`,
-        [uuidv4(), subject_id, mIds[0], sIds[0]]
+      // Every class the student is enrolled in
+      const subs = await query(
+        `SELECT DISTINCT subject_id FROM class_enrollments WHERE student_id = $1 AND student_id IS NOT NULL`,
+        [sIds[0]]
       );
-      assigned++;
+      if (!subs.rows.length) { skipped.push({ row: i + 1, reason: `"${sName}" is not enrolled in any class` }); continue; }
+      for (const sub of subs.rows) {
+        await query(
+          `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id)
+           VALUES ($1,$2,$3,$4)
+           ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id=$3, assigned_at=NOW()`,
+          [uuidv4(), sub.subject_id, mIds[0], sIds[0]]
+        );
+        assignments++;
+      }
+      students++;
     } catch (err) { skipped.push({ row: i + 1, reason: err.message }); }
   }
-  await logAudit(req.user.id, 'import_class_mentors', 'subject', subject_id, { assigned });
-  res.json({ assigned, skipped });
+  await logAudit(req.user.id, 'import_class_mentors', 'user', null, { students, assignments });
+  res.json({ students, assignments, skipped });
 }
 
 // ── Rank List ─────────────────────────────────────────────────────────────

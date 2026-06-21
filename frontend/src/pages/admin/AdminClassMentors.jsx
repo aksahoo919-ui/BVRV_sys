@@ -58,12 +58,11 @@ export default function AdminClassMentors() {
 
   async function handleImport() {
     const file = importFileRef.current?.files[0];
-    if (!file || !subjectId) return;
+    if (!file) return;
     setImporting(true); setImportResult(null);
     try {
       const form = new FormData();
       form.append('file', file);
-      form.append('subject_id', subjectId);
       const r = await api.post('/admin/class-mentors/import', form);
       setImportResult(r.data);
       load();
@@ -94,8 +93,7 @@ export default function AdminClassMentors() {
         </div>
         <button
           onClick={() => { setShowImport(true); setImportResult(null); }}
-          disabled={!subjectId}
-          className="btn-primary text-sm disabled:opacity-50"
+          className="btn-primary text-sm"
         >
           Import CSV
         </button>
@@ -171,17 +169,16 @@ export default function AdminClassMentors() {
               <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">
-              For <span className="font-medium text-gray-700">{subject ? `${subject.code} — ${subject.name}` : 'this class'}</span>.
               Columns: <code className="bg-gray-100 px-1 rounded text-xs">student name, mentor name</code>.
             </p>
-            <p className="text-xs text-gray-400 mb-3">Names are matched against students enrolled in this class and active mentors.</p>
+            <p className="text-xs text-gray-400 mb-3">Each student is assigned the named mentor across every class they're enrolled in. Names are matched case-insensitively.</p>
             <button onClick={downloadImportTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
             <input ref={importFileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
               <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
                 {importResult.error
                   ? importResult.error
-                  : `Assigned: ${importResult.assigned} · Skipped: ${importResult.skipped?.length || 0}`}
+                  : `Students mapped: ${importResult.students} · Class assignments: ${importResult.assignments} · Skipped: ${importResult.skipped?.length || 0}`}
                 {importResult.skipped?.length > 0 && (
                   <ul className="mt-2 text-xs text-red-600 max-h-32 overflow-y-auto list-disc list-inside">
                     {importResult.skipped.slice(0, 20).map((s, i) => (
