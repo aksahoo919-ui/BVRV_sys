@@ -571,7 +571,7 @@ export async function getActiveSessions(req, res) {
     const r = await query(`
       SELECT sess.id AS session_id, sess.subject_id, s.name AS subject_name,
              s.code AS subject_code, sess.pin_display, sess.opened_at, sess.expires_at,
-             COUNT(al.id) AS present_count
+             COUNT(al.id) FILTER (WHERE al.status='present' AND al.replayed=false) AS present_count
       FROM sessions sess
       JOIN subjects s ON s.id = sess.subject_id
       LEFT JOIN attendance_logs al ON al.session_id = sess.id
@@ -592,7 +592,7 @@ export async function getRecentSessions(req, res) {
     const r = await query(`
       SELECT sess.id, sess.subject_id, s.name AS subject_name, s.code AS subject_code,
              sess.opened_at, sess.closed,
-             COUNT(al.id) AS present_count,
+             COUNT(DISTINCT al.student_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS present_count,
              COUNT(DISTINCT ce.student_id) AS total_students
       FROM sessions sess
       JOIN subjects s ON s.id = sess.subject_id
