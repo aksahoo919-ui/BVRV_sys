@@ -17,6 +17,7 @@ export default function AdminTimetable() {
   const [form, setForm] = useState({ subject_id:'', teacher_id:'', day_of_week:0, start_time:'', end_time:'', room:'' });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [subjectTeachers, setSubjectTeachers] = useState([]); // instructors assigned to the chosen subject
 
   async function load() {
     setLoading(true);
@@ -34,6 +35,14 @@ export default function AdminTimetable() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Load only the teachers assigned to the selected subject
+  useEffect(() => {
+    if (!modal || !form.subject_id) { setSubjectTeachers([]); return; }
+    api.get(`/admin/classes/${form.subject_id}/members`)
+      .then(r => setSubjectTeachers(r.data.instructors || []))
+      .catch(() => setSubjectTeachers([]));
+  }, [form.subject_id, modal]);
 
   function openNew(day, hour) {
     const h = String(hour).padStart(2,'0');
@@ -152,16 +161,16 @@ export default function AdminTimetable() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                <select className="input" required value={form.subject_id} onChange={e => setForm(f => ({ ...f, subject_id: e.target.value }))}>
+                <select className="input" required value={form.subject_id} onChange={e => setForm(f => ({ ...f, subject_id: e.target.value, teacher_id: '' }))}>
                   <option value="">— Select —</option>
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
-                <select className="input" required value={form.teacher_id} onChange={e => setForm(f => ({ ...f, teacher_id: e.target.value }))}>
-                  <option value="">— Select —</option>
-                  {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                <select className="input" required value={form.teacher_id} onChange={e => setForm(f => ({ ...f, teacher_id: e.target.value }))} disabled={!form.subject_id}>
+                  <option value="">{!form.subject_id ? '— Select a subject first —' : (subjectTeachers.length ? '— Select —' : 'No teachers assigned to this subject')}</option>
+                  {subjectTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               </div>
               <div>
