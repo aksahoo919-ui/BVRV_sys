@@ -511,7 +511,7 @@ export async function getSubjects(req, res) {
        LEFT JOIN courses c ON c.id = s.course_id
        LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
        LEFT JOIN users u ON u.id = s.created_by
-       ORDER BY s.created_at DESC`
+       ORDER BY s.code`
     );
     res.json(result.rows);
   } catch (err) {
@@ -643,13 +643,15 @@ export async function getClassMembers(req, res) {
     const instructors = await query(
       `SELECT u.id, u.name, u.email, u.avatar_url, 'teacher' AS member_type
        FROM class_enrollments ce JOIN users u ON ce.instructor_id = u.id
-       WHERE ce.subject_id = $1 AND ce.instructor_id IS NOT NULL`,
+       WHERE ce.subject_id = $1 AND ce.instructor_id IS NOT NULL
+       ORDER BY u.name`,
       [subject_id]
     );
     const students = await query(
       `SELECT u.id, u.name, u.email, u.avatar_url, 'student' AS member_type
        FROM class_enrollments ce JOIN users u ON ce.student_id = u.id
-       WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL`,
+       WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL
+       ORDER BY u.name`,
       [subject_id]
     );
     res.json({ instructors: instructors.rows, students: students.rows });

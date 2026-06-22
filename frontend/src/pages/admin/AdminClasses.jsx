@@ -19,8 +19,9 @@ export default function AdminClasses() {
     api.get('/admin/subjects').then(r => setSubjects(r.data));
     api.get('/admin/users').then(r => {
       const users = r.data;
-      setAllTeachers(users.filter(u => (u.role === 'teacher' || u.secondary_role === 'teacher') && u.status === 'active'));
-      setAllStudents(users.filter(u => u.role === 'student' && u.status === 'active'));
+      const byName = (a, b) => (a.name || '').localeCompare(b.name || '');
+      setAllTeachers(users.filter(u => (u.role === 'teacher' || u.secondary_role === 'teacher') && u.status === 'active').sort(byName));
+      setAllStudents(users.filter(u => u.role === 'student' && u.status === 'active').sort(byName));
     });
   }, []);
 

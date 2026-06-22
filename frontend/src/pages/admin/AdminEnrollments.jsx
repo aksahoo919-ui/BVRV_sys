@@ -27,7 +27,7 @@ export default function AdminEnrollments() {
     ]).then(([cr, yr, ur]) => {
       setCourses(cr.data);
       setYears(yr.data);
-      setStudents(ur.data.filter(u => u.role === 'student' && u.status === 'active'));
+      setStudents(ur.data.filter(u => u.role === 'student' && u.status === 'active').sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       // Auto-select current
       const cur = yr.data.find(y => y.is_current) || yr.data[0];
       if (cur) setYearId(String(cur.id));
