@@ -858,21 +858,29 @@ export async function reportDepartmentAttendance(req, res) {
   try {
     // For each course (used as "department" since departments are removed from UI),
     // compute average attendance % across subjects in that course
+    // Per-subject counts via scalar subqueries (no join fan-out), then rolled up per course.
     const r = await query(`
+      WITH subj AS (
+        SELECT
+          s.id AS subject_id,
+          s.course_id,
+          (SELECT COUNT(*) FROM class_enrollments ce
+             WHERE ce.subject_id = s.id AND ce.student_id IS NOT NULL) AS students,
+          (SELECT COUNT(*) FROM sessions sess
+             WHERE sess.subject_id = s.id AND sess.closed = true) AS sessions,
+          (SELECT COUNT(*) FROM attendance_logs al
+             JOIN sessions sess ON sess.id = al.session_id
+             WHERE sess.subject_id = s.id AND sess.closed = true
+               AND al.status = 'present' AND al.replayed = false) AS present
+        FROM subjects s
+      )
       SELECT
         COALESCE(c.name, 'Unassigned') AS department_name,
         c.id AS course_id,
-        ROUND(
-          100.0 * SUM(CASE WHEN al.id IS NOT NULL THEN 1 ELSE 0 END)
-          / NULLIF(COUNT(DISTINCT ce.student_id) * COUNT(DISTINCT sess.id), 0),
-          1
-        ) AS average_attendance_pct,
-        COUNT(DISTINCT s.id) AS subject_count
-      FROM subjects s
-      LEFT JOIN courses c ON c.id = s.course_id
-      LEFT JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.student_id IS NOT NULL
-      LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
-      LEFT JOIN attendance_logs al ON al.session_id = sess.id
+        ROUND(100.0 * SUM(subj.present) / NULLIF(SUM(subj.students * subj.sessions), 0), 1) AS average_attendance_pct,
+        COUNT(subj.subject_id) AS subject_count
+      FROM subj
+      LEFT JOIN courses c ON c.id = subj.course_id
       GROUP BY c.id, c.name
       ORDER BY c.name
     `);
