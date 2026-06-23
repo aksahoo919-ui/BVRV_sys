@@ -24,6 +24,7 @@ const migrations = [
   '013_secondary_role.sql',
   '014_semester_and_mentor_pin.sql',
   '015_performance_indexes.sql',
+  '016_username_password.sql',
 ];
 
 async function migrate() {

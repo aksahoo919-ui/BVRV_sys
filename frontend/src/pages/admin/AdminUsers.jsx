@@ -35,7 +35,7 @@ export default function AdminUsers() {
   // Edit email
   // Edit user (email / phone / role)
   const [editTarget, setEditTarget] = useState(null); // user object
-  const [editForm, setEditForm] = useState({ email: '', phone: '', role: '' });
+  const [editForm, setEditForm] = useState({ email: '', phone: '', role: '', username: '', password: '' });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -131,11 +131,14 @@ export default function AdminUsers() {
     setSavingEdit(true);
     setEditError('');
     try {
-      await api.patch(`/admin/users/${editTarget.id}`, {
+      const payload = {
         email: editForm.email.trim(),
         phone: editForm.phone.trim() || null,
         role: editForm.role,
-      });
+        username: editForm.username.trim(),
+      };
+      if (editForm.password.trim()) payload.password = editForm.password.trim();
+      await api.patch(`/admin/users/${editTarget.id}`, payload);
       setEditTarget(null);
       load();
     } catch (err) {
@@ -367,6 +370,11 @@ export default function AdminUsers() {
               <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-3">{editTarget.name}</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input className="input mb-3" value={editForm.username} onChange={e => setEditForm(f => ({ ...f, username: e.target.value }))} placeholder="username" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input type="text" className="input mb-1" value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))} placeholder="Leave blank to keep unchanged" />
+            <p className="text-xs text-gray-400 mb-3">Default password is <code className="bg-gray-100 px-1 rounded">1896</code> until changed.</p>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" className="input mb-3" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
@@ -530,7 +538,7 @@ export default function AdminUsers() {
                         <div className="flex gap-1.5 justify-end">
                           {/* Edit user */}
                           <button
-                            onClick={() => { setEditTarget(u); setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student' }); setEditError(''); }}
+                            onClick={() => { setEditTarget(u); setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' }); setEditError(''); }}
                             className="text-xs font-medium py-1 px-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                           >
                             Edit

@@ -3,6 +3,7 @@ import passport from '../config/passport.js';
 import { issueJWT } from '../utils/jwt.js';
 import { query } from '../config/db.js';
 import { requireAuth, requireActive } from '../middleware/auth.js';
+import { verifyPassword } from '../utils/password.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -138,6 +139,29 @@ router.post('/select-role', async (req, res) => {
     return res.json({ token: newToken });
   } catch (err) {
     console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── Username + password login ──────────────────────────────────────────────
+router.post('/login', async (req, res) => {
+  const username = String(req.body.username || '').trim();
+  const password = String(req.body.password || '');
+  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  try {
+    const r = await query('SELECT * FROM users WHERE lower(username) = lower($1) LIMIT 1', [username]);
+    const user = r.rows[0];
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    if (user.status === 'suspended') return res.status(403).json({ error: 'Your account has been suspended' });
+    if (user.status !== 'active' || !user.role) {
+      return res.status(403).json({ error: 'Your account is pending approval' });
+    }
+    const token = issueJWT(user);
+    return res.json({ token });
+  } catch (err) {
+    console.error('[login]', err);
     return res.status(500).json({ error: 'Server error' });
   }
 });

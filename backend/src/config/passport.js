@@ -2,6 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { query } from './db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { defaultUsername } from '../utils/password.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -46,9 +47,9 @@ passport.use(
         // New user — create with pending status
         const newId = uuidv4();
         const insertResult = await query(
-          `INSERT INTO users (id, google_id, name, email, avatar_url, role, status)
-           VALUES ($1, $2, $3, $4, $5, NULL, 'pending') RETURNING *`,
-          [newId, googleId, name, email, avatarUrl]
+          `INSERT INTO users (id, google_id, name, email, avatar_url, role, status, username)
+           VALUES ($1, $2, $3, $4, $5, NULL, 'pending', $6) RETURNING *`,
+          [newId, googleId, name, email, avatarUrl, defaultUsername(email, name)]
         );
         return done(null, insertResult.rows[0]);
       } catch (err) {
@@ -84,9 +85,9 @@ passport.use(
         if (!user) {
           const newId = uuidv4();
           const insertResult = await query(
-            `INSERT INTO users (id, google_id, name, email, avatar_url, role, status)
-             VALUES ($1, $2, $3, $4, $5, 'admin', 'active') RETURNING *`,
-            [newId, googleId, name, email, avatarUrl]
+            `INSERT INTO users (id, google_id, name, email, avatar_url, role, status, username)
+             VALUES ($1, $2, $3, $4, $5, 'admin', 'active', $6) RETURNING *`,
+            [newId, googleId, name, email, avatarUrl, defaultUsername(email, name)]
           );
           user = insertResult.rows[0];
         } else {

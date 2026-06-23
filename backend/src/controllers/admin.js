@@ -2,6 +2,7 @@ import { query, pool } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { stringify } from 'csv-stringify/sync';
 import { logAudit } from '../middleware/audit.js';
+import { hashPassword, defaultUsername } from '../utils/password.js';
 
 // ── Users ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, secondary_role, status, avatar_url, phone, created_at
+      `SELECT id, name, email, role, secondary_role, status, avatar_url, phone, username, created_at
        FROM users ORDER BY created_at DESC`
     );
     res.json(result.rows);
@@ -73,10 +74,10 @@ export async function createUser(req, res) {
 
   try {
     const r = await query(
-      `INSERT INTO users (id, name, email, role, phone, status)
-       VALUES ($1, $2, $3, $4, $5, 'active')
-       RETURNING id, name, email, role, secondary_role, status, created_at`,
-      [uuidv4(), name, email, role, phone]
+      `INSERT INTO users (id, name, email, role, phone, status, username)
+       VALUES ($1, $2, $3, $4, $5, 'active', $6)
+       RETURNING id, name, email, role, secondary_role, status, username, created_at`,
+      [uuidv4(), name, email, role, phone, defaultUsername(email, name)]
     );
     await logAudit(req.user.id, 'create_user', 'user', r.rows[0].id, { role });
     res.status(201).json(r.rows[0]);
@@ -90,7 +91,7 @@ export async function createUser(req, res) {
 // Update editable fields: email, phone, role.
 export async function updateUser(req, res) {
   const { id } = req.params;
-  const { email, phone, role } = req.body;
+  const { email, phone, role, username, password } = req.body;
   const fields = [];
   const vals = [];
   let n = 1;
@@ -106,19 +107,27 @@ export async function updateUser(req, res) {
       return res.status(400).json({ error: 'Role must be student, teacher, or mentor' });
     fields.push(`role = $${n++}`); vals.push(role);
   }
+  if (username !== undefined) {
+    const u = String(username).trim();
+    if (!u) return res.status(400).json({ error: 'Username cannot be empty' });
+    fields.push(`username = $${n++}`); vals.push(u);
+  }
+  if (password) {
+    fields.push(`password_hash = $${n++}`); vals.push(hashPassword(String(password)));
+  }
   if (!fields.length) return res.status(400).json({ error: 'Nothing to update' });
 
   vals.push(id);
   try {
     const r = await query(
       `UPDATE users SET ${fields.join(', ')} WHERE id = $${n}
-       RETURNING id, name, email, role, secondary_role, status`,
+       RETURNING id, name, email, role, secondary_role, status, username`,
       vals
     );
     if (!r.rows.length) return res.status(404).json({ error: 'User not found' });
     // If the new primary role equals the secondary role, clear the duplicate
     if (role) await query('UPDATE users SET secondary_role = NULL WHERE id = $1 AND secondary_role = $2', [id, role]);
-    await logAudit(req.user.id, 'update_user', 'user', id, { email, phone, role });
+    await logAudit(req.user.id, 'update_user', 'user', id, { email, phone, role, username, passwordChanged: !!password });
     res.json(r.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email is already in use' });
@@ -298,8 +307,8 @@ export async function bulkImport(req, res) {
       } else {
         userId = uuidv4();
         await query(
-          `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1, $2, $3, $4, $5, 'active')`,
-          [userId, name, email, role, phone]
+          `INSERT INTO users (id, name, email, role, phone, status, username) VALUES ($1, $2, $3, $4, $5, 'active', $6)`,
+          [userId, name, email, role, phone, defaultUsername(email, name)]
         );
         imported++;
       }
@@ -436,8 +445,8 @@ export async function bulkImportParticipants(req, res) {
       } else {
         studentId = uuidv4();
         await query(
-          `INSERT INTO users (id, name, email, role, phone, status) VALUES ($1,$2,$3,'student',$4,'active')`,
-          [studentId, name, email, phoneRaw || null]
+          `INSERT INTO users (id, name, email, role, phone, status, username) VALUES ($1,$2,$3,'student',$4,'active',$5)`,
+          [studentId, name, email, phoneRaw || null, defaultUsername(email, name)]
         );
         created++;
       }
