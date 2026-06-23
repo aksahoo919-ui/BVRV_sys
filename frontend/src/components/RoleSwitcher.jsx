@@ -16,7 +16,7 @@ export default function RoleSwitcher() {
   // Only dual-role teacher/mentor users can switch.
   if ((role !== 'teacher' && role !== 'mentor') || (target !== 'teacher' && target !== 'mentor')) return null;
 
-  const targetLabel = target.charAt(0).toUpperCase() + target.slice(1);
+  const targetLabel = target === 'mentor' ? 'BV Leader' : 'Teacher';
 
   async function handleSwitch() {
     setSwitching(true);

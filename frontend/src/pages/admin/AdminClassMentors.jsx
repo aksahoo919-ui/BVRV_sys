@@ -74,7 +74,7 @@ export default function AdminClassMentors() {
   }
 
   function downloadImportTemplate() {
-    const csv = 'student name,mentor name\nManoj Kumar Sahoo,Vimal Das\nMahesh Pupala,Gita Devi';
+    const csv = 'student name,bv leader name\nManoj Kumar Sahoo,Vimal Das\nMahesh Pupala,Gita Devi';
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -88,8 +88,8 @@ export default function AdminClassMentors() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Class Mentors</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Assign a mentor to each student in a class. A class can have many mentors.</p>
+          <h1 className="text-xl font-bold text-gray-900">Class BV Leaders</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders.</p>
         </div>
         <button
           onClick={() => { setShowImport(true); setImportResult(null); }}
@@ -116,14 +116,14 @@ export default function AdminClassMentors() {
       {loading ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
           <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
-            {rows.length} students · {assignedCount} with a mentor
+            {rows.length} students · {assignedCount} with a BV Leader
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Roll No</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Student</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Mentor</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">BV Leader</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -144,7 +144,7 @@ export default function AdminClassMentors() {
                       disabled={savingId === r.student_id}
                       onChange={e => setMentor(r.student_id, e.target.value)}
                     >
-                      <option value="">— No mentor —</option>
+                      <option value="">— No BV Leader —</option>
                       {mentors.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </td>
@@ -165,13 +165,13 @@ export default function AdminClassMentors() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Import mentor assignments</h2>
+              <h2 className="font-bold text-gray-900">Import BV Leader assignments</h2>
               <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">
-              Columns: <code className="bg-gray-100 px-1 rounded text-xs">student name, mentor name</code>.
+              Columns: <code className="bg-gray-100 px-1 rounded text-xs">student name, bv leader name</code>.
             </p>
-            <p className="text-xs text-gray-400 mb-3">Each student is assigned the named mentor across every class they're enrolled in. Names are matched case-insensitively.</p>
+            <p className="text-xs text-gray-400 mb-3">Each student is assigned the named BV Leader across every class they're enrolled in. Names are matched case-insensitively.</p>
             <button onClick={downloadImportTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
             <input ref={importFileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (

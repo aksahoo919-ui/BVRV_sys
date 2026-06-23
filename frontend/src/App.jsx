@@ -22,14 +22,12 @@ import AdminSubjects from './pages/admin/AdminSubjects';
 import AdminClasses from './pages/admin/AdminClasses';
 import AdminReports from './pages/admin/AdminReports';
 import AdminSettings from './pages/admin/AdminSettings';
-import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
-import AdminLeaveRequests from './pages/admin/AdminLeaveRequests';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
 import AdminBackups from './pages/admin/AdminBackups';
 import AdminEnrollments from './pages/admin/AdminEnrollments';
@@ -40,12 +38,10 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import TeacherSession from './pages/teacher/TeacherSession';
 import TeacherReports from './pages/teacher/TeacherReports';
-import TeacherMessages from './pages/teacher/TeacherMessages';
 import TeacherMarks from './pages/teacher/TeacherMarks';
 import TeacherMarksHistory from './pages/teacher/TeacherMarksHistory';
 import TeacherManualAttendance from './pages/teacher/TeacherManualAttendance';
 import TeacherTimetable from './pages/teacher/TeacherTimetable';
-import TeacherLeaveRequests from './pages/teacher/TeacherLeaveRequests';
 import TeacherStudentPerformance from './pages/teacher/TeacherStudentPerformance';
 import TeacherDefaulters from './pages/teacher/TeacherDefaulters';
 import TeacherAttendanceCorrections from './pages/teacher/TeacherAttendanceCorrections';
@@ -61,17 +57,14 @@ import MentorCounseling from './pages/mentor/MentorCounseling';
 import MentorParentContacts from './pages/mentor/MentorParentContacts';
 import MentorMeetings from './pages/mentor/MentorMeetings';
 import MentorAlerts from './pages/mentor/MentorAlerts';
-import MentorMessages from './pages/mentor/MentorMessages';
 
 // ── Student pages ─────────────────────────────────────────────────────────
 import StudentLayout from './pages/student/StudentLayout';
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentHome from './pages/student/StudentHome';
 import StudentMarkAttendance from './pages/student/StudentMarkAttendance';
-import StudentInbox from './pages/student/StudentInbox';
 import StudentMarks from './pages/student/StudentMarks';
 import StudentResults from './pages/student/StudentResults';
-import StudentLeave from './pages/student/StudentLeave';
 import StudentTimetable from './pages/student/StudentTimetable';
 import StudentProfile from './pages/student/StudentProfile';
 import StudentMentor from './pages/student/StudentMentor';
@@ -121,10 +114,8 @@ export default function App() {
         <Route path="class-mentors" element={<AdminClassMentors />} />
         <Route path="enrollments" element={<AdminEnrollments />} />
         <Route path="corrections" element={<AdminAttendanceCorrections />} />
-        <Route path="leave" element={<AdminLeaveRequests />} />
         <Route path="results" element={<AdminResults />} />
         <Route path="reports" element={<AdminReports />} />
-        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="audit" element={<AdminAuditLogs />} />
         <Route path="backups" element={<AdminBackups />} />
@@ -137,7 +128,6 @@ export default function App() {
         <Route path="classes" element={<TeacherClasses />} />
         <Route path="session/:id" element={<TeacherSession />} />
         <Route path="reports" element={<TeacherReports />} />
-        <Route path="messages" element={<TeacherMessages />} />
         <Route path="marks" element={<TeacherMarks />} />
         <Route path="marks-history" element={<TeacherMarksHistory />} />
         <Route path="manual-attendance" element={<TeacherManualAttendance />} />
@@ -145,7 +135,6 @@ export default function App() {
         <Route path="defaulters" element={<TeacherDefaulters />} />
         <Route path="timetable" element={<TeacherTimetable />} />
         <Route path="corrections" element={<TeacherAttendanceCorrections />} />
-        <Route path="leave-requests" element={<TeacherLeaveRequests />} />
       </Route>
 
       {/* ── Mentor ── */}
@@ -155,7 +144,6 @@ export default function App() {
         <Route path="students" element={<MentorStudents />} />
         <Route path="students/:studentId" element={<MentorStudentDetail />} />
         <Route path="alerts" element={<MentorAlerts />} />
-        <Route path="messages" element={<MentorMessages />} />
         <Route path="counseling" element={<MentorCounseling />} />
         <Route path="contacts" element={<MentorParentContacts />} />
         <Route path="meetings" element={<MentorMeetings />} />
@@ -171,10 +159,8 @@ export default function App() {
         <Route path="marks" element={<StudentMarks />} />
         <Route path="results" element={<StudentResults />} />
         <Route path="timetable" element={<StudentTimetable />} />
-        <Route path="leave" element={<StudentLeave />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="mentor" element={<StudentMentor />} />
-        <Route path="inbox" element={<StudentInbox />} />
       </Route>
 
       {/* ── Root redirect ── */}

@@ -14,9 +14,7 @@ const NAV = [
   { to: '/teacher/defaulters',     label: 'Defaulters',    icon: AlertIcon },
   { to: '/teacher/timetable',      label: 'Timetable',     icon: CalendarIcon },
   { to: '/teacher/corrections',    label: 'Corrections',   icon: CorrectionsIcon },
-  { to: '/teacher/leave-requests', label: 'Leave',         icon: LeaveIcon },
   { to: '/teacher/reports',        label: 'Reports',       icon: ReportsIcon },
-  { to: '/teacher/messages',       label: 'Messages',      icon: MailIcon },
 ];
 
 export default function TeacherLayout() {

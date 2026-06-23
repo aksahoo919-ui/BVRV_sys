@@ -5,7 +5,7 @@ import api from '../../utils/api';
 const ROLES = [
   { value: 'student',    label: 'Student',    icon: '🎓', desc: 'I am enrolled in courses' },
   { value: 'teacher',    label: 'Teacher',    icon: '👨‍🏫', desc: 'I teach subjects' },
-  { value: 'mentor',     label: 'Mentor',     icon: '🤝', desc: 'I guide & counsel students' },
+  { value: 'mentor',     label: 'BV Leader',  icon: '🤝', desc: 'I guide & counsel students' },
   { value: 'admin',      label: 'Admin',      icon: '🔐', desc: 'I manage the institution', adminNote: true },
 ];
 

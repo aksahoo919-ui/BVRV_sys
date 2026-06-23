@@ -10,7 +10,6 @@ const navItems = [
   { to: '/mentor/attendance', label: 'Attendance', icon: MeetingsIcon },
   { to: '/mentor/defaulters', label: 'Defaulters', icon: AlertIcon },
   { to: '/mentor/alerts',     label: 'Alerts',     icon: AlertIcon },
-  { to: '/mentor/messages',   label: 'Messages',   icon: MailIcon },
   { to: '/mentor/counseling', label: 'Counseling', icon: CounselingIcon },
   { to: '/mentor/contacts',   label: 'Contacts',   icon: ContactsIcon },
   { to: '/mentor/meetings',   label: 'Meetings',   icon: MeetingsIcon },
@@ -51,7 +50,7 @@ export default function MentorLayout() {
       >
         <div className="px-5 py-5 border-b border-emerald-700 flex items-center justify-between">
           <div>
-            <p className="text-xs text-emerald-300 uppercase tracking-wider">Mentor Portal</p>
+            <p className="text-xs text-emerald-300 uppercase tracking-wider">BV Leader Portal</p>
             <p className="font-bold text-white mt-0.5">BVRV Attendance</p>
           </div>
           <button
@@ -112,7 +111,7 @@ export default function MentorLayout() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              Mentor Portal
+              BV Leader Portal
             </div>
           }
         />

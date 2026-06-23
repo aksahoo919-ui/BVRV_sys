@@ -16,7 +16,7 @@ export default function StudentMentor() {
         const res = await api.get('/student/mentor');
         setMentors(res.data?.mentors ?? []);
       } catch {
-        setError('Failed to load mentor information.');
+        setError('Failed to load BV Leader information.');
       } finally {
         setLoading(false);
       }
@@ -37,8 +37,8 @@ export default function StudentMentor() {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">My Mentors</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Your mentor for each class</p>
+        <h1 className="text-xl font-bold text-gray-900">My BV Leaders</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Your BV Leader for each class</p>
       </div>
 
       {mentors.length === 0 ? (
@@ -48,8 +48,8 @@ export default function StudentMentor() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <p className="text-gray-600 font-medium">No mentor assigned yet.</p>
-          <p className="text-gray-400 text-sm mt-1">Please contact admin to get a mentor assigned.</p>
+          <p className="text-gray-600 font-medium">No BV Leader assigned yet.</p>
+          <p className="text-gray-400 text-sm mt-1">Please contact admin to get a BV Leader assigned.</p>
         </div>
       ) : (
         <div className="space-y-3">

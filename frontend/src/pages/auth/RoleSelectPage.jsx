@@ -18,7 +18,7 @@ const VIEWS = [
   },
   {
     role: 'mentor',
-    label: 'Mentor View',
+    label: 'BV Leader View',
     desc: 'Guide students, track their progress, and manage counseling.',
     color: 'border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50',
     badge: 'bg-emerald-100 text-emerald-700',

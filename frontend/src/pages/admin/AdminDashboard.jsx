@@ -207,7 +207,7 @@ export default function AdminDashboard() {
           <QuickAction icon="✅" label="Approve Users" onClick={() => navigate('/admin/pending')} color="red" />
           <QuickAction icon="📥" label="Bulk Import" onClick={() => navigate('/admin/users')} color="blue" />
           <QuickAction icon="🏆" label="Generate Results" onClick={() => navigate('/admin/results')} color="amber" />
-          <QuickAction icon="🔔" label="Send Notice" onClick={() => navigate('/admin/notifications')} color="purple" />
+          <QuickAction icon="🧑‍🏫" label="Class BV Leaders" onClick={() => navigate('/admin/class-mentors')} color="purple" />
           <QuickAction icon="📊" label="Reports" onClick={() => navigate('/admin/reports')} color="blue" />
           <QuickAction icon="📚" label="Courses" onClick={() => navigate('/admin/courses')} color="green" />
           <QuickAction icon="⚙️" label="Settings" onClick={() => navigate('/admin/settings')} color="amber" />

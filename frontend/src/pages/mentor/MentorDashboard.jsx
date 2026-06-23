@@ -144,7 +144,7 @@ export default function MentorDashboard() {
 
   if (loading) return <SkeletonPage />;
 
-  const displayName = user?.name || user?.email || 'Mentor';
+  const displayName = user?.name || user?.email || 'BV Leader';
 
   return (
     <div className="space-y-6">
@@ -200,10 +200,10 @@ export default function MentorDashboard() {
         <h2 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
+            { icon: '✅', label: 'Attendance', path: '/mentor/attendance' },
             { icon: '📅', label: 'Schedule Meeting', path: '/mentor/meetings' },
             { icon: '📝', label: 'Add Note', path: '/mentor/counseling' },
             { icon: '📞', label: 'Log Contact', path: '/mentor/contacts' },
-            { icon: '💬', label: 'Message Student', path: '/mentor/messages' },
           ].map(({ icon, label, path }) => (
             <button
               key={label}

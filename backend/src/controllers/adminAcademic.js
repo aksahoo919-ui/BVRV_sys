@@ -431,9 +431,9 @@ export async function bulkImportClassMentors(req, res) {
   const header = lines[0].split(',').map(h => h.trim().toLowerCase());
   const idx = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; };
   const studentIdx = idx('student name', 'student');
-  const mentorIdx = idx('mentor name', 'mentor');
+  const mentorIdx = idx('bv leader name', 'bv leader', 'mentor name', 'mentor');
   if (studentIdx === -1 || mentorIdx === -1)
-    return res.status(400).json({ error: 'CSV must have columns: student name, mentor name' });
+    return res.status(400).json({ error: 'CSV must have columns: student name, bv leader name' });
 
   // All students, keyed by lowercased name
   const studR = await query(`SELECT id, name FROM users WHERE role = 'student'`);

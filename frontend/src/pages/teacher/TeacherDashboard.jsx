@@ -74,7 +74,6 @@ export default function TeacherDashboard() {
   const [activeSessions, setActiveSessions] = useState([]);
   const [recentSessions, setRecentSessions] = useState([]);
   const [timetable, setTimetable] = useState([]);
-  const [leaveRequests, setLeaveRequests] = useState([]);
   const [correctionsCount, setCorrectionsCount] = useState(0);
   const [startingFor, setStartingFor] = useState({}); // { subject_id: true }
 
@@ -86,14 +85,12 @@ export default function TeacherDashboard() {
         activeRes,
         recentRes,
         timetableRes,
-        leaveRes,
         correctionsRes,
       ] = await Promise.allSettled([
         api.get('/teacher/subjects'),
         api.get('/teacher/sessions/active'),
         api.get('/teacher/sessions/recent?limit=4'),
         api.get('/teacher/timetable'),
-        api.get('/teacher/leave-requests?status=pending&limit=3'),
         api.get('/teacher/attendance-corrections?status=pending'),
       ]);
 
@@ -103,7 +100,6 @@ export default function TeacherDashboard() {
       setActiveSessions(activeRes.status === 'fulfilled' ? (activeRes.value.data ?? []) : []);
       setRecentSessions(recentRes.status === 'fulfilled' ? (recentRes.value.data ?? []) : []);
       setTimetable(timetableRes.status === 'fulfilled' ? (timetableRes.value.data ?? []) : []);
-      setLeaveRequests(leaveRes.status === 'fulfilled' ? (leaveRes.value.data ?? []) : []);
 
       if (correctionsRes.status === 'fulfilled') {
         const data = correctionsRes.value.data;
@@ -218,12 +214,6 @@ export default function TeacherDashboard() {
           onClick={() => navigate('/teacher/corrections')}
         />
         <StatCard
-          label="Pending Leave"
-          value={leaveRequests.length}
-          variant={leaveRequests.length > 0 ? 'warning' : 'default'}
-          onClick={() => navigate('/teacher/leave-requests')}
-        />
-        <StatCard
           label="Active Sessions"
           value={activeSessions.length}
           variant={activeSessions.length > 0 ? 'warning' : 'default'}
@@ -293,7 +283,7 @@ export default function TeacherDashboard() {
           {[
             { icon: '📊', label: 'Upload Marks', color: 'blue', path: '/teacher/marks' },
             { icon: '🚨', label: 'Defaulters', color: 'red', path: '/teacher/defaulters' },
-            { icon: '💬', label: 'Message Class', color: 'purple', path: '/teacher/messages' },
+            { icon: '✅', label: 'Manual Attend.', color: 'purple', path: '/teacher/manual-attendance' },
             { icon: '📅', label: 'Timetable', color: 'green', path: '/teacher/timetable' },
           ].map(({ icon, label, color, path }) => (
             <button
@@ -308,94 +298,47 @@ export default function TeacherDashboard() {
         </div>
       </section>
 
-      {/* ── Bottom grid: recent sessions + pending leave ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Recent sessions */}
-        <section className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800 text-sm">Recent Sessions</h2>
-          </div>
-          {recentSessions.length === 0 ? (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">No recent sessions.</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {recentSessions.map(session => (
-                <li
-                  key={session.id}
-                  onClick={() => navigate(`/teacher/session/${session.id}`)}
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{session.subject_name}</p>
-                    <p className="text-xs text-gray-400">{timeAgo(session.opened_at)}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-semibold text-gray-700">
-                      {session.present_count ?? 0}
-                      {session.total_students != null && (
-                        <span className="font-normal text-gray-400">/{session.total_students}</span>
-                      )}
-                    </p>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        session.status === 'open'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {session.status ?? 'closed'}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* Pending leave requests */}
-        <section className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800 text-sm">Pending Leave Requests</h2>
-            <button
-              onClick={() => navigate('/teacher/leave-requests')}
-              className="text-xs text-blue-600 hover:underline"
-            >
-              Review all →
-            </button>
-          </div>
-          {leaveRequests.length === 0 ? (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">No pending leave requests.</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {leaveRequests.map(req => (
-                <li key={req.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                    {(req.student_name || '?')[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{req.student_name}</p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {req.subject_name || 'All subjects'}
-                      {req.from_date && (
-                        <span className="ml-1">
-                          · {new Date(req.from_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          {req.to_date && req.to_date !== req.from_date && (
-                            <span>–{new Date(req.to_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                          )}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
-                    pending
+      {/* ── Recent sessions ── */}
+      <section className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800 text-sm">Recent Sessions</h2>
+        </div>
+        {recentSessions.length === 0 ? (
+          <p className="px-4 py-8 text-center text-gray-400 text-sm">No recent sessions.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {recentSessions.map(session => (
+              <li
+                key={session.id}
+                onClick={() => navigate(`/teacher/session/${session.id}`)}
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 text-sm truncate">{session.subject_name}</p>
+                  <p className="text-xs text-gray-400">{timeAgo(session.opened_at)}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs font-semibold text-gray-700">
+                    {session.present_count ?? 0}
+                    {session.total_students != null && (
+                      <span className="font-normal text-gray-400">/{session.total_students}</span>
+                    )}
+                  </p>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      session.status === 'open'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {session.status ?? 'closed'}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

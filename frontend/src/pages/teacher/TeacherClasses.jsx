@@ -40,7 +40,7 @@ function StudentRow({ student, mentors, subjectId, onMentorAssigned }) {
     setRowError('');
     try {
       await api.post(`/teacher/students/${student.id}/mentor`, { mentor_id: Number(selectedMentor) });
-      onMentorAssigned(subjectId, 'Mentor assigned');
+      onMentorAssigned(subjectId, 'BV Leader assigned');
     } catch (err) {
       setRowError(err.response?.data?.error || 'Assignment failed.');
     } finally {
@@ -60,7 +60,7 @@ function StudentRow({ student, mentors, subjectId, onMentorAssigned }) {
             value={selectedMentor}
             onChange={e => setSelectedMentor(e.target.value)}
           >
-            <option value="">— Select mentor —</option>
+            <option value="">— Select BV Leader —</option>
             {mentors.map(m => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
@@ -163,7 +163,7 @@ function SubjectCard({ subject, mentors, openingId, onStartSession, onMentorAssi
                     <tr className="border-b border-gray-100">
                       <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Roll No</th>
                       <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Name</th>
-                      <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Mentor</th>
+                      <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">BV Leader</th>
                       <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Assign</th>
                     </tr>
                   </thead>

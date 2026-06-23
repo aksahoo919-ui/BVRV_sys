@@ -56,8 +56,6 @@ export default function StudentDashboard() {
   const [settings, setSettings] = useState({ attendance_threshold: 75 });
   const [results, setResults] = useState([]);
   const [marks, setMarks] = useState([]);
-  const [pendingLeaveCount, setPendingLeaveCount] = useState(0);
-  const [messages, setMessages] = useState([]);
   const [todaySessions, setTodaySessions] = useState([]);
 
   useEffect(() => {
@@ -69,16 +67,12 @@ export default function StudentDashboard() {
         settingsRes,
         resultsRes,
         marksRes,
-        leaveRes,
-        messagesRes,
         todayRes,
       ] = await Promise.all([
         settle(api.get('/student/attendance')),
         settle(api.get('/student/settings')),
         settle(api.get('/student/results')),
         settle(api.get('/student/marks')),
-        settle(api.get('/student/leave-requests?status=pending')),
-        settle(api.get('/student/messages?limit=3')),
         settle(api.get('/student/attendance/today')),
       ]);
 
@@ -86,11 +80,6 @@ export default function StudentDashboard() {
       if (settingsRes) setSettings(settingsRes.data ?? { attendance_threshold: 75 });
       if (resultsRes) setResults(resultsRes.data ?? []);
       if (marksRes) setMarks(marksRes.data ?? []);
-      if (leaveRes) {
-        const d = leaveRes.data;
-        setPendingLeaveCount(Array.isArray(d) ? d.length : d?.count ?? 0);
-      }
-      if (messagesRes) setMessages(messagesRes.data ?? []);
       if (todayRes) setTodaySessions(todayRes.data ?? []);
 
       setLoading(false);
@@ -117,8 +106,6 @@ export default function StudentDashboard() {
     if (a.semester_id && b.semester_id) return b.semester_id - a.semester_id;
     return 0;
   })[0];
-
-  const unreadCount = messages.filter((m) => !m.read_at).length;
 
   const sortedByPct = [...subjectsWithPct].sort((a, b) => a.pct - b.pct).slice(0, 4);
 
@@ -177,31 +164,6 @@ export default function StudentDashboard() {
             )}
           </div>
         </div>
-
-        <button
-          onClick={() => navigate('/student/inbox')}
-          className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Inbox"
-        >
-          <svg
-            className="w-6 h-6 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
-          </svg>
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* ── Alert banner ── */}
@@ -241,16 +203,15 @@ export default function StudentDashboard() {
           onClick={() => navigate('/student/results')}
         />
         <StatCard
-          label="Pending Leave"
-          value={pendingLeaveCount}
-          sub="requests"
-          onClick={() => navigate('/student/leave')}
-          variant={pendingLeaveCount > 0 ? 'warning' : 'default'}
+          label="Subjects"
+          value={subjectsWithPct.length}
+          sub="enrolled"
+          onClick={() => navigate('/student/attendance')}
         />
       </div>
 
       {/* ── Quick actions ── */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <QuickAction
           icon="📝"
           label="Mark Attendance"
@@ -264,14 +225,8 @@ export default function StudentDashboard() {
           onClick={() => navigate('/student/timetable')}
         />
         <QuickAction
-          icon="🏖"
-          label="Apply Leave"
-          color="amber"
-          onClick={() => navigate('/student/leave')}
-        />
-        <QuickAction
           icon="📄"
-          label="Download Memo"
+          label="Results"
           color="green"
           onClick={() => navigate('/student/results')}
         />
@@ -373,54 +328,6 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      {/* ── Inbox ── */}
-      <div className="bg-white rounded-xl shadow-sm p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Inbox</h2>
-          <button
-            onClick={() => navigate('/student/inbox')}
-            className="text-xs text-primary-600 hover:underline"
-          >
-            View all →
-          </button>
-        </div>
-        {messages.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">No messages yet.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {messages.map((msg, i) => {
-              const unread = !msg.read_at;
-              const sender = msg.sender_name ?? msg.from ?? 'System';
-              const preview =
-                (msg.body ?? msg.message ?? msg.preview ?? '').slice(0, 45) +
-                ((msg.body ?? msg.message ?? msg.preview ?? '').length > 45 ? '…' : '');
-              return (
-                <div
-                  key={msg.id ?? i}
-                  className="flex items-start gap-3 py-3 cursor-pointer hover:bg-gray-50 rounded-lg px-1 transition-colors"
-                  onClick={() => navigate('/student/inbox')}
-                >
-                  {unread && (
-                    <span className="mt-1.5 w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />
-                  )}
-                  {!unread && <span className="mt-1.5 w-2 h-2 flex-shrink-0" />}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`text-sm font-medium ${unread ? 'text-gray-900' : 'text-gray-600'}`}>
-                        {sender}
-                      </span>
-                      <span className="text-xs text-gray-400 flex-shrink-0">
-                        {timeAgo(msg.created_at ?? msg.sent_at)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">{preview}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

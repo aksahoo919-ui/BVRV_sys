@@ -12,6 +12,8 @@ const ROLE_COLORS = {
   mentor:  'bg-teal-100 text-teal-700',
   student: 'bg-green-100 text-green-700',
 };
+const ROLE_LABEL = { mentor: 'BV Leader', teacher: 'Teacher', student: 'Student', admin: 'Admin' };
+const roleLabel = (r) => ROLE_LABEL[r] || r || '—';
 
 export default function AdminUsers() {
   const [users, setUsers]           = useState([]);
@@ -243,7 +245,7 @@ export default function AdminUsers() {
           <option value="">All roles</option>
           <option value="student">Students</option>
           <option value="teacher">Teachers</option>
-          <option value="mentor">Mentors</option>
+          <option value="mentor">BV Leaders</option>
           <option value="admin">Admins</option>
         </select>
       </div>
@@ -267,7 +269,7 @@ export default function AdminUsers() {
               <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number, course name, language</code></p>
-            <p className="text-xs text-gray-400 mb-3">Only name &amp; role are required — email, phone, course name &amp; language are optional. Rows without an email still import (a placeholder is generated). If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and mentor automatically get a dual role.</p>
+            <p className="text-xs text-gray-400 mb-3">Only name &amp; role are required — email, phone, course name &amp; language are optional. Rows without an email still import (a placeholder is generated). If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and BV Leader automatically get a dual role.</p>
             <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
@@ -306,7 +308,7 @@ export default function AdminUsers() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Role to delete</label>
             <select className="input mb-3" value={bulkRole} onChange={e => setBulkRole(e.target.value)}>
               <option value="student">All Students</option>
-              <option value="mentor">All Mentors</option>
+              <option value="mentor">All BV Leaders</option>
               <option value="teacher">All Teachers</option>
             </select>
             <p className="text-xs text-red-600 mb-3">This cannot be undone. Admins are never affected.</p>
@@ -339,7 +341,7 @@ export default function AdminUsers() {
             <select className="input mb-3" value={addForm.role} onChange={e => setAddForm(f => ({ ...f, role: e.target.value }))}>
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
-              <option value="mentor">Mentor</option>
+              <option value="mentor">BV Leader</option>
             </select>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(optional)</span></label>
             <input type="email" className="input mb-3" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
@@ -373,7 +375,7 @@ export default function AdminUsers() {
             <select className="input mb-3" value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}>
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
-              <option value="mentor">Mentor</option>
+              <option value="mentor">BV Leader</option>
             </select>
             <p className="text-xs text-gray-400 mb-3">A real email lets this person sign in with Google.</p>
             {editError && <p className="text-sm text-red-600 mb-3">{editError}</p>}
@@ -397,9 +399,9 @@ export default function AdminUsers() {
             </div>
             <p className="text-sm text-gray-500 mb-1">{dualTarget.name}</p>
             <p className="text-xs text-gray-400 mb-4">
-              Primary role: <span className="font-medium text-gray-700 capitalize">{dualTarget.role}</span>
+              Primary role: <span className="font-medium text-gray-700">{roleLabel(dualTarget.role)}</span>
               {dualTarget.secondary_role && (
-                <> · Current secondary: <span className="font-medium text-gray-700 capitalize">{dualTarget.secondary_role}</span></>
+                <> · Current secondary: <span className="font-medium text-gray-700">{roleLabel(dualTarget.secondary_role)}</span></>
               )}
             </p>
             {dualError && <p className="text-sm text-red-600 mb-3">{dualError}</p>}
@@ -410,8 +412,8 @@ export default function AdminUsers() {
                   disabled={savingDual || dualTarget.secondary_role === 'mentor'}
                   className="w-full text-left px-4 py-3 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  <span className="font-medium text-emerald-700">Add Mentor role</span>
-                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and Mentor dashboards.</p>
+                  <span className="font-medium text-emerald-700">Add BV Leader role</span>
+                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
                 </button>
               )}
               {dualTarget.role === 'mentor' && (
@@ -421,7 +423,7 @@ export default function AdminUsers() {
                   className="w-full text-left px-4 py-3 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   <span className="font-medium text-blue-700">Add Teacher role</span>
-                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and Mentor dashboards.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
                 </button>
               )}
               {dualTarget.secondary_role && (
@@ -509,9 +511,9 @@ export default function AdminUsers() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{u.role || '—'}</span>
+                        <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{roleLabel(u.role)}</span>
                         {u.secondary_role && (
-                          <span className={`badge ${ROLE_COLORS[u.secondary_role] || 'bg-gray-100 text-gray-600'} opacity-70`}>+{u.secondary_role}</span>
+                          <span className={`badge ${ROLE_COLORS[u.secondary_role] || 'bg-gray-100 text-gray-600'} opacity-70`}>+{roleLabel(u.secondary_role)}</span>
                         )}
                       </div>
                     </td>
