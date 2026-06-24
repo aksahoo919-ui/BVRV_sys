@@ -82,3 +82,8 @@ app.use((err, _req, res, _next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Register scheduled report/reminder emails (no-op until SMTP is configured)
+import('./services/scheduledEmails.js')
+  .then(({ initScheduledEmails }) => initScheduledEmails())
+  .catch(err => console.warn('[scheduled] init failed:', err.message));

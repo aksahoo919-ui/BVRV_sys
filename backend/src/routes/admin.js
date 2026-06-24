@@ -115,6 +115,9 @@ router.post('/notifications', ...guard, ops.sendNotification);
 
 router.get('/audit-logs', ...guard, ops.getAuditLogs);
 
+// Manually trigger scheduled report/reminder emails (testing)
+router.post('/email-jobs/:type', ...guard, adminCtrl.runEmailJob);
+
 router.get('/backups', ...guard, ops.getBackups);
 router.post('/backups', ...guard, ops.createBackup);
 router.get('/backups/:id/download', ...guard, ops.downloadBackup);

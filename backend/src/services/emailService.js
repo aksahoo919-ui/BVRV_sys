@@ -34,20 +34,25 @@ async function isEnabled() {
 
 // ── Core send ─────────────────────────────────────────────────────────────
 
-export async function sendEmail({ to, subject, html, text }) {
+export async function sendEmail({ to, bcc, subject, html, text }) {
   try {
     const transport = getTransport();
     if (!transport) return; // SMTP not configured — silent no-op
     if (!(await isEnabled())) return; // email_alerts_enabled = false
-    if (!to) return;
+    if (!to && !(bcc && bcc.length)) return;
     await transport.sendMail({
       from:    process.env.FROM_EMAIL || process.env.SMTP_USER,
-      to, subject, html, text,
+      to:      to || (process.env.FROM_EMAIL || process.env.SMTP_USER),
+      bcc:     bcc && bcc.length ? bcc : undefined,
+      subject, html, text,
     });
   } catch (err) {
     console.warn('[email] send failed:', err.message);
   }
 }
+
+// Re-export the HTML layout so other services can build consistent emails.
+export function emailLayout(title, bodyHtml) { return layout(title, bodyHtml); }
 
 // ── HTML layout helper ────────────────────────────────────────────────────
 

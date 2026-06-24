@@ -136,6 +136,23 @@ export async function updateUser(req, res) {
   }
 }
 
+// Manually trigger a scheduled email job (for testing without waiting for cron)
+export async function runEmailJob(req, res) {
+  const { type } = req.params;
+  try {
+    const jobs = await import('../services/scheduledEmails.js');
+    let result;
+    if (type === 'monthly') result = await jobs.runMonthlyReports();
+    else if (type === 'weekly') result = await jobs.runWeeklyReports();
+    else if (type === 'reminder') result = await jobs.sendAttendanceReminders();
+    else return res.status(400).json({ error: 'type must be monthly, weekly, or reminder' });
+    res.json({ message: `Job '${type}' ran`, count: result });
+  } catch (err) {
+    console.error('[runEmailJob]', err);
+    res.status(500).json({ error: err.message || 'Job failed' });
+  }
+}
+
 // Reset a user's password back to the default (1896) — stored as a null hash.
 export async function resetPassword(req, res) {
   try {
