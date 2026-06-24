@@ -125,6 +125,23 @@ export default function AdminUsers() {
     }
   }
 
+  async function resetPasswordToDefault() {
+    if (!editTarget) return;
+    if (!window.confirm(`Reset ${editTarget.name}'s password to the default (1896)?`)) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      await api.patch(`/admin/users/${editTarget.id}/reset-password`);
+      setEditForm(f => ({ ...f, password: '' }));
+      setEditError('');
+      alert('Password reset to default (1896).');
+    } catch (err) {
+      setEditError(err.response?.data?.error || 'Failed to reset password');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   // ── Edit user (email / phone / role) ────────────────────────────────────────
   async function saveEdit() {
     if (!editTarget) return;
@@ -374,7 +391,10 @@ export default function AdminUsers() {
             <input className="input mb-3" value={editForm.username} onChange={e => setEditForm(f => ({ ...f, username: e.target.value }))} placeholder="username" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input type="text" className="input mb-1" value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))} placeholder="Leave blank to keep unchanged" />
-            <p className="text-xs text-gray-400 mb-3">Default password is <code className="bg-gray-100 px-1 rounded">1896</code> until changed.</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-gray-400">Default password is <code className="bg-gray-100 px-1 rounded">1896</code>.</p>
+              <button type="button" onClick={resetPasswordToDefault} disabled={savingEdit} className="text-xs font-medium text-amber-700 hover:underline">Reset to 1896</button>
+            </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" className="input mb-3" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>

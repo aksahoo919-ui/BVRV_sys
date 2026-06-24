@@ -16,6 +16,7 @@ router.patch('/users/:id/reject',   ...guard, adminCtrl.rejectUser);
 router.patch('/users/:id/suspend',  ...guard, adminCtrl.suspendUser);
 router.patch('/users/:id/email',          ...guard, adminCtrl.updateUserEmail);
 router.patch('/users/:id/secondary-role', ...guard, adminCtrl.setSecondaryRole);
+router.patch('/users/:id/reset-password', ...guard, adminCtrl.resetPassword);
 router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
 router.post('/users', ...guard, adminCtrl.createUser);

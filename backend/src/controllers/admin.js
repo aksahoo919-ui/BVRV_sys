@@ -136,6 +136,22 @@ export async function updateUser(req, res) {
   }
 }
 
+// Reset a user's password back to the default (1896) — stored as a null hash.
+export async function resetPassword(req, res) {
+  try {
+    const r = await query(
+      `UPDATE users SET password_hash = NULL WHERE id = $1 RETURNING id, name`,
+      [req.params.id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'User not found' });
+    await logAudit(req.user.id, 'reset_password', 'user', req.params.id, {});
+    res.json({ message: `Password for ${r.rows[0].name} reset to default (1896)` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
 export async function approveUser(req, res) {
   try {
     const result = await query(

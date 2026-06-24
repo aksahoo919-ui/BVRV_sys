@@ -70,6 +70,9 @@ export default function LoginPage() {
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
+          <p className="text-xs text-gray-400 text-center">
+            Forgot your password? Please contact your administrator to reset it.
+          </p>
         </form>
 
         {/* Divider */}
