@@ -13,10 +13,20 @@ import { sendEmail, emailLayout } from './emailService.js';
 
 const TZ = 'Asia/Kolkata';
 
+// Test mode: if TEST_EMAIL_RECIPIENTS is set (comma-separated), ONLY these
+// addresses receive any scheduled/triggered mail. Leave unset for production.
+const TEST_LIST = (process.env.TEST_EMAIL_RECIPIENTS || '')
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
 function ymd(d) { return d.toISOString().slice(0, 10); }
 function isRealEmail(e) {
   const s = String(e || '').toLowerCase();
   return s.includes('@') && !s.endsWith('@noemail.bvrv');
+}
+// During testing, restrict to the allowlist.
+function allowed(email) {
+  if (!TEST_LIST.length) return true;
+  return TEST_LIST.includes(String(email || '').toLowerCase());
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────
@@ -86,7 +96,7 @@ export async function sendBVLeaderReports(start, end, periodLabel) {
   const leaders = await getBVLeaders();
   let sent = 0;
   for (const leader of leaders) {
-    if (!isRealEmail(leader.email)) continue;
+    if (!isRealEmail(leader.email) || !allowed(leader.email)) continue;
     const rows = await studentsForLeader(leader.id, start, end);
     await sendEmail({
       to: leader.email,
@@ -105,7 +115,7 @@ export async function sendAttendanceReminders() {
      WHERE (role IN ('teacher','mentor') OR secondary_role IN ('teacher','mentor'))
        AND status='active'`
   );
-  const recipients = r.rows.map(x => x.email).filter(isRealEmail);
+  const recipients = r.rows.map(x => x.email).filter(isRealEmail).filter(allowed);
   if (!recipients.length) { console.log('[scheduled] reminder: no recipients'); return 0; }
   await sendEmail({
     bcc: recipients,
