@@ -57,7 +57,7 @@ export function emailLayout(title, bodyHtml) { return layout(title, bodyHtml); }
 // ── HTML layout helper ────────────────────────────────────────────────────
 
 function layout(title, bodyHtml) {
-  const inst = process.env.INSTITUTION_NAME || 'BVRV Institution';
+  const inst = 'BVRV, ISKCON ABIDS';
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -91,7 +91,7 @@ export async function emailAccountApproved(user) {
     to: user.email,
     subject: 'Your account has been approved',
     html: layout('Account Approved', `
-      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Hare Krishna <strong>${user.name}</strong>,</p>
       <p>Your account has been approved. You can now log in and access the system.</p>
       <p><span class="badge badge-green">✓ Approved</span></p>
       <p>Role assigned: <strong>${user.role}</strong></p>
@@ -105,7 +105,7 @@ export async function emailAccountRejected(user) {
     to: user.email,
     subject: 'Account registration update',
     html: layout('Account Not Approved', `
-      <p>Hi <strong>${user.name}</strong>,</p>
+      <p>Hare Krishna <strong>${user.name}</strong>,</p>
       <p>Unfortunately, your account registration was not approved at this time.
          Please contact the administration for further information.</p>
       <p><span class="badge badge-red">✗ Not Approved</span></p>
@@ -122,7 +122,7 @@ export async function emailLeaveRequestStatus(student, status, fromDate, toDate)
     to: student.email,
     subject: `Leave request ${status}`,
     html: layout(`Leave Request ${status.charAt(0).toUpperCase() + status.slice(1)}`, `
-      <p>Hi <strong>${student.name}</strong>,</p>
+      <p>Hare Krishna <strong>${student.name}</strong>,</p>
       <p>Your leave request for <strong>${fromDate}</strong> to <strong>${toDate}</strong>
          has been <strong>${status}</strong>. ${badge}</p>
     `),
@@ -138,7 +138,7 @@ export async function emailCorrectionStatus(teacher, status, studentName, subjec
     to: teacher.email,
     subject: `Attendance correction ${status}`,
     html: layout(`Correction ${status.charAt(0).toUpperCase() + status.slice(1)}`, `
-      <p>Hi <strong>${teacher.name}</strong>,</p>
+      <p>Hare Krishna <strong>${teacher.name}</strong>,</p>
       <p>Your attendance correction request for <strong>${studentName}</strong>
          in <strong>${subjectName}</strong> has been <strong>${status}</strong>. ${badge}</p>
     `),
@@ -157,7 +157,7 @@ export async function emailAttendanceAlert({
     to: studentEmail,
     subject: `⚠ Attendance warning: ${subjectName}`,
     html: layout('Attendance Warning', `
-      <p>Hi <strong>${studentName}</strong>,</p>
+      <p>Hare Krishna <strong>${studentName}</strong>,</p>
       <p>Your attendance in <strong>${subjectName}</strong> has dropped to
          <strong>${percentage}%</strong>, which is below the required threshold of
          <strong>${threshold}%</strong>.</p>
@@ -172,7 +172,7 @@ export async function emailAttendanceAlert({
       to: mentorEmail,
       subject: `Attendance alert for ${studentName}`,
       html: layout('Student Attendance Alert', `
-        <p>Hi <strong>${mentorName}</strong>,</p>
+        <p>Hare Krishna <strong>${mentorName}</strong>,</p>
         <p>Your mentee <strong>${studentName}</strong> has attendance of
            <strong>${percentage}%</strong> in <strong>${subjectName}</strong>
            (threshold: ${threshold}%). Please follow up.</p>
@@ -194,7 +194,7 @@ export async function emailLowGpaAlert(mentor, students) {
     to: mentor.email,
     subject: 'GPA alert for assigned students',
     html: layout('Low GPA Alert', `
-      <p>Hi <strong>${mentor.name}</strong>,</p>
+      <p>Hare Krishna <strong>${mentor.name}</strong>,</p>
       <p>The following students have GPA below the configured threshold:</p>
       <table style="width:100%;border-collapse:collapse;margin-top:8px">
         <tr style="background:#e2e8f0"><th style="padding:6px;text-align:left">Student</th>

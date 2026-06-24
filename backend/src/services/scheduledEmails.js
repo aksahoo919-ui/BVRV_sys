@@ -61,7 +61,7 @@ async function studentsForLeader(mentorId, start, end) {
 function reportHtml(leaderName, rows, periodLabel) {
   if (!rows.length) {
     return emailLayout(`Attendance Report — ${periodLabel}`,
-      `<p>Hi <strong>${leaderName}</strong>,</p><p>You have no students assigned yet.</p>`);
+      `<p>Hare Krishna <strong>${leaderName}</strong>,</p><p>You have no students assigned yet.</p>`);
   }
   const body = rows.map(s => {
     const total = Number(s.total_sessions) || 0;
@@ -76,7 +76,7 @@ function reportHtml(leaderName, rows, periodLabel) {
     </tr>`;
   }).join('');
   return emailLayout(`Attendance Report — ${periodLabel}`, `
-    <p>Hi <strong>${leaderName}</strong>,</p>
+    <p>Hare Krishna <strong>${leaderName}</strong>,</p>
     <p>Here is the attendance of your students for <strong>${periodLabel}</strong>:</p>
     <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px">
       <tr style="background:#e2e8f0">
@@ -121,7 +121,7 @@ export async function sendAttendanceReminders() {
     bcc: recipients,
     subject: 'Reminder: please mark & verify attendance',
     html: emailLayout('Attendance Reminder', `
-      <p>Dear Teachers and BV Leaders,</p>
+      <p>Hare Krishna Teachers and BV Leaders,</p>
       <p>This is a gentle reminder to <strong>mark and verify the attendance</strong> of your students in the BVRV Attendance system.</p>
       <p>Please ensure today's records are up to date. Thank you for your service.</p>
     `),
