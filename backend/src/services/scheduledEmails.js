@@ -39,25 +39,36 @@ async function getBVLeaders() {
   return r.rows;
 }
 
-// Attendance of a BV Leader's students within [start, end] — their single common class.
+// For each of a BV Leader's students within [start, end]:
+//  - bv: attendance in the leader's own common weekly class
+//  - ac: academic attendance across the subjects the student is enrolled in
 async function studentsForLeader(mentorId, start, end) {
   const totalR = await query(
     `SELECT COUNT(*)::int AS n FROM mentor_sessions
      WHERE mentor_id = $1 AND session_date >= $2 AND session_date <= $3`,
     [mentorId, start, end]
   );
-  const total = totalR.rows[0].n;
+  const bvTotal = totalR.rows[0].n;
   const r = await query(`
     SELECT u.name, u.roll_number,
       (SELECT COUNT(*) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
          WHERE ms.mentor_id = $1 AND ms.session_date >= $2 AND ms.session_date <= $3
-           AND mat.student_id = u.id AND mat.status='present')::int AS attended
+           AND mat.student_id = u.id AND mat.status='present')::int AS bv_attended,
+      (SELECT COUNT(DISTINCT sess.id) FROM class_enrollments ce
+         JOIN sessions sess ON sess.subject_id = ce.subject_id AND sess.closed = true
+           AND sess.opened_at::date BETWEEN $2 AND $3
+         WHERE ce.student_id = u.id)::int AS ac_total,
+      (SELECT COUNT(DISTINCT al.session_id) FROM attendance_logs al
+         JOIN sessions sess ON sess.id = al.session_id AND sess.closed = true
+           AND sess.opened_at::date BETWEEN $2 AND $3
+         JOIN class_enrollments ce ON ce.subject_id = sess.subject_id AND ce.student_id = u.id
+         WHERE al.student_id = u.id AND al.status='present' AND al.replayed = false)::int AS ac_attended
     FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
     ORDER BY u.name
   `, [mentorId, start, end]);
-  return r.rows.map(row => ({ ...row, total_sessions: total }));
+  return r.rows.map(row => ({ ...row, bv_total: bvTotal }));
 }
 
 function reportHtml(leaderName, rows, periodLabel) {
@@ -65,27 +76,29 @@ function reportHtml(leaderName, rows, periodLabel) {
     return emailLayout(`Attendance Report — ${periodLabel}`,
       `<p>Hare Krishna <strong>${leaderName}</strong>,</p><p>You have no students assigned yet.</p>`);
   }
-  const body = rows.map(s => {
-    const total = Number(s.total_sessions) || 0;
-    const att = Number(s.attended) || 0;
-    const pct = total > 0 ? Math.round(att / total * 100) : 0;
+  const cell = (att, total) => {
+    const a = Number(att) || 0, t = Number(total) || 0;
+    const pct = t > 0 ? Math.round(a / t * 100) : 0;
     const color = pct >= 75 ? '#15803d' : pct >= 50 ? '#92400e' : '#b91c1c';
-    return `<tr>
+    const txt = t > 0 ? `${a}/${t} <span style="color:${color};font-weight:600">(${pct}%)</span>` : '—';
+    return `<td style="padding:6px;border-bottom:1px solid #eee;text-align:center">${txt}</td>`;
+  };
+  const body = rows.map(s => `<tr>
       <td style="padding:6px;border-bottom:1px solid #eee">${s.name}</td>
       <td style="padding:6px;border-bottom:1px solid #eee">${s.roll_number || '—'}</td>
-      <td style="padding:6px;border-bottom:1px solid #eee;text-align:center">${att}/${total}</td>
-      <td style="padding:6px;border-bottom:1px solid #eee;text-align:center;color:${color};font-weight:600">${total ? pct + '%' : '—'}</td>
-    </tr>`;
-  }).join('');
+      ${cell(s.bv_attended, s.bv_total)}
+      ${cell(s.ac_attended, s.ac_total)}
+    </tr>`).join('');
   return emailLayout(`Attendance Report — ${periodLabel}`, `
     <p>Hare Krishna <strong>${leaderName}</strong>,</p>
-    <p>Here is the attendance of your students for <strong>${periodLabel}</strong>:</p>
+    <p>Here is the attendance of your students for <strong>${periodLabel}</strong> —
+       both your weekly BV class and their subject (academic) classes:</p>
     <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px">
       <tr style="background:#e2e8f0">
         <th style="padding:6px;text-align:left">Student</th>
         <th style="padding:6px;text-align:left">Roll No</th>
-        <th style="padding:6px">Present/Total</th>
-        <th style="padding:6px">%</th>
+        <th style="padding:6px">BV Class</th>
+        <th style="padding:6px">Subjects</th>
       </tr>
       ${body}
     </table>
