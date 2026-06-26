@@ -39,6 +39,33 @@ export async function submitAttendance(req, res) {
   if (!pin || !subject_id) return res.status(400).json({ error: 'pin and subject_id required' });
 
   try {
+    // BV Leader (mentor) common-class code session — identified as "mentor:<sessionId>"
+    if (String(subject_id).startsWith('mentor:')) {
+      const sessionId = String(subject_id).slice('mentor:'.length);
+      const mSessR = await query(
+        `SELECT ms.* FROM mentor_sessions ms
+         WHERE ms.id = $1 AND ms.closed = false AND ms.expires_at > NOW() AND ms.pin_display IS NOT NULL
+           AND EXISTS (SELECT 1 FROM class_mentor_assignments cma
+                       WHERE cma.mentor_id = ms.mentor_id AND cma.student_id = $2)`,
+        [sessionId, req.user.id]
+      );
+      const mSess = mSessR.rows[0];
+      if (!mSess) return res.status(400).json({ error: 'No active BV Leader session' });
+      if (pin !== mSess.pin_display) return res.status(400).json({ error: 'Invalid PIN' });
+      const dup = await query(
+        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status='present'",
+        [mSess.id, req.user.id]
+      );
+      if (dup.rows.length) return res.status(409).json({ error: 'Already marked' });
+      await query(
+        `INSERT INTO mentor_attendance (id, session_id, student_id, status)
+         VALUES ($1,$2,$3,'present')
+         ON CONFLICT (session_id, student_id) DO UPDATE SET status='present', marked_at=NOW()`,
+        [uuidv4(), mSess.id, req.user.id]
+      );
+      return res.json({ message: 'Attendance marked!' });
+    }
+
     // Find open, non-expired teacher session for subject_id
     const sessionResult = await query(
       `SELECT * FROM sessions
@@ -48,35 +75,8 @@ export async function submitAttendance(req, res) {
     );
 
     const session = sessionResult.rows[0];
-    const teacherPinMatches = session && pin.toUpperCase() === session.pin_display.toUpperCase();
-
-    // If no teacher session matches, try an open mentor code-session for this subject
-    if (!teacherPinMatches) {
-      const mSessR = await query(
-        `SELECT ms.* FROM mentor_sessions ms
-         JOIN class_mentor_assignments cma
-           ON cma.subject_id = ms.subject_id AND cma.mentor_id = ms.mentor_id AND cma.student_id = $2
-         WHERE ms.subject_id = $1 AND ms.closed = false AND ms.expires_at > NOW()
-           AND ms.pin_display IS NOT NULL
-         ORDER BY ms.created_at DESC LIMIT 1`,
-        [subject_id, req.user.id]
-      );
-      const mSess = mSessR.rows[0];
-      if (mSess && pin === mSess.pin_display) {
-        const dup = await query(
-          'SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status=$3',
-          [mSess.id, req.user.id, 'present']
-        );
-        if (dup.rows.length) return res.status(409).json({ error: 'Already marked' });
-        await query(
-          `INSERT INTO mentor_attendance (id, session_id, student_id, status)
-           VALUES ($1,$2,$3,'present')
-           ON CONFLICT (session_id, student_id) DO UPDATE SET status='present', marked_at=NOW()`,
-          [uuidv4(), mSess.id, req.user.id]
-        );
-        return res.json({ message: 'Attendance marked!' });
-      }
-      if (!session) return res.status(400).json({ error: 'No active session for this subject' });
+    if (!session) return res.status(400).json({ error: 'No active session for this subject' });
+    if (pin.toUpperCase() !== session.pin_display.toUpperCase()) {
       return res.status(400).json({ error: 'Invalid PIN' });
     }
 
@@ -547,38 +547,7 @@ export async function getTodayAttendance(req, res) {
         LIMIT 1
       `, [subj.subject_id]);
 
-      let session = sessR.rows[0] || null;
-
-      // If no teacher session, look for an open mentor code-session for this subject
-      if (!session) {
-        const mSessR = await query(`
-          SELECT ms.id, ms.expires_at
-          FROM mentor_sessions ms
-          JOIN class_mentor_assignments cma
-            ON cma.subject_id = ms.subject_id AND cma.mentor_id = ms.mentor_id AND cma.student_id = $2
-          WHERE ms.subject_id = $1 AND ms.closed = false AND ms.expires_at > NOW()
-            AND ms.pin_display IS NOT NULL
-          ORDER BY ms.created_at DESC LIMIT 1
-        `, [subj.subject_id, studentId]);
-        if (mSessR.rows[0]) {
-          const ms = mSessR.rows[0];
-          const marked = await query(
-            "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status='present'",
-            [ms.id, studentId]
-          );
-          results.push({
-            subject_id: subj.subject_id,
-            subject_name: subj.subject_name,
-            subject_code: subj.subject_code,
-            session_open: true,
-            session_id: ms.id,
-            expires_at: ms.expires_at,
-            already_marked: marked.rows.length > 0,
-            kind: 'mentor',
-          });
-          continue;
-        }
-      }
+      const session = sessR.rows[0] || null;
 
       // Check if student already marked today
       let alreadyMarked = false;
@@ -610,6 +579,33 @@ export async function getTodayAttendance(req, res) {
         already_marked: alreadyMarked,
       });
     }
+
+    // Open BV Leader (mentor) common-class code sessions for this student's leaders
+    const mSessR = await query(`
+      SELECT DISTINCT ms.id, ms.title, ms.expires_at
+      FROM mentor_sessions ms
+      WHERE ms.closed = false AND ms.expires_at > NOW() AND ms.pin_display IS NOT NULL
+        AND EXISTS (SELECT 1 FROM class_mentor_assignments cma
+                    WHERE cma.mentor_id = ms.mentor_id AND cma.student_id = $1)
+      ORDER BY ms.expires_at DESC
+    `, [studentId]);
+    for (const ms of mSessR.rows) {
+      const marked = await query(
+        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status='present'",
+        [ms.id, studentId]
+      );
+      results.push({
+        subject_id: `mentor:${ms.id}`,
+        subject_name: ms.title || 'BV Leader Class',
+        subject_code: 'BV',
+        session_open: true,
+        session_id: ms.id,
+        expires_at: ms.expires_at,
+        already_marked: marked.rows.length > 0,
+        kind: 'mentor',
+      });
+    }
+
     res.json(results);
   } catch (err) {
     console.error(err);

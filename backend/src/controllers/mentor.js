@@ -20,17 +20,19 @@ export async function getAssignedStudents(req, res) {
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
 
+  // Total = the BV Leader's common weekly sessions (subject-independent)
+  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  const total = totalR.rows[0].n;
+
   const r = await query(`
     SELECT u.id, u.name, u.email, u.avatar_url, u.roll_number,
-      MIN(cma.assigned_at) AS assigned_at,
       STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
-      COUNT(DISTINCT ms.id) AS total_sessions,
-      COUNT(DISTINCT ma.session_id) FILTER (WHERE ma.status='present') AS attended_sessions
+      (SELECT COUNT(*) FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
     JOIN subjects s ON s.id = cma.subject_id
-    LEFT JOIN mentor_sessions ms   ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
-    LEFT JOIN mentor_attendance ma ON ma.session_id = ms.id AND ma.student_id = u.id
     WHERE cma.mentor_id = $1
     GROUP BY u.id
     ORDER BY u.name`,
@@ -38,8 +40,8 @@ export async function getAssignedStudents(req, res) {
   );
 
   res.json(r.rows.map(s => {
-    const pct = s.total_sessions > 0 ? Math.round(s.attended_sessions / s.total_sessions * 100) : 0;
-    return { ...s, attendance_percentage: pct, below_threshold: s.total_sessions > 0 && pct < threshold };
+    const pct = total > 0 ? Math.round(s.attended_sessions / total * 100) : 0;
+    return { ...s, total_sessions: total, attendance_percentage: pct, below_threshold: total > 0 && pct < threshold };
   }));
 }
 
@@ -204,34 +206,33 @@ export async function getAlerts(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  // All mentored students, with mentor-class attendance and latest GPA.
+  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  const total = totalR.rows[0].n;
+
+  // All mentored students (distinct), with common-class attendance and latest GPA.
   const r = await query(`
     SELECT
       u.id AS student_id, u.name AS student_name, u.email AS student_email,
       u.avatar_url, u.roll_number,
-      COUNT(DISTINCT ms.id) AS total_sessions,
-      COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status = 'present') AS attended_sessions,
+      (SELECT COUNT(*) FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions,
       (
         SELECT r.gpa FROM results r
         LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
         WHERE r.student_id = u.id AND r.published = true
         ORDER BY ay.start_date DESC NULLS LAST LIMIT 1
       ) AS latest_gpa
-    FROM class_mentor_assignments cma
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
-    LEFT JOIN mentor_sessions ms    ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
-    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id AND mat.student_id = u.id
-    WHERE cma.mentor_id = $1
-    GROUP BY u.id
   `, [req.user.id]);
 
   const alerts = r.rows
     .map(s => {
-      const pct = s.total_sessions > 0
-        ? Math.round(s.attended_sessions / s.total_sessions * 100)
-        : 0;
+      const pct = total > 0 ? Math.round(s.attended_sessions / total * 100) : 0;
+      s.total_sessions = total;
       const reasons = [];
-      if (pct < attThreshold && s.total_sessions > 0) reasons.push(`Attendance ${pct}% < ${attThreshold}%`);
+      if (pct < attThreshold && total > 0) reasons.push(`Attendance ${pct}% < ${attThreshold}%`);
       if (s.latest_gpa != null && Number(s.latest_gpa) < gpaThreshold)
         reasons.push(`GPA ${s.latest_gpa} < ${gpaThreshold}`);
       return { ...s, attendance_percentage: pct, alert_reasons: reasons };
@@ -297,43 +298,39 @@ export async function getMentorSubjectStudents(req, res) {
 
 // ── Mentor weekly sessions ────────────────────────────────────────────────
 
+async function mentorHasStudents(mentorId) {
+  const r = await query('SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 LIMIT 1', [mentorId]);
+  return r.rows.length > 0;
+}
+
 export async function createMentorSession(req, res) {
-  const { subject_id, title, session_date } = req.body;
-  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
-  // Verify the mentor actually mentors students in this subject
-  const owns = await query(
-    'SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 AND subject_id=$2 LIMIT 1',
-    [req.user.id, subject_id]
-  );
-  if (!owns.rows.length) return res.status(403).json({ error: 'You are not a mentor for this class' });
+  const { title, session_date } = req.body;
+  if (!(await mentorHasStudents(req.user.id)))
+    return res.status(403).json({ error: 'You have no students assigned yet' });
   const r = await query(
-    `INSERT INTO mentor_sessions (id, subject_id, mentor_id, title, session_date)
-     VALUES ($1,$2,$3,$4,COALESCE($5, CURRENT_DATE)) RETURNING *`,
-    [uuidv4(), subject_id, req.user.id, title || null, session_date || null]
+    `INSERT INTO mentor_sessions (id, mentor_id, title, session_date)
+     VALUES ($1,$2,$3,COALESCE($4, CURRENT_DATE)) RETURNING *`,
+    [uuidv4(), req.user.id, title || null, session_date || null]
   );
   res.status(201).json(r.rows[0]);
 }
 
 export async function getMentorSessions(req, res) {
-  const { subject_id } = req.query;
-  const params = [req.user.id];
-  const clause = subject_id ? `AND ms.subject_id=$${params.push(subject_id)}` : '';
   const r = await query(`
-    SELECT ms.*, s.code AS subject_code, s.name AS subject_name,
+    SELECT ms.*,
       COUNT(mat.id) FILTER (WHERE mat.status='present') AS present_count,
       COUNT(mat.id) FILTER (WHERE mat.status='absent')  AS absent_count
     FROM mentor_sessions ms
-    JOIN subjects s ON s.id = ms.subject_id
     LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id
-    WHERE ms.mentor_id=$1 ${clause}
-    GROUP BY ms.id, s.code, s.name
+    WHERE ms.mentor_id=$1
+    GROUP BY ms.id
     ORDER BY ms.session_date DESC, ms.created_at DESC`,
-    params
+    [req.user.id]
   );
   res.json(r.rows);
 }
 
-// Attendance roster for one session (mentor's students in that subject + their marks)
+// Attendance roster for one session = all distinct students under this BV Leader
 export async function getMentorSessionAttendance(req, res) {
   const { id } = req.params;
   const sess = await query('SELECT * FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [id, req.user.id]);
@@ -341,33 +338,28 @@ export async function getMentorSessionAttendance(req, res) {
   const session = sess.rows[0];
   const r = await query(`
     SELECT u.id, u.name, u.roll_number, mat.status
-    FROM class_mentor_assignments cma
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $2) cma
     JOIN users u ON u.id = cma.student_id
     LEFT JOIN mentor_attendance mat ON mat.session_id = $1 AND mat.student_id = u.id
-    WHERE cma.mentor_id = $2 AND cma.subject_id = $3
     ORDER BY u.name`,
-    [id, req.user.id, session.subject_id]
+    [id, req.user.id]
   );
   res.json({ session, roster: r.rows });
 }
 
 // Open a code-based (PIN) attendance session — students submit the PIN to mark present.
 export async function openMentorCodeSession(req, res) {
-  const { subject_id, title, session_date } = req.body;
-  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
-  const owns = await query(
-    'SELECT 1 FROM class_mentor_assignments WHERE mentor_id=$1 AND subject_id=$2 LIMIT 1',
-    [req.user.id, subject_id]
-  );
-  if (!owns.rows.length) return res.status(403).json({ error: 'You are not a mentor for this class' });
+  const { title, session_date } = req.body;
+  if (!(await mentorHasStudents(req.user.id)))
+    return res.status(403).json({ error: 'You have no students assigned yet' });
 
-  const { pin } = generatePin(subject_id, req.user.id);
+  const { pin } = generatePin(req.user.id, req.user.id);
   const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5-minute window
   const id = uuidv4();
   await query(
-    `INSERT INTO mentor_sessions (id, subject_id, mentor_id, title, session_date, pin_display, expires_at, closed)
-     VALUES ($1,$2,$3,$4,COALESCE($5, CURRENT_DATE),$6,$7,false)`,
-    [id, subject_id, req.user.id, title || 'Code attendance', session_date || null, pin, expires_at.toISOString()]
+    `INSERT INTO mentor_sessions (id, mentor_id, title, session_date, pin_display, expires_at, closed)
+     VALUES ($1,$2,$3,COALESCE($4, CURRENT_DATE),$5,$6,false)`,
+    [id, req.user.id, title || 'Code attendance', session_date || null, pin, expires_at.toISOString()]
   );
   res.status(201).json({ session_id: id, pin, expires_at });
 }
@@ -411,32 +403,26 @@ export async function getMentorDefaulters(req, res) {
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
 
-  const { subject_id } = req.query;
-  const params = [req.user.id];
-  const clause = subject_id ? `AND cma.subject_id=$${params.push(subject_id)}` : '';
+  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  const total = totalR.rows[0].n;
 
   const r = await query(`
     SELECT u.id, u.name, u.email, u.roll_number,
-      STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
-      COUNT(DISTINCT ms.id) AS total_sessions,
-      COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status='present') AS attended_sessions
-    FROM class_mentor_assignments cma
-    JOIN users u    ON u.id = cma.student_id
-    JOIN subjects s ON s.id = cma.subject_id
-    LEFT JOIN mentor_sessions ms    ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
-    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id AND mat.student_id = u.id
-    WHERE cma.mentor_id = $1 ${clause}
-    GROUP BY u.id
+      (SELECT COUNT(*) FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
+    JOIN users u ON u.id = cma.student_id
     ORDER BY u.name`,
-    params
+    [req.user.id]
   );
 
   const defaulters = r.rows
     .map(s => {
-      const pct = s.total_sessions > 0 ? Math.round(s.attended_sessions / s.total_sessions * 100) : 0;
-      return { ...s, attendance_percentage: pct };
+      const pct = total > 0 ? Math.round(s.attended_sessions / total * 100) : 0;
+      return { ...s, total_sessions: total, attendance_percentage: pct };
     })
-    .filter(s => s.total_sessions > 0 && s.attendance_percentage < threshold);
+    .filter(s => total > 0 && s.attendance_percentage < threshold);
 
   res.json({ threshold, defaulters });
 }

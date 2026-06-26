@@ -39,23 +39,25 @@ async function getBVLeaders() {
   return r.rows;
 }
 
-// Attendance of a BV Leader's students within [start, end] (their weekly-class sessions)
+// Attendance of a BV Leader's students within [start, end] — their single common class.
 async function studentsForLeader(mentorId, start, end) {
+  const totalR = await query(
+    `SELECT COUNT(*)::int AS n FROM mentor_sessions
+     WHERE mentor_id = $1 AND session_date >= $2 AND session_date <= $3`,
+    [mentorId, start, end]
+  );
+  const total = totalR.rows[0].n;
   const r = await query(`
     SELECT u.name, u.roll_number,
-      COUNT(DISTINCT ms.id) AS total_sessions,
-      COUNT(DISTINCT mat.session_id) FILTER (WHERE mat.status='present') AS attended
-    FROM class_mentor_assignments cma
+      (SELECT COUNT(*) FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND ms.session_date >= $2 AND ms.session_date <= $3
+           AND mat.student_id = u.id AND mat.status='present')::int AS attended
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
-    LEFT JOIN mentor_sessions ms
-      ON ms.subject_id = cma.subject_id AND ms.mentor_id = $1
-      AND ms.session_date >= $2 AND ms.session_date <= $3
-    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id AND mat.student_id = u.id
-    WHERE cma.mentor_id = $1
-    GROUP BY u.id
     ORDER BY u.name
   `, [mentorId, start, end]);
-  return r.rows;
+  return r.rows.map(row => ({ ...row, total_sessions: total }));
 }
 
 function reportHtml(leaderName, rows, periodLabel) {

@@ -11,8 +11,6 @@ function fmtDate(d) {
 }
 
 export default function MentorAttendance() {
-  const [subjects, setSubjects] = useState([]);
-  const [subjectId, setSubjectId] = useState('');
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,31 +31,22 @@ export default function MentorAttendance() {
   const [code, setCode] = useState(null); // { session_id, pin, expires_at }
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    api.get('/mentor/subjects').then(r => {
-      setSubjects(r.data);
-      if (r.data[0]) setSubjectId(String(r.data[0].id));
-    }).catch(() => setError('Failed to load your classes'));
-  }, []);
-
   async function loadSessions() {
-    if (!subjectId) return;
     setLoading(true); setError('');
     try {
-      const r = await api.get(`/mentor/sessions?subject_id=${subjectId}`);
+      const r = await api.get('/mentor/sessions');
       setSessions(r.data);
     } catch (e) { setError(e.response?.data?.error || 'Failed to load sessions'); }
     finally { setLoading(false); }
   }
 
-  useEffect(() => { loadSessions(); setActiveSession(null); }, [subjectId]);
+  useEffect(() => { loadSessions(); }, []);
 
   async function createSession(e) {
     e.preventDefault();
-    if (!subjectId) return;
     setCreating(true); setError('');
     try {
-      const r = await api.post('/mentor/sessions', { subject_id: subjectId, title: title || null, session_date: date });
+      const r = await api.post('/mentor/sessions', { title: title || null, session_date: date });
       setTitle('');
       await loadSessions();
       openSession(r.data.id);
@@ -66,10 +55,9 @@ export default function MentorAttendance() {
   }
 
   async function generateCode() {
-    if (!subjectId) return;
     setGenerating(true); setError(''); setCode(null);
     try {
-      const r = await api.post('/mentor/sessions/open-code', { subject_id: subjectId, title: title || null, session_date: date });
+      const r = await api.post('/mentor/sessions/open-code', { title: title || null, session_date: date });
       setCode(r.data);
       await loadSessions();
     } catch (e) { setError(e.response?.data?.error || 'Failed to generate code'); }
@@ -112,20 +100,10 @@ export default function MentorAttendance() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Weekly Class Attendance</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Create a weekly session and mark attendance manually.</p>
+        <p className="text-sm text-gray-400 mt-0.5">One common weekly class for all your students — create a session and mark attendance.</p>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
-
-      <div className="card">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Class (Subject)</label>
-        <select className="input max-w-md" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
-          <option value="">— Select class —</option>
-          {subjects.map(s => (
-            <option key={s.id} value={s.id}>{s.code} — {s.name} · {s.student_count} student(s)</option>
-          ))}
-        </select>
-      </div>
 
       {/* New session */}
       <form onSubmit={createSession} className="card flex flex-wrap items-end gap-3">
@@ -137,10 +115,10 @@ export default function MentorAttendance() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
           <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
         </div>
-        <button type="submit" className="btn-primary" disabled={!subjectId || creating}>
+        <button type="submit" className="btn-primary" disabled={creating}>
           {creating ? 'Creating…' : '+ Manual Session'}
         </button>
-        <button type="button" onClick={generateCode} className="btn-secondary" disabled={!subjectId || generating}>
+        <button type="button" onClick={generateCode} className="btn-secondary" disabled={generating}>
           {generating ? 'Generating…' : '🔢 Generate Code'}
         </button>
       </form>
