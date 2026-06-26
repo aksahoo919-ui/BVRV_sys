@@ -3,7 +3,8 @@ import passport from '../config/passport.js';
 import { issueJWT } from '../utils/jwt.js';
 import { query } from '../config/db.js';
 import { requireAuth, requireActive } from '../middleware/auth.js';
-import { verifyPassword } from '../utils/password.js';
+import { verifyPassword, hashPassword, makeResetToken, hashToken } from '../utils/password.js';
+import { emailPasswordReset } from '../services/emailService.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -162,6 +163,55 @@ router.post('/login', async (req, res) => {
     return res.json({ token });
   } catch (err) {
     console.error('[login]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── Forgot / reset password (staff: teacher, BV Leader, admin) ──────────────
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const generic = { message: 'If an eligible account with that email exists, a reset link has been sent.' };
+  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const r = await query('SELECT id, name, email, role FROM users WHERE lower(email) = $1 LIMIT 1', [email]);
+    const user = r.rows[0];
+    const isStaff = user && ['teacher', 'mentor', 'admin'].includes(user.role);
+    const realEmail = user && user.email.includes('@') && !user.email.toLowerCase().endsWith('@noemail.bvrv');
+    if (isStaff && realEmail) {
+      const { raw, hash } = makeResetToken();
+      const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await query(
+        'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+        [user.id, hash, expires.toISOString()]
+      );
+      const link = `${process.env.FRONTEND_URL}/auth/reset-password?token=${raw}`;
+      await emailPasswordReset(user, link);
+    }
+    return res.json(generic);
+  } catch (err) {
+    console.error('[forgot-password]', err);
+    return res.json(generic); // never reveal internal errors / account existence
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const { token } = req.body;
+  const password = String(req.body.password || '');
+  if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+  if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  try {
+    const hash = hashToken(token);
+    const r = await query(
+      'SELECT id, user_id FROM password_reset_tokens WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW() LIMIT 1',
+      [hash]
+    );
+    const row = r.rows[0];
+    if (!row) return res.status(400).json({ error: 'This reset link is invalid or has expired' });
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashPassword(password), row.user_id]);
+    await query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1', [row.id]);
+    return res.json({ message: 'Password updated. You can now sign in.' });
+  } catch (err) {
+    console.error('[reset-password]', err);
     return res.status(500).json({ error: 'Server error' });
   }
 });

@@ -71,7 +71,8 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
           <p className="text-xs text-gray-400 text-center">
-            Forgot your password? Please contact your administrator to reset it.
+            <Link to="/auth/forgot-password" className="text-primary-600 hover:underline">Forgot password?</Link>
+            {' '}(staff) · students contact your administrator.
           </p>
         </form>
 

@@ -6,6 +6,8 @@ import { setTokenGetter } from './utils/api';
 // ── Auth pages ────────────────────────────────────────────────────────────
 import LoginPage from './pages/auth/LoginPage';
 import AdminLoginPage from './pages/auth/AdminLoginPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import AuthCallback from './pages/auth/AuthCallback';
 import OnboardingPage from './pages/auth/OnboardingPage';
 import PendingPage from './pages/auth/PendingPage';
@@ -92,6 +94,8 @@ export default function App() {
       {/* ── Auth ── */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/auth/onboarding" element={<OnboardingPage />} />
       <Route path="/auth/pending" element={<PendingPage />} />

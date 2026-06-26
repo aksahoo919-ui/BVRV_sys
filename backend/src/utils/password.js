@@ -23,6 +23,16 @@ export function verifyPassword(plain, stored) {
   }
 }
 
+// Password-reset token: returns the raw token (emailed) and its sha256 hash (stored).
+export function makeResetToken() {
+  const raw = crypto.randomBytes(32).toString('hex');
+  const hash = crypto.createHash('sha256').update(raw).digest('hex');
+  return { raw, hash };
+}
+export function hashToken(raw) {
+  return crypto.createHash('sha256').update(String(raw)).digest('hex');
+}
+
 // Default username from email/name rules.
 export function defaultUsername(email, name) {
   const e = String(email || '').toLowerCase();

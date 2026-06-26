@@ -85,6 +85,24 @@ function layout(title, bodyHtml) {
 
 // ── Specific email senders ────────────────────────────────────────────────
 
+/** Password reset link */
+export async function emailPasswordReset(user, link) {
+  await sendEmail({
+    to: user.email,
+    subject: 'Reset your BVRV Attendance password',
+    html: layout('Password Reset', `
+      <p>Hare Krishna <strong>${user.name}</strong>,</p>
+      <p>We received a request to reset your password. Click the button below to set a new one.
+         This link expires in <strong>1 hour</strong>.</p>
+      <p style="margin:18px 0">
+        <a href="${link}" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600">Reset Password</a>
+      </p>
+      <p style="font-size:12px;color:#64748b">If the button doesn't work, copy this link:<br>${link}</p>
+      <p>If you didn't request this, you can safely ignore this email.</p>
+    `),
+  });
+}
+
 /** Account approved */
 export async function emailAccountApproved(user) {
   await sendEmail({
