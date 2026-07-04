@@ -25,11 +25,7 @@ function Toast({ message, type, onDismiss }) {
 
 function StudentRow({ student, mentors, subjectId, onMentorAssigned }) {
   const [selectedMentor, setSelectedMentor] = useState(
-    () => {
-      if (!student.current_mentor_name) return '';
-      const match = mentors.find(m => m.name === student.current_mentor_name);
-      return match ? String(match.id) : '';
-    }
+    () => student.current_mentor_id ? String(student.current_mentor_id) : ''
   );
   const [assigning, setAssigning] = useState(false);
   const [rowError, setRowError] = useState('');
@@ -39,7 +35,7 @@ function StudentRow({ student, mentors, subjectId, onMentorAssigned }) {
     setAssigning(true);
     setRowError('');
     try {
-      await api.post(`/teacher/students/${student.id}/mentor`, { mentor_id: Number(selectedMentor) });
+      await api.post(`/teacher/students/${student.id}/mentor`, { mentor_id: selectedMentor, subject_id: subjectId });
       onMentorAssigned(subjectId, 'BV Leader assigned');
     } catch (err) {
       setRowError(err.response?.data?.error || 'Assignment failed.');

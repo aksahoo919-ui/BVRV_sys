@@ -472,6 +472,9 @@ export async function getStudentPerformance(req, res) {
   const r = await query(`
     SELECT
       u.id, u.name, u.email, u.roll_number,
+      -- Assigned BV Leader for this subject
+      mu.name AS current_mentor_name,
+      cma.mentor_id AS current_mentor_id,
       -- Attendance
       COUNT(DISTINCT sess.id)                                                                    AS total_sessions,
       COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)    AS attended,
@@ -484,11 +487,13 @@ export async function getStudentPerformance(req, res) {
       COALESCE(SUM(m.max_marks), 0)                                                              AS total_max
     FROM users u
     JOIN class_enrollments ce ON ce.student_id = u.id AND ce.subject_id = $1
+    LEFT JOIN class_mentor_assignments cma ON cma.student_id = u.id AND cma.subject_id = $1
+    LEFT JOIN users mu ON mu.id = cma.mentor_id
     LEFT JOIN sessions sess ON sess.subject_id = $1 AND sess.closed = true
     LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = u.id
     LEFT JOIN marks m ON m.student_id = u.id AND m.subject_id = $1 ${semClause}
     WHERE u.role = 'student'
-    GROUP BY u.id
+    GROUP BY u.id, mu.name, cma.mentor_id
     ORDER BY u.name
   `, params);
 
@@ -536,27 +541,26 @@ export async function getMentors(req, res) {
 
 export async function assignMentorToStudent(req, res) {
   const { student_id } = req.params;
-  const { mentor_id } = req.body;
-  if (!mentor_id) return res.status(400).json({ error: 'mentor_id required' });
+  const { mentor_id, subject_id } = req.body;
+  if (!mentor_id || !subject_id) return res.status(400).json({ error: 'mentor_id and subject_id required' });
   try {
-    // Verify student is enrolled in one of this teacher's subjects
+    // Verify student is enrolled in this teacher's subject
     const check = await query(
       `SELECT 1 FROM class_enrollments ce
-       WHERE ce.student_id = $1
-         AND ce.instructor_id = $2
+       WHERE ce.student_id = $1 AND ce.subject_id = $2 AND ce.instructor_id = $3
        LIMIT 1`,
-      [student_id, req.user.id]
+      [student_id, subject_id, req.user.id]
     );
     if (!check.rows.length) return res.status(403).json({ error: 'Student not in your class' });
 
     await query(
-      `INSERT INTO mentor_assignments (id, mentor_id, student_id)
+      `INSERT INTO class_mentor_assignments (subject_id, mentor_id, student_id)
        VALUES ($1, $2, $3)
-       ON CONFLICT (student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`,
-      [uuidv4(), mentor_id, student_id]
+       ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`,
+      [subject_id, mentor_id, student_id]
     );
-    await logAudit(req.user.id, 'assign_mentor', 'mentor_assignment', student_id);
-    res.json({ message: 'Mentor assigned' });
+    await logAudit(req.user.id, 'assign_mentor', 'class_mentor_assignment', student_id);
+    res.json({ message: 'BV Leader assigned' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
