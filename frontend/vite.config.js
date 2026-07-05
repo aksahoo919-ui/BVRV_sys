@@ -41,8 +41,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // Never let the service worker intercept /api/* requests —
         // OAuth redirects and API calls must go directly to the server.
+        // Also exclude standalone static HTML (e.g. the user guide) so the
+        // SPA fallback doesn't hijack it into the login redirect.
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/demo-guide\.html$/],
         runtimeCaching: [],
       },
     }),
