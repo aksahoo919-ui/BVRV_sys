@@ -1,141 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BVRV Attendance — How to Use the Portal</title>
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+// The guide is plain HTML rendered inside the SPA so a single button can open
+// it as a normal route — no static file / service-worker / rebuild concerns.
+// Global-ish element selectors below only take effect while this full-screen
+// page is mounted; React removes the <style> node on unmount.
+const GUIDE_HTML = `
 <style>
-  :root{
-    --primary:#2563eb; --primary-600:#2563eb; --primary-700:#1d4ed8;
-    --primary-50:#eff6ff; --primary-100:#dbeafe;
-    --admin:#7c3aed; --admin-50:#f5f3ff;
+  .guide-root{
+    --primary:#2563eb; --primary-700:#1d4ed8; --primary-50:#eff6ff; --primary-100:#dbeafe;
     --teacher:#2563eb; --teacher-50:#eff6ff;
     --leader:#059669; --leader-50:#ecfdf5;
     --student:#d97706; --student-50:#fffbeb;
     --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color:var(--ink); background:var(--bg); line-height:1.6; -webkit-font-smoothing:antialiased;
+    min-height:100vh;
   }
-  a{color:inherit;text-decoration:none}
+  .guide-root *{box-sizing:border-box;margin:0;padding:0}
+  .guide-root a{color:inherit;text-decoration:none}
 
-  /* Layout */
-  .shell{display:flex; min-height:100vh}
-  .sidebar{
+  .guide-root .shell{display:flex; min-height:100vh}
+  .guide-root .sidebar{
     width:260px; flex-shrink:0; background:#0f172a; color:#cbd5e1;
     position:sticky; top:0; height:100vh; overflow-y:auto; padding:24px 0;
   }
-  .brand{padding:0 24px 20px; border-bottom:1px solid #1e293b; margin-bottom:16px}
-  .brand .logo{
+  .guide-root .brand{padding:0 24px 20px; border-bottom:1px solid #1e293b; margin-bottom:16px}
+  .guide-root .brand .logo{
     width:44px;height:44px;border-radius:12px;background:var(--primary);
     display:flex;align-items:center;justify-content:center;margin-bottom:10px;
     font-weight:800;color:#fff;font-size:18px;
   }
-  .brand h1{font-size:16px;color:#fff;font-weight:700;letter-spacing:.2px}
-  .brand p{font-size:12px;color:#64748b;margin-top:2px}
-  .nav-group{padding:8px 0}
-  .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#475569;padding:8px 24px 4px}
-  .nav a{
+  .guide-root .brand h1{font-size:16px;color:#fff;font-weight:700;letter-spacing:.2px}
+  .guide-root .brand p{font-size:12px;color:#64748b;margin-top:2px}
+  .guide-root .nav-group{padding:8px 0}
+  .guide-root .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#475569;padding:8px 24px 4px}
+  .guide-root .nav a{
     display:flex;align-items:center;gap:10px;padding:9px 24px;font-size:14px;color:#cbd5e1;
     border-left:3px solid transparent;transition:.15s;
   }
-  .nav a:hover{background:#1e293b;color:#fff}
-  .nav a .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-  .content{flex:1; min-width:0; padding:0 0 80px}
+  .guide-root .nav a:hover{background:#1e293b;color:#fff}
+  .guide-root .nav a .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .guide-root .content{flex:1; min-width:0; padding:0 0 80px}
 
-  /* Hero */
-  .hero{
+  .guide-root .hero{
     background:linear-gradient(135deg,#1e3a8a,#2563eb 60%,#3b82f6);
     color:#fff; padding:56px 48px 48px;
   }
-  .hero .eyebrow{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8;margin-bottom:12px}
-  .hero h2{font-size:34px;font-weight:800;line-height:1.2;margin-bottom:12px;max-width:720px}
-  .hero p{font-size:16px;opacity:.9;max-width:640px}
-  .hero .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
-  .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  .guide-root .hero .eyebrow{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8;margin-bottom:12px}
+  .guide-root .hero h2{font-size:34px;font-weight:800;line-height:1.2;margin-bottom:12px;max-width:720px}
+  .guide-root .hero p{font-size:16px;opacity:.9;max-width:640px}
+  .guide-root .hero .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+  .guide-root .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
     padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
 
-  .wrap{padding:40px 48px;max-width:1000px}
+  .guide-root .wrap{padding:40px 48px;max-width:1000px}
 
-  /* Login card block */
-  .info{
+  .guide-root .info{
     background:var(--primary-50);border:1px solid var(--primary-100);border-radius:14px;
     padding:20px 24px;margin-bottom:36px;
   }
-  .info h4{font-size:15px;margin-bottom:8px;color:var(--primary-700)}
-  .info code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:13px;font-family:"SF Mono",Consolas,monospace}
-  .info ul{margin:8px 0 0 18px;font-size:14px;color:#334155}
-  .info li{margin:3px 0}
+  .guide-root .info h4{font-size:15px;margin-bottom:8px;color:var(--primary-700)}
+  .guide-root .info code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:13px;font-family:"SF Mono",Consolas,monospace}
+  .guide-root .info ul{margin:8px 0 0 18px;font-size:14px;color:#334155}
+  .guide-root .info li{margin:3px 0}
 
-  /* Role sections */
-  section{scroll-margin-top:20px;margin-bottom:56px}
-  .sec-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
-  .sec-badge{
+  .guide-root section{scroll-margin-top:20px;margin-bottom:56px}
+  .guide-root .sec-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .guide-root .sec-badge{
     width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;
     font-size:24px;flex-shrink:0;
   }
-  .sec-head h3{font-size:26px;font-weight:800}
-  .sec-sub{color:var(--muted);font-size:15px;margin-bottom:24px;margin-left:66px}
+  .guide-root .sec-head h3{font-size:26px;font-weight:800}
+  .guide-root .sec-sub{color:var(--muted);font-size:15px;margin-bottom:24px;margin-left:66px}
 
-  /* Steps */
-  .steps{counter-reset:step;display:grid;gap:14px}
-  .step{
+  .guide-root .steps{counter-reset:step;display:grid;gap:14px}
+  .guide-root .step{
     background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px 18px 60px;
     position:relative;box-shadow:0 1px 2px rgba(15,23,42,.04);
   }
-  .step::before{
+  .guide-root .step::before{
     counter-increment:step;content:counter(step);
     position:absolute;left:16px;top:18px;width:30px;height:30px;border-radius:9px;
     background:var(--accent,#2563eb);color:#fff;font-weight:700;font-size:14px;
     display:flex;align-items:center;justify-content:center;
   }
-  .step h5{font-size:15px;font-weight:700;margin-bottom:4px}
-  .step p{font-size:14px;color:#475569}
-  .step .where{
+  .guide-root .step h5{font-size:15px;font-weight:700;margin-bottom:4px}
+  .guide-root .step p{font-size:14px;color:#475569}
+  .guide-root .step .where{
     display:inline-block;margin-top:8px;font-size:12px;font-weight:600;
     background:var(--tint,#eff6ff);color:var(--accent,#2563eb);
     padding:3px 10px;border-radius:6px;
   }
-  .step .tip{
+  .guide-root .step .tip{
     margin-top:10px;font-size:13px;color:#475569;background:#fffbeb;border-left:3px solid #f59e0b;
     padding:8px 12px;border-radius:0 8px 8px 0;
   }
 
-  /* Feature grid */
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:8px}
-  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-  .feat .ic{font-size:20px;margin-bottom:8px}
-  .feat h6{font-size:14px;font-weight:700;margin-bottom:3px}
-  .feat p{font-size:13px;color:var(--muted)}
+  .guide-root .divider{height:1px;background:var(--line);margin:0 48px}
 
-  .divider{height:1px;background:var(--line);margin:0 48px}
+  .guide-root details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 18px;margin-bottom:10px}
+  .guide-root details summary{cursor:pointer;font-weight:600;font-size:15px;padding:16px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  .guide-root details summary::-webkit-details-marker{display:none}
+  .guide-root details summary::after{content:"+";font-size:22px;color:var(--muted);font-weight:400}
+  .guide-root details[open] summary::after{content:"–"}
+  .guide-root details p{padding:0 0 16px;font-size:14px;color:#475569}
 
-  /* FAQ */
-  details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 18px;margin-bottom:10px}
-  details summary{cursor:pointer;font-weight:600;font-size:15px;padding:16px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
-  details summary::-webkit-details-marker{display:none}
-  details summary::after{content:"+";font-size:22px;color:var(--muted);font-weight:400}
-  details[open] summary::after{content:"–"}
-  details p{padding:0 0 16px;font-size:14px;color:#475569}
-
-  footer{padding:32px 48px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:20px}
+  .guide-root footer{padding:32px 48px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:20px}
 
   @media(max-width:860px){
-    .sidebar{display:none}
-    .hero{padding:40px 24px}
-    .hero h2{font-size:26px}
-    .wrap{padding:28px 20px}
-    .divider{margin:0 20px}
-    footer{padding:24px 20px}
+    .guide-root .sidebar{display:none}
+    .guide-root .hero{padding:40px 24px}
+    .guide-root .hero h2{font-size:26px}
+    .guide-root .wrap{padding:28px 20px}
+    .guide-root .divider{margin:0 20px}
+    .guide-root footer{padding:24px 20px}
   }
 </style>
-</head>
-<body>
 <div class="shell">
-  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">B</div>
@@ -160,7 +142,6 @@
     </nav>
   </aside>
 
-  <!-- Content -->
   <main class="content">
     <div class="hero">
       <div class="eyebrow">BVRV, ISKCON ABIDS</div>
@@ -174,7 +155,6 @@
     </div>
 
     <div class="wrap">
-      <!-- GETTING STARTED -->
       <section id="getting-started">
         <div class="info">
           <h4>🔑 Signing in</h4>
@@ -187,7 +167,6 @@
         </div>
       </section>
 
-      <!-- TEACHER -->
       <section id="teacher" style="--accent:var(--teacher);--tint:var(--teacher-50)">
         <div class="sec-head">
           <div class="sec-badge" style="background:var(--teacher-50)">📘</div>
@@ -233,7 +212,6 @@
       <div class="divider"></div>
       <div style="height:40px"></div>
 
-      <!-- BV LEADER -->
       <section id="leader" style="--accent:var(--leader);--tint:var(--leader-50)">
         <div class="sec-head">
           <div class="sec-badge" style="background:var(--leader-50)">🪷</div>
@@ -274,7 +252,6 @@
       <div class="divider"></div>
       <div style="height:40px"></div>
 
-      <!-- STUDENT -->
       <section id="student" style="--accent:var(--student);--tint:var(--student-50)">
         <div class="sec-head">
           <div class="sec-badge" style="background:var(--student-50)">🎓</div>
@@ -304,7 +281,6 @@
       <div class="divider"></div>
       <div style="height:40px"></div>
 
-      <!-- FAQ -->
       <section id="faq">
         <div class="sec-head">
           <div class="sec-badge" style="background:#f1f5f9">❓</div>
@@ -344,5 +320,26 @@
     </footer>
   </main>
 </div>
-</body>
-</html>
+`;
+
+export default function GuidePage() {
+  const navigate = useNavigate();
+  return (
+    <div className="guide-root">
+      <button
+        onClick={() => navigate(-1)}
+        style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 50,
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'rgba(255,255,255,.9)', backdropFilter: 'blur(4px)',
+          border: '1px solid #e2e8f0', color: '#1d4ed8', fontSize: 14, fontWeight: 600,
+          padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+          boxShadow: '0 1px 2px rgba(15,23,42,.06)',
+        }}
+      >
+        ← Back
+      </button>
+      <div dangerouslySetInnerHTML={{ __html: GUIDE_HTML }} />
+    </div>
+  );
+}

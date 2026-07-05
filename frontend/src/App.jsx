@@ -14,6 +14,7 @@ import PendingPage from './pages/auth/PendingPage';
 import SuspendedPage from './pages/auth/SuspendedPage';
 import NotAdminPage from './pages/auth/NotAdminPage';
 import RoleSelectPage from './pages/auth/RoleSelectPage';
+import GuidePage from './pages/GuidePage';
 
 // ── Admin pages ───────────────────────────────────────────────────────────
 import AdminLayout from './pages/admin/AdminLayout';
@@ -93,6 +94,7 @@ export default function App() {
     <Routes>
       {/* ── Auth ── */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/guide" element={<GuidePage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
