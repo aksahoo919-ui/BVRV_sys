@@ -168,21 +168,10 @@ export async function emailCorrectionStatus(teacher, status, studentName, subjec
  * Called after session close when a student's running attendance drops below threshold.
  */
 export async function emailAttendanceAlert({
-  studentEmail, studentName, subjectName, percentage, threshold, mentorEmail, mentorName,
+  studentName, subjectName, percentage, threshold, mentorEmail, mentorName,
 }) {
-  // Email student
-  await sendEmail({
-    to: studentEmail,
-    subject: `⚠ Attendance warning: ${subjectName}`,
-    html: layout('Attendance Warning', `
-      <p>Hare Krishna <strong>${studentName}</strong>,</p>
-      <p>Your attendance in <strong>${subjectName}</strong> has dropped to
-         <strong>${percentage}%</strong>, which is below the required threshold of
-         <strong>${threshold}%</strong>.</p>
-      <p><span class="badge badge-amber">⚠ Below Threshold</span></p>
-      <p>Please attend upcoming sessions to avoid being marked a defaulter.</p>
-    `),
-  });
+  // Note: students are NOT emailed about their own class attendance.
+  // Only the assigned BV Leader is notified so they can follow up.
 
   // Email mentor if assigned
   if (mentorEmail) {

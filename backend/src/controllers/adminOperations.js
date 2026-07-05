@@ -61,6 +61,39 @@ export async function reviewAttendanceCorrection(req, res) {
   res.json(corr);
 }
 
+// ── Reset Attendance ───────────────────────────────────────────────────────
+// Deletes class (academic) sessions and their attendance records. Scope:
+//   - subject_id only     → class-wise
+//   - date only           → date-wise (all classes on that day)
+//   - subject_id + date    → that class on that day
+//   - neither (bulk)       → ALL class attendance (requires confirm === 'RESET')
+// attendance_logs & attendance_corrections cascade-delete with their sessions.
+// BV Leader (mentor) attendance is separate and is NOT touched here.
+export async function resetAttendance(req, res) {
+  const { subject_id, date, confirm } = req.body || {};
+  const bulk = !subject_id && !date;
+  if (bulk && confirm !== 'RESET') {
+    return res.status(400).json({ error: 'A full reset requires confirm="RESET".' });
+  }
+  try {
+    const params = [];
+    const clauses = [];
+    if (subject_id) { params.push(subject_id); clauses.push(`subject_id = $${params.length}`); }
+    if (date)       { params.push(date);       clauses.push(`opened_at::date = $${params.length}`); }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+    const del = await query(`DELETE FROM sessions ${where} RETURNING id`, params);
+    await logAudit(
+      req.user.id, 'reset_attendance', 'sessions',
+      subject_id || (date ? `date:${date}` : 'ALL')
+    );
+    res.json({ deleted_sessions: del.rowCount });
+  } catch (err) {
+    console.error('[resetAttendance]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
 // ── Leave Requests ─────────────────────────────────────────────────────────
 
 export async function getLeaveRequests(req, res) {

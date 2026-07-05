@@ -155,17 +155,16 @@ async function _checkAttendanceAlerts(session) {
     const pct = Math.round(att / tot * 100);
     if (pct >= threshold) continue; // OK — no alert
 
-    // Look up assigned mentor
+    // Look up assigned BV Leader for this subject
     const mentorR = await query(`
       SELECT u.name, u.email
-      FROM mentor_assignments ma
-      JOIN users u ON u.id = ma.mentor_id
-      WHERE ma.student_id = $1
-    `, [student.id]);
+      FROM class_mentor_assignments cma
+      JOIN users u ON u.id = cma.mentor_id
+      WHERE cma.student_id = $1 AND cma.subject_id = $2
+    `, [student.id, session.subject_id]);
     const mentor = mentorR.rows[0];
 
     await emailAttendanceAlert({
-      studentEmail: student.email,
       studentName:  student.name,
       subjectName,
       percentage:   pct,

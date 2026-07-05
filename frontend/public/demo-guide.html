@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BVRV Attendance — How to Use the Portal</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-600:#2563eb; --primary-700:#1d4ed8;
+    --primary-50:#eff6ff; --primary-100:#dbeafe;
+    --admin:#7c3aed; --admin-50:#f5f3ff;
+    --teacher:#2563eb; --teacher-50:#eff6ff;
+    --leader:#059669; --leader-50:#ecfdf5;
+    --student:#d97706; --student-50:#fffbeb;
+    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); background:var(--bg); line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+
+  /* Layout */
+  .shell{display:flex; min-height:100vh}
+  .sidebar{
+    width:260px; flex-shrink:0; background:#0f172a; color:#cbd5e1;
+    position:sticky; top:0; height:100vh; overflow-y:auto; padding:24px 0;
+  }
+  .brand{padding:0 24px 20px; border-bottom:1px solid #1e293b; margin-bottom:16px}
+  .brand .logo{
+    width:44px;height:44px;border-radius:12px;background:var(--primary);
+    display:flex;align-items:center;justify-content:center;margin-bottom:10px;
+    font-weight:800;color:#fff;font-size:18px;
+  }
+  .brand h1{font-size:16px;color:#fff;font-weight:700;letter-spacing:.2px}
+  .brand p{font-size:12px;color:#64748b;margin-top:2px}
+  .nav-group{padding:8px 0}
+  .nav-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#475569;padding:8px 24px 4px}
+  .nav a{
+    display:flex;align-items:center;gap:10px;padding:9px 24px;font-size:14px;color:#cbd5e1;
+    border-left:3px solid transparent;transition:.15s;
+  }
+  .nav a:hover{background:#1e293b;color:#fff}
+  .nav a .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .content{flex:1; min-width:0; padding:0 0 80px}
+
+  /* Hero */
+  .hero{
+    background:linear-gradient(135deg,#1e3a8a,#2563eb 60%,#3b82f6);
+    color:#fff; padding:56px 48px 48px;
+  }
+  .hero .eyebrow{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8;margin-bottom:12px}
+  .hero h2{font-size:34px;font-weight:800;line-height:1.2;margin-bottom:12px;max-width:720px}
+  .hero p{font-size:16px;opacity:.9;max-width:640px}
+  .hero .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+  .chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+    padding:6px 14px;border-radius:999px;font-size:13px;font-weight:600}
+
+  .wrap{padding:40px 48px;max-width:1000px}
+
+  /* Login card block */
+  .info{
+    background:var(--primary-50);border:1px solid var(--primary-100);border-radius:14px;
+    padding:20px 24px;margin-bottom:36px;
+  }
+  .info h4{font-size:15px;margin-bottom:8px;color:var(--primary-700)}
+  .info code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:13px;font-family:"SF Mono",Consolas,monospace}
+  .info ul{margin:8px 0 0 18px;font-size:14px;color:#334155}
+  .info li{margin:3px 0}
+
+  /* Role sections */
+  section{scroll-margin-top:20px;margin-bottom:56px}
+  .sec-head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .sec-badge{
+    width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-size:24px;flex-shrink:0;
+  }
+  .sec-head h3{font-size:26px;font-weight:800}
+  .sec-sub{color:var(--muted);font-size:15px;margin-bottom:24px;margin-left:66px}
+
+  /* Steps */
+  .steps{counter-reset:step;display:grid;gap:14px}
+  .step{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px 18px 60px;
+    position:relative;box-shadow:0 1px 2px rgba(15,23,42,.04);
+  }
+  .step::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;left:16px;top:18px;width:30px;height:30px;border-radius:9px;
+    background:var(--accent,#2563eb);color:#fff;font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step h5{font-size:15px;font-weight:700;margin-bottom:4px}
+  .step p{font-size:14px;color:#475569}
+  .step .where{
+    display:inline-block;margin-top:8px;font-size:12px;font-weight:600;
+    background:var(--tint,#eff6ff);color:var(--accent,#2563eb);
+    padding:3px 10px;border-radius:6px;
+  }
+  .step .tip{
+    margin-top:10px;font-size:13px;color:#475569;background:#fffbeb;border-left:3px solid #f59e0b;
+    padding:8px 12px;border-radius:0 8px 8px 0;
+  }
+
+  /* Feature grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:8px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .feat .ic{font-size:20px;margin-bottom:8px}
+  .feat h6{font-size:14px;font-weight:700;margin-bottom:3px}
+  .feat p{font-size:13px;color:var(--muted)}
+
+  .divider{height:1px;background:var(--line);margin:0 48px}
+
+  /* FAQ */
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 18px;margin-bottom:10px}
+  details summary{cursor:pointer;font-weight:600;font-size:15px;padding:16px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";font-size:22px;color:var(--muted);font-weight:400}
+  details[open] summary::after{content:"–"}
+  details p{padding:0 0 16px;font-size:14px;color:#475569}
+
+  footer{padding:32px 48px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:20px}
+
+  @media(max-width:860px){
+    .sidebar{display:none}
+    .hero{padding:40px 24px}
+    .hero h2{font-size:26px}
+    .wrap{padding:28px 20px}
+    .divider{margin:0 20px}
+    footer{padding:24px 20px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <h1>BVRV Attendance</h1>
+      <p>User Guide &amp; Demo</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-label">Overview</div>
+        <a href="#getting-started"><span class="dot" style="background:#64748b"></span> Getting Started</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Roles</div>
+        <a href="#teacher"><span class="dot" style="background:var(--teacher)"></span> Teacher</a>
+        <a href="#leader"><span class="dot" style="background:var(--leader)"></span> BV Leader</a>
+        <a href="#student"><span class="dot" style="background:var(--student)"></span> Student</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Help</div>
+        <a href="#faq"><span class="dot" style="background:#64748b"></span> FAQ</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Content -->
+  <main class="content">
+    <div class="hero">
+      <div class="eyebrow">BVRV, ISKCON ABIDS</div>
+      <h2>Attendance &amp; Academic Portal — How to Use It</h2>
+      <p>A quick walkthrough for every role. Follow the steps for your part, and you'll be running sessions, marking attendance, and pulling reports in minutes.</p>
+      <div class="chips">
+        <span class="chip">📘 Teacher</span>
+        <span class="chip">🪷 BV Leader</span>
+        <span class="chip">🎓 Student</span>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- GETTING STARTED -->
+      <section id="getting-started">
+        <div class="info">
+          <h4>🔑 Signing in</h4>
+          <ul>
+            <li><strong>Staff (Admin / Teacher / BV Leader):</strong> sign in with your <strong>username &amp; password</strong>, or with <strong>Google</strong>.</li>
+            <li><strong>First-time password:</strong> the default is <code>1896</code> — change it via <strong>Forgot password?</strong> on the login screen (sends a reset link to your email).</li>
+            <li><strong>Students:</strong> sign in with Google, or the username/password given by the admin.</li>
+            <li><strong>Dual role?</strong> If you are both a Teacher and a BV Leader, use the <strong>role switcher</strong> in the top bar to move between the two portals.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- TEACHER -->
+      <section id="teacher" style="--accent:var(--teacher);--tint:var(--teacher-50)">
+        <div class="sec-head">
+          <div class="sec-badge" style="background:var(--teacher-50)">📘</div>
+          <h3>Teacher</h3>
+        </div>
+        <p class="sec-sub">Runs academic classes: takes attendance, uploads marks, and keeps an eye on defaulters.</p>
+
+        <div class="steps">
+          <div class="step">
+            <h5>Open your classes</h5>
+            <p>The <strong>Classes</strong> page lists every subject assigned to you, with student counts and the last session date.</p>
+            <span class="where">Classes</span>
+          </div>
+          <div class="step">
+            <h5>Start a session &amp; take attendance</h5>
+            <p>Hit <strong>Start Session</strong> to generate a PIN — students enter it to mark themselves present in real time. Prefer to call names? Use <strong>Manual Attendance</strong> to tick a roster.</p>
+            <span class="where">Classes → Start Session · Manual Attend.</span>
+            <div class="tip">💡 The live view updates as students punch in the PIN. Close the session when done to lock it.</div>
+          </div>
+          <div class="step">
+            <h5>Assign / view each student's BV Leader</h5>
+            <p>Expand a class to see the roster. Each row shows the student's current BV Leader and lets you assign one — this stays in sync with the Admin's Class BV Leaders page.</p>
+            <span class="where">Classes → ▼ Students</span>
+          </div>
+          <div class="step">
+            <h5>Enter marks</h5>
+            <p>Upload marks per assessment (OBE / CBE / Sloka), choose the semester, and record scored vs. max. Review or edit anytime in Marks History.</p>
+            <span class="where">Marks · Marks History</span>
+          </div>
+          <div class="step">
+            <h5>Track performance &amp; defaulters</h5>
+            <p>See per-student attendance % and marks together. The Defaulters list flags anyone below the attendance threshold so you can follow up.</p>
+            <span class="where">Performance · Defaulters</span>
+          </div>
+          <div class="step">
+            <h5>Fix mistakes with corrections</h5>
+            <p>Marked the wrong status? Raise an attendance-correction request for the admin to approve.</p>
+            <span class="where">Corrections</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+      <div style="height:40px"></div>
+
+      <!-- BV LEADER -->
+      <section id="leader" style="--accent:var(--leader);--tint:var(--leader-50)">
+        <div class="sec-head">
+          <div class="sec-badge" style="background:var(--leader-50)">🪷</div>
+          <h3>BV Leader</h3>
+        </div>
+        <p class="sec-sub">Mentors a group of students across subjects. Runs one common weekly session for all of them — independent of which subjects they study.</p>
+
+        <div class="steps">
+          <div class="step">
+            <h5>See your students</h5>
+            <p>Your <strong>Students</strong> list shows everyone assigned to you (by the admin or a teacher), pulled from every class they're enrolled in.</p>
+            <span class="where">Students</span>
+          </div>
+          <div class="step">
+            <h5>Take your weekly attendance</h5>
+            <p>Your class is <strong>one common session</strong> for all your students — not per subject. Create a <strong>Manual Session</strong> and tick who attended, or <strong>Generate Code</strong> and let students punch in a PIN.</p>
+            <span class="where">Attendance</span>
+            <div class="tip">💡 BV Leader attendance is separate from academic attendance — it never dilutes a subject's percentage.</div>
+          </div>
+          <div class="step">
+            <h5>Spot who's falling behind</h5>
+            <p>The <strong>Defaulters</strong> view lists students below the threshold against your common sessions, and <strong>Alerts</strong> surfaces students needing attention.</p>
+            <span class="where">Defaulters · Alerts</span>
+          </div>
+          <div class="step">
+            <h5>Drill into a student</h5>
+            <p>Open any student to see both your BV-class attendance <em>and</em> their academic subject attendance in one place — a full picture for counseling.</p>
+            <span class="where">Students → View Details</span>
+          </div>
+          <div class="step">
+            <h5>Stay informed by email</h5>
+            <p>You receive consolidated weekly &amp; monthly reports for your students automatically — no action needed.</p>
+            <span class="where">Automatic email</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+      <div style="height:40px"></div>
+
+      <!-- STUDENT -->
+      <section id="student" style="--accent:var(--student);--tint:var(--student-50)">
+        <div class="sec-head">
+          <div class="sec-badge" style="background:var(--student-50)">🎓</div>
+          <h3>Student</h3>
+        </div>
+        <p class="sec-sub">Marks attendance, checks marks &amp; results, and sees who their BV Leader is.</p>
+
+        <div class="steps">
+          <div class="step">
+            <h5>Mark yourself present</h5>
+            <p>When a teacher or BV Leader opens a session, enter the <strong>PIN</strong> they announce to record your attendance before it expires.</p>
+            <span class="where">Mark Attendance</span>
+          </div>
+          <div class="step">
+            <h5>Check marks &amp; results</h5>
+            <p>View your assessment marks per subject and your published results for the academic year.</p>
+            <span class="where">Marks · Results</span>
+          </div>
+          <div class="step">
+            <h5>See your timetable &amp; BV Leader</h5>
+            <p>Check your class schedule, and find the BV Leader assigned to you for each class.</p>
+            <span class="where">Timetable · My BV Leaders</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+      <div style="height:40px"></div>
+
+      <!-- FAQ -->
+      <section id="faq">
+        <div class="sec-head">
+          <div class="sec-badge" style="background:#f1f5f9">❓</div>
+          <h3>FAQ</h3>
+        </div>
+        <p class="sec-sub">Quick answers to the most common questions.</p>
+
+        <details>
+          <summary>What's the default password and how do I change it?</summary>
+          <p>New staff accounts start with <strong>1896</strong>. Change it by clicking <strong>Forgot password?</strong> on the login page — you'll get a reset link by email (valid for 1 hour, single use). Admins can also reset any user back to 1896.</p>
+        </details>
+        <details>
+          <summary>I'm both a Teacher and a BV Leader. How do I switch?</summary>
+          <p>Use the role switcher in the top-right of the dashboard. It only appears if your account has a second role. A brief loading animation shows while it swaps you into the other portal.</p>
+        </details>
+        <details>
+          <summary>How is BV Leader attendance different from class attendance?</summary>
+          <p>A teacher's session is tied to a subject and counts toward that subject's attendance %. A BV Leader runs <strong>one common weekly session</strong> for all their students regardless of subject — it's tracked separately and never affects academic percentages.</p>
+        </details>
+        <details>
+          <summary>Why does a student show no BV Leader in my teacher view?</summary>
+          <p>They haven't been assigned one for that subject yet. Expand the class roster and pick a BV Leader from the dropdown, then click Assign — it syncs with the admin's Class BV Leaders page instantly.</p>
+        </details>
+        <details>
+          <summary>A student's email is missing — can I still import them?</summary>
+          <p>Yes. Bulk import keeps rows without an email (a placeholder is generated). Only staff with a <em>real</em> email can use self-service password reset, though.</p>
+        </details>
+        <details>
+          <summary>Can I fix an attendance mistake after closing a session?</summary>
+          <p>Teachers raise an <strong>attendance-correction request</strong>; the admin approves it. This keeps an audit trail of every change.</p>
+        </details>
+      </section>
+    </div>
+
+    <footer>
+      BVRV Attendance · ISKCON ABIDS — Internal user guide. Hare Krishna 🙏
+    </footer>
+  </main>
+</div>
+</body>
+</html>

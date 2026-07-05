@@ -106,6 +106,7 @@ router.get('/enrollments', ...guard, acad.getCourseEnrollments);
 // ── Operations ────────────────────────────────────────────────────────────
 router.get('/attendance-corrections', ...guard, ops.getAttendanceCorrections);
 router.patch('/attendance-corrections/:id', ...guard, ops.reviewAttendanceCorrection);
+router.post('/attendance/reset', ...guard, ops.resetAttendance);
 
 router.get('/leave-requests', ...guard, ops.getLeaveRequests);
 router.patch('/leave-requests/:id', ...guard, ops.reviewLeaveRequest);
