@@ -1,8 +1,12 @@
-import { query } from '../config/db.js';
+import { query, pool } from '../config/db.js';
 import redis from '../config/redis.js';
 import { v4 as uuidv4 } from 'uuid';
 import { generatePin } from '../utils/pin.js';
 import { logAudit } from '../middleware/audit.js';
+import { istDateString, isDateLocked, lockCutoffDate, isValidYmd } from '../utils/istDate.js';
+
+const LOG_STATUSES = ['present', 'late', 'flagged', 'service'];
+const LOCK_MSG = d => `Attendance for ${d} is locked (weeks lock every Saturday)`;
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 
@@ -72,9 +76,9 @@ export async function openSession(req, res) {
   const expiresAt = new Date(now.getTime() + 3 * 60 * 1000); // 3 min
 
   await query(
-    `INSERT INTO sessions (id,subject_id,instructor_id,token_hash,pin_display,opened_at,expires_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [sessionId, subject_id, req.user.id, tokenHash, pin, now, expiresAt]
+    `INSERT INTO sessions (id,subject_id,instructor_id,token_hash,pin_display,opened_at,expires_at,session_date)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [sessionId, subject_id, req.user.id, tokenHash, pin, now, expiresAt, istDateString(now)]
   );
 
   // Register PIN in Redis with 5-min TTL
@@ -99,7 +103,8 @@ export async function getLiveAttendance(req, res) {
 
 export async function closeSession(req, res) {
   const r = await query(
-    'UPDATE sessions SET closed=true WHERE id=$1 AND instructor_id=$2 RETURNING *',
+    `UPDATE sessions SET closed=true WHERE id=$1 AND instructor_id=$2
+     RETURNING *, to_char(session_date, 'YYYY-MM-DD') AS session_day`,
     [req.params.id, req.user.id]
   );
   if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
@@ -141,8 +146,8 @@ async function _checkAttendanceAlerts(session) {
   for (const student of studentsR.rows) {
     const attR = await query(`
       SELECT
-        COUNT(DISTINCT sess.id)                                                                   AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)   AS attended
+        COUNT(DISTINCT sess.session_date)                                                                   AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)   AS attended
       FROM sessions sess
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
       WHERE sess.subject_id = $2 AND sess.closed = true
@@ -177,7 +182,14 @@ async function _checkAttendanceAlerts(session) {
 
 export async function overrideAttendance(req, res) {
   const { status } = req.body;
-  if (!['present','late','flagged'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  if (!LOG_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const day = await query(
+    `SELECT to_char(sess.session_date, 'YYYY-MM-DD') AS d FROM attendance_logs al
+     JOIN sessions sess ON sess.id = al.session_id WHERE al.id=$1 AND sess.instructor_id=$2`,
+    [req.params.log_id, req.user.id]
+  );
+  if (!day.rows.length) return res.status(404).json({ error: 'Not found' });
+  if (isDateLocked(day.rows[0].d)) return res.status(423).json({ error: LOCK_MSG(day.rows[0].d) });
   const r = await query(
     `UPDATE attendance_logs al SET status=$1
      FROM sessions sess WHERE al.id=$2 AND al.session_id=sess.id AND sess.instructor_id=$3 RETURNING al.*`,
@@ -202,11 +214,11 @@ export async function getSubjectReport(req, res) {
 
   const r = await query(`
     SELECT u.id, u.name, u.email, u.avatar_url,
-      COUNT(DISTINCT sess.id) AS total_sessions,
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended,
-      CASE WHEN COUNT(DISTINCT sess.id)>0
-        THEN ROUND((COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-             / COUNT(DISTINCT sess.id))*100,1)
+      COUNT(DISTINCT sess.session_date) AS total_sessions,
+      COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+      CASE WHEN COUNT(DISTINCT sess.session_date)>0
+        THEN ROUND((COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+             / COUNT(DISTINCT sess.session_date))*100,1)
         ELSE 0 END AS percentage
     FROM users u
     JOIN class_enrollments ce ON ce.student_id=u.id AND ce.subject_id=$1
@@ -405,44 +417,171 @@ export async function editMark(req, res) {
   res.json(r.rows[0]);
 }
 
-// ── Manual attendance marking (roster, no PIN) ────────────────────────────
+// ── Manual attendance (roster, no PIN) — one record per class per day ─────
+// All sessions a teacher holds for a class on the same IST day are merged into a
+// single attendance day: a student counts as attended if present (or on service)
+// in any of them. Saving a day writes the record to the day's first session and
+// clears the student's rows in the other sessions of that day, so the saved
+// roster is exactly the merged result. Days lock every Saturday (see istDate.js).
 
+async function ownsSubject(subjectId, userId) {
+  const r = await query(
+    'SELECT 1 FROM class_enrollments WHERE subject_id=$1 AND instructor_id=$2 LIMIT 1',
+    [subjectId, userId]
+  );
+  return r.rows.length > 0;
+}
+
+// GET /teacher/attendance/day?subject_id=&date=YYYY-MM-DD
+export async function getAttendanceDay(req, res) {
+  const { subject_id } = req.query;
+  const date = req.query.date || istDateString();
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  if (!isValidYmd(date)) return res.status(400).json({ error: 'Invalid date' });
+  if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
+
+  const sessR = await query(
+    `SELECT id, opened_at, manual FROM sessions
+     WHERE subject_id=$1 AND session_date=$2 AND closed=true ORDER BY opened_at`,
+    [subject_id, date]
+  );
+  const r = await query(`
+    SELECT u.id, u.name, u.roll_number,
+      (SELECT al.status FROM attendance_logs al
+         JOIN sessions sess ON sess.id = al.session_id
+         WHERE sess.subject_id = $1 AND sess.session_date = $2 AND sess.closed = true
+           AND al.student_id = u.id AND al.replayed = false
+         ORDER BY CASE al.status WHEN 'present' THEN 0 WHEN 'service' THEN 1
+                                 WHEN 'late' THEN 2 ELSE 3 END
+         LIMIT 1)::text AS status
+    FROM (SELECT DISTINCT student_id FROM class_enrollments
+          WHERE subject_id = $1 AND student_id IS NOT NULL) ce
+    JOIN users u ON u.id = ce.student_id
+    WHERE u.role = 'student'
+    ORDER BY u.name`,
+    [subject_id, date]
+  );
+  const hasRecord = sessR.rows.length > 0;
+  res.json({
+    date,
+    locked: isDateLocked(date),
+    lock_cutoff: lockCutoffDate(),
+    has_record: hasRecord,
+    session_count: sessR.rows.length,
+    recorded_at: hasRecord ? sessR.rows[sessR.rows.length - 1].opened_at : null,
+    // No row on a recorded day = absent. A new day starts with nobody pre-marked.
+    roster: r.rows.map(s => ({ ...s, status: s.status || (hasRecord ? 'absent' : null) })),
+  });
+}
+
+// GET /teacher/attendance/days?subject_id=  — recorded days (merged), newest first
+export async function getAttendanceDays(req, res) {
+  const { subject_id } = req.query;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
+  const r = await query(`
+    SELECT to_char(sess.session_date, 'YYYY-MM-DD') AS session_date,
+      COUNT(DISTINCT sess.id)::int AS session_count,
+      MAX(sess.opened_at) AS recorded_at,
+      COUNT(DISTINCT al.student_id) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::int AS present_count,
+      COUNT(DISTINCT al.student_id) FILTER (WHERE al.status = 'service' AND al.replayed=false)::int AS service_count,
+      (SELECT COUNT(DISTINCT ce.student_id) FROM class_enrollments ce
+         WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL)::int AS total_students
+    FROM sessions sess
+    LEFT JOIN attendance_logs al ON al.session_id = sess.id
+    WHERE sess.subject_id = $1 AND sess.closed = true
+    GROUP BY sess.session_date
+    ORDER BY sess.session_date DESC
+    LIMIT 60`,
+    [subject_id]
+  );
+  const cutoff = lockCutoffDate();
+  res.json(r.rows.map(d => ({ ...d, locked: d.session_date <= cutoff })));
+}
+
+// POST /teacher/attendance/manual
+// Body: { subject_id, session_date?, entries: [{ student_id, status }] }
+// status: 'present' | 'absent' | 'service' | 'late' | 'flagged'
 export async function markAttendanceManual(req, res) {
-  // Body: { subject_id, session_date?, entries: [{ student_id, status: 'present'|'absent' }] }
-  const { subject_id, session_date, entries } = req.body;
+  const { subject_id, entries } = req.body;
+  const date = req.body.session_date || istDateString();
   if (!subject_id || !Array.isArray(entries))
     return res.status(400).json({ error: 'subject_id and entries are required' });
+  if (!isValidYmd(date)) return res.status(400).json({ error: 'Invalid date' });
+  if (date > istDateString()) return res.status(400).json({ error: 'Attendance cannot be recorded for a future date' });
+  if (isDateLocked(date)) return res.status(423).json({ error: LOCK_MSG(date) });
+  if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
 
-  const owned = await query(
-    'SELECT id FROM class_enrollments WHERE subject_id=$1 AND instructor_id=$2',
-    [subject_id, req.user.id]
+  const enrolled = await query(
+    'SELECT DISTINCT student_id FROM class_enrollments WHERE subject_id=$1 AND student_id IS NOT NULL',
+    [subject_id]
   );
-  if (!owned.rows.length) return res.status(403).json({ error: 'Not your subject' });
+  const allowed = new Set(enrolled.rows.map(r => r.student_id));
 
-  // Create a closed, manual session to anchor the logs.
-  const sessionId = uuidv4();
-  const opened = session_date ? new Date(session_date) : new Date();
-  await query(
-    `INSERT INTO sessions (id, subject_id, instructor_id, token_hash, pin_display, opened_at, expires_at, closed, manual)
-     VALUES ($1,$2,$3,'manual','MANUAL',$4,$4,true,true)`,
-    [sessionId, subject_id, req.user.id, opened.toISOString()]
-  );
+  const client = await pool.connect();
+  let sessionId, created = false;
+  const counts = { present: 0, absent: 0, service: 0, late: 0, flagged: 0 };
+  try {
+    await client.query('BEGIN');
+    // Serialise concurrent saves for the same class/day.
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`att:${subject_id}:${date}`]);
 
-  // Only present students get a log row (absence stays implicit, matching the rest of the app).
-  let present = 0, absent = 0;
-  for (const e of entries) {
-    if (!e.student_id) continue;
-    if (e.status === 'absent') { absent++; continue; }
-    await query(
-      `INSERT INTO attendance_logs (id, session_id, student_id, status, replayed)
-       VALUES ($1,$2,$3,'present',false)
-       ON CONFLICT (session_id, student_id) DO NOTHING`,
-      [uuidv4(), sessionId, e.student_id]
+    const existing = await client.query(
+      `SELECT id FROM sessions WHERE subject_id=$1 AND session_date=$2 AND closed=true
+       ORDER BY opened_at LIMIT 1`,
+      [subject_id, date]
     );
-    present++;
+    if (existing.rows.length) {
+      sessionId = existing.rows[0].id;
+    } else {
+      // opened_at = the real time it was recorded; session_date = the class day.
+      sessionId = uuidv4();
+      created = true;
+      await client.query(
+        `INSERT INTO sessions (id, subject_id, instructor_id, token_hash, pin_display,
+                               opened_at, expires_at, closed, manual, session_date)
+         VALUES ($1,$2,$3,'manual','MANUAL',NOW(),NOW(),true,true,$4)`,
+        [sessionId, subject_id, req.user.id, date]
+      );
+    }
+
+    for (const e of entries) {
+      if (!e.student_id || !allowed.has(e.student_id)) continue;
+      const status = e.status === 'absent' ? 'absent' : (LOG_STATUSES.includes(e.status) ? e.status : 'present');
+      counts[status]++;
+      // Remove the student's rows from the day's other sessions (merge into one record).
+      await client.query(
+        `DELETE FROM attendance_logs al USING sessions sess
+         WHERE al.session_id = sess.id AND sess.subject_id = $1 AND sess.session_date = $2
+           AND sess.closed = true AND sess.id <> $3 AND al.student_id = $4`,
+        [subject_id, date, sessionId, e.student_id]
+      );
+      if (status === 'absent') {
+        await client.query('DELETE FROM attendance_logs WHERE session_id=$1 AND student_id=$2', [sessionId, e.student_id]);
+      } else {
+        await client.query(
+          `INSERT INTO attendance_logs (id, session_id, student_id, status, replayed)
+           VALUES ($1,$2,$3,$4,false)
+           ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, replayed=false`,
+          [uuidv4(), sessionId, e.student_id, status]
+        );
+      }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[markAttendanceManual]', err);
+    return res.status(500).json({ error: 'Save failed' });
+  } finally {
+    client.release();
   }
-  await logAudit(req.user.id, 'mark_attendance_manual', 'session', sessionId, { subject_id, present, absent });
-  res.status(201).json({ session_id: sessionId, present, absent });
+
+  await logAudit(req.user.id, created ? 'mark_attendance_manual' : 'edit_attendance_manual', 'session', sessionId,
+    { subject_id, date, ...counts });
+  res.status(created ? 201 : 200).json({
+    session_id: sessionId, date, updated: !created,
+    present: counts.present + counts.late, absent: counts.absent, service: counts.service, flagged: counts.flagged,
+  });
 }
 
 // ── Student performance per subject ──────────────────────────────────────
@@ -475,11 +614,11 @@ export async function getStudentPerformance(req, res) {
       mu.name AS current_mentor_name,
       cma.mentor_id AS current_mentor_id,
       -- Attendance
-      COUNT(DISTINCT sess.id)                                                                    AS total_sessions,
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)    AS attended,
-      CASE WHEN COUNT(DISTINCT sess.id) > 0
-        THEN ROUND(COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-             / COUNT(DISTINCT sess.id) * 100, 1)
+      COUNT(DISTINCT sess.session_date)                                                                    AS total_sessions,
+      COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)    AS attended,
+      CASE WHEN COUNT(DISTINCT sess.session_date) > 0
+        THEN ROUND(COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+             / COUNT(DISTINCT sess.session_date) * 100, 1)
         ELSE 0 END                                                                               AS attendance_pct,
       -- Marks aggregate (across all assessment types)
       COALESCE(SUM(m.scored_marks), 0)                                                           AS total_scored,
@@ -574,7 +713,7 @@ export async function getActiveSessions(req, res) {
     const r = await query(`
       SELECT sess.id AS session_id, sess.subject_id, s.name AS subject_name,
              s.code AS subject_code, sess.pin_display, sess.opened_at, sess.expires_at,
-             COUNT(al.id) FILTER (WHERE al.status='present' AND al.replayed=false) AS present_count
+             COUNT(al.id) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS present_count
       FROM sessions sess
       JOIN subjects s ON s.id = sess.subject_id
       LEFT JOIN attendance_logs al ON al.session_id = sess.id
@@ -589,21 +728,27 @@ export async function getActiveSessions(req, res) {
 }
 
 // GET /api/teacher/sessions/recent?limit=N
+// One row per class per day — sessions on the same day are merged.
 export async function getRecentSessions(req, res) {
   const limit = Math.min(parseInt(req.query.limit) || 5, 20);
   try {
     const r = await query(`
-      SELECT sess.id, sess.subject_id, s.name AS subject_name, s.code AS subject_code,
-             sess.opened_at, sess.closed,
-             COUNT(DISTINCT al.student_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS present_count,
-             COUNT(DISTINCT ce.student_id) AS total_students
+      SELECT (ARRAY_AGG(sess.id ORDER BY sess.opened_at DESC))[1] AS id,
+             sess.subject_id, s.name AS subject_name, s.code AS subject_code,
+             to_char(sess.session_date, 'YYYY-MM-DD') AS session_date,
+             MAX(sess.opened_at) AS opened_at,
+             BOOL_AND(sess.closed) AS closed,
+             BOOL_AND(sess.manual) AS manual,
+             COUNT(DISTINCT sess.id)::int AS session_count,
+             COUNT(DISTINCT al.student_id) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS present_count,
+             (SELECT COUNT(DISTINCT ce.student_id) FROM class_enrollments ce
+                WHERE ce.subject_id = sess.subject_id AND ce.student_id IS NOT NULL) AS total_students
       FROM sessions sess
       JOIN subjects s ON s.id = sess.subject_id
       LEFT JOIN attendance_logs al ON al.session_id = sess.id
-      LEFT JOIN class_enrollments ce ON ce.subject_id = sess.subject_id AND ce.student_id IS NOT NULL
       WHERE sess.instructor_id = $1
-      GROUP BY sess.id, s.name, s.code
-      ORDER BY sess.opened_at DESC
+      GROUP BY sess.subject_id, sess.session_date, s.name, s.code
+      ORDER BY MAX(sess.opened_at) DESC
       LIMIT $2
     `, [req.user.id, limit]);
     res.json(r.rows);
@@ -630,11 +775,11 @@ export async function getDefaulters(req, res) {
   const r = await query(`
     SELECT
       u.id, u.name, u.email, u.roll_number,
-      COUNT(DISTINCT sess.id)                                                                  AS total_sessions,
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)  AS attended,
+      COUNT(DISTINCT sess.session_date)                                                                  AS total_sessions,
+      COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)  AS attended,
       ROUND(
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-        / NULLIF(COUNT(DISTINCT sess.id), 0) * 100, 1
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+        / NULLIF(COUNT(DISTINCT sess.session_date), 0) * 100, 1
       )                                                                                        AS percentage
     FROM users u
     JOIN class_enrollments ce ON ce.student_id = u.id AND ce.subject_id = $1
@@ -643,9 +788,9 @@ export async function getDefaulters(req, res) {
     WHERE u.role = 'student'
     GROUP BY u.id
     HAVING ROUND(
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-      / NULLIF(COUNT(DISTINCT sess.id), 0) * 100, 1
-    ) < $2 OR COUNT(DISTINCT sess.id) = 0
+      COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+      / NULLIF(COUNT(DISTINCT sess.session_date), 0) * 100, 1
+    ) < $2 OR COUNT(DISTINCT sess.session_date) = 0
     ORDER BY percentage NULLS FIRST, u.name
   `, [subject_id, threshold]);
 

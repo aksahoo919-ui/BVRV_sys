@@ -111,6 +111,7 @@ export default function InstructorSession() {
                   <option value="present">Present</option>
                   <option value="late">Late</option>
                   <option value="flagged">Flagged</option>
+                  <option value="service">Service</option>
                 </select>
                 {s.replayed && <span className="badge bg-orange-100 text-orange-600 text-xs">replay</span>}
               </li>

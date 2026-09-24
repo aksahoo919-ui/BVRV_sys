@@ -7,6 +7,7 @@ import AlertBanner from '../../components/dashboard/AlertBanner';
 import QuickAction from '../../components/dashboard/QuickAction';
 import SubjectRow from '../../components/dashboard/SubjectRow';
 import TodayPill from '../../components/dashboard/TodayPill';
+import { fmtDayIST } from '../../utils/datetime';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +58,7 @@ export default function StudentDashboard() {
   const [results, setResults] = useState([]);
   const [marks, setMarks] = useState([]);
   const [todaySessions, setTodaySessions] = useState([]);
+  const [bvLeaders, setBvLeaders] = useState([]); // BV Leader class attendance
 
   useEffect(() => {
     async function loadAll() {
@@ -68,12 +70,14 @@ export default function StudentDashboard() {
         resultsRes,
         marksRes,
         todayRes,
+        bvRes,
       ] = await Promise.all([
         settle(api.get('/student/attendance')),
         settle(api.get('/student/settings')),
         settle(api.get('/student/results')),
         settle(api.get('/student/marks')),
         settle(api.get('/student/attendance/today')),
+        settle(api.get('/student/bv-attendance')),
       ]);
 
       if (attendanceRes) setAttendance(attendanceRes.data ?? []);
@@ -81,6 +85,7 @@ export default function StudentDashboard() {
       if (resultsRes) setResults(resultsRes.data ?? []);
       if (marksRes) setMarks(marksRes.data ?? []);
       if (todayRes) setTodaySessions(todayRes.data ?? []);
+      if (bvRes) setBvLeaders(bvRes.data?.leaders ?? []);
 
       setLoading(false);
     }
@@ -284,6 +289,52 @@ export default function StudentDashboard() {
           ))
         )}
       </div>
+
+      {/* ── BV Leader class attendance (separate from subject classes) ── */}
+      {bvLeaders.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <h2 className="font-semibold text-gray-900 mb-1">BV Leader Class Attendance</h2>
+          <p className="text-xs text-gray-400 mb-3">Your weekly class with your BV Leader.</p>
+          <div className="space-y-4">
+            {bvLeaders.map((l) => {
+              const pct = Number(l.percentage ?? 0);
+              const chip = pctChip(pct);
+              const chipCls = chip.color === 'green'
+                ? 'bg-green-50 text-green-700'
+                : chip.color === 'amber' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700';
+              return (
+                <div key={l.mentor_id}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{l.mentor_name}</p>
+                      <p className="text-xs text-gray-400">{l.attended} of {l.total_sessions} classes attended</p>
+                    </div>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${l.total_sessions ? chipCls : 'bg-gray-100 text-gray-500'}`}>
+                      {l.total_sessions ? `${pct}%` : '—'}
+                    </span>
+                  </div>
+                  {l.records?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {l.records.slice(0, 8).map((r) => (
+                        <span
+                          key={r.session_date}
+                          className={`text-xs px-2 py-0.5 rounded-md ${
+                            r.status === 'present' ? 'bg-green-50 text-green-700'
+                              : r.status === 'service' ? 'bg-indigo-50 text-indigo-700'
+                              : 'bg-red-50 text-red-600'
+                          }`}
+                        >
+                          {fmtDayIST(r.session_date)} · {r.status === 'present' ? 'Present' : r.status === 'service' ? 'Service' : 'Absent'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Recent marks ── */}
       <div className="bg-white rounded-xl shadow-sm p-5">

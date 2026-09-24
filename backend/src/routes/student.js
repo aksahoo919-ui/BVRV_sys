@@ -11,6 +11,7 @@ router.get('/settings',                          ...guard, sc.getStudentSettings
 router.get('/attendance/today',                  ...guard, sc.getTodayAttendance);
 router.post('/attendance/submit',                ...guard, sc.submitAttendance);
 router.get('/attendance',                        ...guard, sc.getAttendanceSummary);
+router.get('/bv-attendance',                     ...guard, sc.getBVAttendance);
 router.get('/messages',                          ...guard, sc.getMessages);
 router.patch('/messages/:id/read',               ...guard, sc.markRead);
 

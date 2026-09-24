@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import redis from '../config/redis.js';
 import { v4 as uuidv4 } from 'uuid';
+import { SQL_TODAY_IST } from '../utils/istDate.js';
 
 export async function getSubjects(req, res) {
   try {
@@ -10,12 +11,12 @@ export async function getSubjects(req, res) {
     const result = await query(`
       SELECT
         s.id, s.code, s.name,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS attended,
-        CASE WHEN COUNT(DISTINCT sess.id) > 0
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+        CASE WHEN COUNT(DISTINCT sess.session_date) > 0
           THEN ROUND(
-            (COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false)::numeric
-            / COUNT(DISTINCT sess.id)) * 100, 1
+            (COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+            / COUNT(DISTINCT sess.session_date)) * 100, 1
           )
           ELSE 0
         END AS percentage
@@ -53,7 +54,7 @@ export async function submitAttendance(req, res) {
       if (!mSess) return res.status(400).json({ error: 'No active BV Leader session' });
       if (pin !== mSess.pin_display) return res.status(400).json({ error: 'Invalid PIN' });
       const dup = await query(
-        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status='present'",
+        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status IN ('present','service')",
         [mSess.id, req.user.id]
       );
       if (dup.rows.length) return res.status(409).json({ error: 'Already marked' });
@@ -129,12 +130,12 @@ export async function getAttendanceSummary(req, res) {
     const result = await query(`
       SELECT
         s.id AS subject_id, s.code, s.name,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS attended,
-        CASE WHEN COUNT(DISTINCT sess.id) > 0
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+        CASE WHEN COUNT(DISTINCT sess.session_date) > 0
           THEN ROUND(
-            (COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false)::numeric
-            / COUNT(DISTINCT sess.id)) * 100, 1
+            (COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+            / COUNT(DISTINCT sess.session_date)) * 100, 1
           )
           ELSE 0
         END AS percentage
@@ -369,8 +370,8 @@ export async function getMyReportCard(req, res) {
         ORDER BY s.name, m.assessment_type`, [req.user.id, semester_id]),
       query(`
         SELECT s.name AS subject_name, s.code,
-          COUNT(DISTINCT sess.id) AS total_sessions,
-          COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended
+          COUNT(DISTINCT sess.session_date) AS total_sessions,
+          COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended
         FROM subjects s
         JOIN class_enrollments ce ON ce.subject_id=s.id AND ce.student_id=$1
         LEFT JOIN sessions sess ON sess.subject_id=s.id AND sess.closed=true
@@ -533,9 +534,6 @@ export async function getTodayAttendance(req, res) {
       WHERE ce.student_id = $1
     `, [studentId]);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today.getTime() + 86400000);
 
     const results = [];
     for (const subj of subjR.rows) {
@@ -563,9 +561,9 @@ export async function getTodayAttendance(req, res) {
           SELECT 1 FROM attendance_logs al
           JOIN sessions sess ON sess.id = al.session_id
           WHERE sess.subject_id=$1 AND al.student_id=$2
-            AND sess.opened_at >= $3 AND sess.opened_at < $4
+            AND sess.session_date = ${SQL_TODAY_IST}
           LIMIT 1
-        `, [subj.subject_id, studentId, today, tomorrow]);
+        `, [subj.subject_id, studentId]);
         alreadyMarked = todayR.rows.length > 0;
       }
 
@@ -591,7 +589,7 @@ export async function getTodayAttendance(req, res) {
     `, [studentId]);
     for (const ms of mSessR.rows) {
       const marked = await query(
-        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status='present'",
+        "SELECT 1 FROM mentor_attendance WHERE session_id=$1 AND student_id=$2 AND status IN ('present','service')",
         [ms.id, studentId]
       );
       results.push({
@@ -610,6 +608,51 @@ export async function getTodayAttendance(req, res) {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// ── BV Leader (mentor) class attendance ───────────────────────────────────
+// Kept separate from subject (teacher) attendance. Several sessions a BV Leader
+// holds on one day count as a single day; 'service' counts as attended.
+// GET /api/student/bv-attendance
+export async function getBVAttendance(req, res) {
+  try {
+    const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
+    const threshold = Number(settingsR.rows[0]?.min_attendance_threshold) || 75;
+
+    const leadersR = await query(`
+      SELECT DISTINCT u.id AS mentor_id, u.name AS mentor_name
+      FROM class_mentor_assignments cma JOIN users u ON u.id = cma.mentor_id
+      WHERE cma.student_id = $1
+      ORDER BY u.name`, [req.user.id]);
+
+    const leaders = [];
+    for (const l of leadersR.rows) {
+      const daysR = await query(`
+        SELECT to_char(ms.session_date, 'YYYY-MM-DD') AS session_date,
+          (SELECT mat.status FROM mentor_attendance mat
+             JOIN mentor_sessions m2 ON m2.id = mat.session_id
+             WHERE m2.mentor_id = $1 AND m2.session_date = ms.session_date AND mat.student_id = $2
+             ORDER BY CASE mat.status WHEN 'present' THEN 0 WHEN 'service' THEN 1 ELSE 2 END
+             LIMIT 1) AS status
+        FROM mentor_sessions ms
+        WHERE ms.mentor_id = $1
+        GROUP BY ms.session_date
+        ORDER BY ms.session_date DESC`, [l.mentor_id, req.user.id]);
+
+      const days = daysR.rows.map(d => ({ ...d, status: d.status || 'absent' }));
+      const total = days.length;
+      const attended = days.filter(d => d.status === 'present' || d.status === 'service').length;
+      const percentage = total > 0 ? Math.round(attended / total * 1000) / 10 : 0;
+      leaders.push({
+        ...l, total_sessions: total, attended, percentage,
+        warning: total > 0 && percentage < threshold,
+        records: days.slice(0, 20),
+      });
+    }
+    res.json({ threshold, leaders });
+  } catch (err) {
+    console.error(err); res.status(500).json({ error: 'Server error' });
   }
 }
 

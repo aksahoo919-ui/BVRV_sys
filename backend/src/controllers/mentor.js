@@ -2,6 +2,10 @@ import { query } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { calculateGrade } from '../services/gradeService.js';
 import { generatePin } from '../utils/pin.js';
+import { pool } from '../config/db.js';
+import { SQL_TODAY_IST, istDateString, isDateLocked, lockCutoffDate, isValidYmd } from '../utils/istDate.js';
+
+const MENTOR_STATUSES = ['present', 'absent', 'service'];
 
 // A student is "mine" if I mentor them in at least one class.
 async function isMyStudent(mentorId, studentId) {
@@ -20,16 +24,17 @@ export async function getAssignedStudents(req, res) {
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
 
-  // Total = the BV Leader's common weekly sessions (subject-independent)
-  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  // Total = distinct days of the BV Leader's common class (subject-independent);
+  // several sessions on one day count as a single day.
+  const totalR = await query('SELECT COUNT(DISTINCT session_date)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
   const total = totalR.rows[0].n;
 
   const r = await query(`
     SELECT u.id, u.name, u.email, u.avatar_url, u.roll_number,
       STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
-      (SELECT COUNT(*) FROM mentor_attendance mat
+      (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
-         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status IN ('present','service'))::int AS attended_sessions
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
     JOIN subjects s ON s.id = cma.subject_id
@@ -56,11 +61,11 @@ export async function getStudentSummary(req, res) {
   const [attendance, marks, recentNotes, upcomingMeetings] = await Promise.all([
     query(`
       SELECT s.id, s.code, s.name,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended,
-        CASE WHEN COUNT(DISTINCT sess.id)>0
-          THEN ROUND((COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-               /COUNT(DISTINCT sess.id))*100,1) ELSE 0 END AS percentage
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+        CASE WHEN COUNT(DISTINCT sess.session_date)>0
+          THEN ROUND((COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+               /COUNT(DISTINCT sess.session_date))*100,1) ELSE 0 END AS percentage
       FROM subjects s
       JOIN class_enrollments ce ON ce.subject_id=s.id AND ce.student_id=$1
       LEFT JOIN sessions sess ON sess.subject_id=s.id AND sess.closed=true
@@ -206,7 +211,7 @@ export async function getAlerts(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  const totalR = await query('SELECT COUNT(DISTINCT session_date)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
   const total = totalR.rows[0].n;
 
   // All mentored students (distinct), with common-class attendance and latest GPA.
@@ -214,9 +219,9 @@ export async function getAlerts(req, res) {
     SELECT
       u.id AS student_id, u.name AS student_name, u.email AS student_email,
       u.avatar_url, u.roll_number,
-      (SELECT COUNT(*) FROM mentor_attendance mat
+      (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
-         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions,
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status IN ('present','service'))::int AS attended_sessions,
       (
         SELECT r.gpa FROM results r
         LEFT JOIN academic_years ay ON ay.id = r.academic_year_id
@@ -303,63 +308,110 @@ async function mentorHasStudents(mentorId) {
   return r.rows.length > 0;
 }
 
+// Resolve the day for a new session: defaults to today (IST); locked days are refused.
+function resolveSessionDate(session_date) {
+  const date = session_date || istDateString();
+  if (!isValidYmd(date)) return { error: 'Invalid date' };
+  if (date > istDateString()) return { error: 'Attendance cannot be recorded for a future date' };
+  if (isDateLocked(date)) return { error: `Attendance for ${date} is locked (weeks lock every Saturday)` };
+  return { date };
+}
+
+// A manual session for a day that already has one reuses it, so one day = one record.
 export async function createMentorSession(req, res) {
-  const { title, session_date } = req.body;
+  const { title } = req.body;
   if (!(await mentorHasStudents(req.user.id)))
     return res.status(403).json({ error: 'You have no students assigned yet' });
+  const { date, error } = resolveSessionDate(req.body.session_date);
+  if (error) return res.status(400).json({ error });
+
+  const existing = await query(
+    `SELECT * FROM mentor_sessions WHERE mentor_id=$1 AND session_date=$2
+     ORDER BY created_at LIMIT 1`,
+    [req.user.id, date]
+  );
+  if (existing.rows.length) return res.json({ ...existing.rows[0], reused: true });
+
   const r = await query(
     `INSERT INTO mentor_sessions (id, mentor_id, title, session_date)
-     VALUES ($1,$2,$3,COALESCE($4, CURRENT_DATE)) RETURNING *`,
-    [uuidv4(), req.user.id, title || null, session_date || null]
+     VALUES ($1,$2,$3,$4) RETURNING *`,
+    [uuidv4(), req.user.id, title || null, date]
   );
   res.status(201).json(r.rows[0]);
 }
 
+// One row per day — sessions opened on the same day are merged.
 export async function getMentorSessions(req, res) {
   const r = await query(`
-    SELECT ms.*,
-      COUNT(mat.id) FILTER (WHERE mat.status='present') AS present_count,
-      COUNT(mat.id) FILTER (WHERE mat.status='absent')  AS absent_count
+    SELECT to_char(ms.session_date, 'YYYY-MM-DD') AS session_date,
+      (ARRAY_AGG(ms.id ORDER BY ms.created_at))[1] AS id,
+      COUNT(DISTINCT ms.id)::int AS session_count,
+      STRING_AGG(DISTINCT ms.title, ' · ') AS title,
+      MIN(ms.created_at) AS created_at,
+      (SELECT MAX(mat.marked_at) FROM mentor_attendance mat
+         JOIN mentor_sessions m2 ON m2.id = mat.session_id
+         WHERE m2.mentor_id = $1 AND m2.session_date = ms.session_date) AS last_marked_at,
+      (SELECT COUNT(DISTINCT mat.student_id) FROM mentor_attendance mat
+         JOIN mentor_sessions m2 ON m2.id = mat.session_id
+         WHERE m2.mentor_id = $1 AND m2.session_date = ms.session_date
+           AND mat.status IN ('present','service'))::int AS present_count,
+      (SELECT COUNT(DISTINCT mat.student_id) FROM mentor_attendance mat
+         JOIN mentor_sessions m2 ON m2.id = mat.session_id
+         WHERE m2.mentor_id = $1 AND m2.session_date = ms.session_date
+           AND mat.status = 'service')::int AS service_count
     FROM mentor_sessions ms
-    LEFT JOIN mentor_attendance mat ON mat.session_id = ms.id
-    WHERE ms.mentor_id=$1
-    GROUP BY ms.id
-    ORDER BY ms.session_date DESC, ms.created_at DESC`,
+    WHERE ms.mentor_id = $1
+    GROUP BY ms.session_date
+    ORDER BY ms.session_date DESC`,
     [req.user.id]
   );
-  res.json(r.rows);
+  const cutoff = lockCutoffDate();
+  res.json(r.rows.map(d => ({ ...d, locked: d.session_date <= cutoff })));
 }
 
-// Attendance roster for one session = all distinct students under this BV Leader
+// Attendance roster for one day = all distinct students under this BV Leader.
+// Status is merged across every session the leader held that day
+// (present > service > absent; no row anywhere = not marked).
 export async function getMentorSessionAttendance(req, res) {
   const { id } = req.params;
-  const sess = await query('SELECT * FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [id, req.user.id]);
+  const sess = await query(
+    `SELECT id, mentor_id, title, pin_display, expires_at, closed, created_at,
+            to_char(session_date, 'YYYY-MM-DD') AS session_date
+     FROM mentor_sessions WHERE id=$1 AND mentor_id=$2`,
+    [id, req.user.id]
+  );
   if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
   const session = sess.rows[0];
   const r = await query(`
-    SELECT u.id, u.name, u.roll_number, mat.status
-    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $2) cma
+    SELECT u.id, u.name, u.roll_number,
+      (SELECT mat.status FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND ms.session_date = $2 AND mat.student_id = u.id
+         ORDER BY CASE mat.status WHEN 'present' THEN 0 WHEN 'service' THEN 1 ELSE 2 END
+         LIMIT 1) AS status
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
-    LEFT JOIN mentor_attendance mat ON mat.session_id = $1 AND mat.student_id = u.id
     ORDER BY u.name`,
-    [id, req.user.id]
+    [req.user.id, session.session_date]
   );
-  res.json({ session, roster: r.rows });
+  res.json({ session: { ...session, locked: isDateLocked(session.session_date) }, roster: r.rows });
 }
 
 // Open a code-based (PIN) attendance session — students submit the PIN to mark present.
 export async function openMentorCodeSession(req, res) {
-  const { title, session_date } = req.body;
+  const { title } = req.body;
   if (!(await mentorHasStudents(req.user.id)))
     return res.status(403).json({ error: 'You have no students assigned yet' });
+  const { date, error } = resolveSessionDate(req.body.session_date);
+  if (error) return res.status(400).json({ error });
 
   const { pin } = generatePin(req.user.id, req.user.id);
   const expires_at = new Date(Date.now() + 5 * 60 * 1000); // 5-minute window
   const id = uuidv4();
   await query(
     `INSERT INTO mentor_sessions (id, mentor_id, title, session_date, pin_display, expires_at, closed)
-     VALUES ($1,$2,$3,COALESCE($4, CURRENT_DATE),$5,$6,false)`,
-    [id, req.user.id, title || 'Code attendance', session_date || null, pin, expires_at.toISOString()]
+     VALUES ($1,$2,$3,$4,$5,$6,false)`,
+    [id, req.user.id, title || 'Code attendance', date, pin, expires_at.toISOString()]
   );
   res.status(201).json({ session_id: id, pin, expires_at });
 }
@@ -374,25 +426,55 @@ export async function closeMentorCodeSession(req, res) {
   res.json({ message: 'Closed' });
 }
 
-// Bulk upsert manual attendance for a session
+// Save (or edit) the day's attendance. The record is written to this session and
+// any rows for the same students in the leader's other sessions that day are
+// removed, so the merged day record is exactly what was saved.
 export async function markMentorAttendance(req, res) {
   const { id } = req.params;
-  const { entries } = req.body; // [{ student_id, status: 'present'|'absent' }]
+  const { entries } = req.body; // [{ student_id, status: 'present'|'absent'|'service' }]
   if (!Array.isArray(entries)) return res.status(400).json({ error: 'entries array required' });
-  const sess = await query('SELECT id FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [id, req.user.id]);
+  const sess = await query(
+    `SELECT id, to_char(session_date, 'YYYY-MM-DD') AS session_date FROM mentor_sessions WHERE id=$1 AND mentor_id=$2`,
+    [id, req.user.id]
+  );
   if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
+  const day = sess.rows[0].session_date;
+  if (isDateLocked(day))
+    return res.status(423).json({ error: `Attendance for ${day} is locked (weeks lock every Saturday)` });
 
+  const mine = await query(
+    'SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id=$1', [req.user.id]
+  );
+  const allowed = new Set(mine.rows.map(r => r.student_id));
+
+  const client = await pool.connect();
   let saved = 0;
-  for (const e of entries) {
-    if (!e.student_id) continue;
-    const status = e.status === 'absent' ? 'absent' : 'present';
-    await query(
-      `INSERT INTO mentor_attendance (id, session_id, student_id, status)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, marked_at=NOW()`,
-      [uuidv4(), id, e.student_id, status]
-    );
-    saved++;
+  try {
+    await client.query('BEGIN');
+    for (const e of entries) {
+      if (!e.student_id || !allowed.has(e.student_id)) continue;
+      const status = MENTOR_STATUSES.includes(e.status) ? e.status : 'present';
+      await client.query(
+        `DELETE FROM mentor_attendance mat USING mentor_sessions ms
+         WHERE mat.session_id = ms.id AND ms.mentor_id = $1 AND ms.session_date = $2
+           AND ms.id <> $3 AND mat.student_id = $4`,
+        [req.user.id, day, id, e.student_id]
+      );
+      await client.query(
+        `INSERT INTO mentor_attendance (id, session_id, student_id, status)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, marked_at=NOW()`,
+        [uuidv4(), id, e.student_id, status]
+      );
+      saved++;
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[markMentorAttendance]', err);
+    return res.status(500).json({ error: 'Save failed' });
+  } finally {
+    client.release();
   }
   res.json({ saved });
 }
@@ -403,14 +485,14 @@ export async function getMentorDefaulters(req, res) {
   const settingsR = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
   const threshold = settingsR.rows[0]?.min_attendance_threshold || 75;
 
-  const totalR = await query('SELECT COUNT(*)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
+  const totalR = await query('SELECT COUNT(DISTINCT session_date)::int AS n FROM mentor_sessions WHERE mentor_id = $1', [req.user.id]);
   const total = totalR.rows[0].n;
 
   const r = await query(`
     SELECT u.id, u.name, u.email, u.roll_number,
-      (SELECT COUNT(*) FROM mentor_attendance mat
+      (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
-         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status='present')::int AS attended_sessions
+         WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status IN ('present','service'))::int AS attended_sessions
     FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
     ORDER BY u.name`,
@@ -451,8 +533,8 @@ export async function getStudentOverview(req, res) {
 
   const attR = await query(`
     SELECT
-      COUNT(DISTINCT sess.id) AS total,
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended
+      COUNT(DISTINCT (sess.subject_id, sess.session_date)) AS total,
+      COUNT(DISTINCT (sess.subject_id, sess.session_date)) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended
     FROM class_enrollments ce
     JOIN sessions sess ON sess.subject_id = ce.subject_id AND sess.closed = true
     LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
@@ -496,11 +578,11 @@ export async function getStudentAttendanceDetail(req, res) {
   if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const r = await query(`
     SELECT s.code AS subject_code, s.name AS subject_name,
-      COUNT(DISTINCT sess.id) AS total,
-      COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended,
-      CASE WHEN COUNT(DISTINCT sess.id) > 0
-        THEN ROUND(COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false)::numeric
-             / COUNT(DISTINCT sess.id) * 100, 1)
+      COUNT(DISTINCT sess.session_date) AS total,
+      COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+      CASE WHEN COUNT(DISTINCT sess.session_date) > 0
+        THEN ROUND(COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+             / COUNT(DISTINCT sess.session_date) * 100, 1)
         ELSE 0 END AS percentage
     FROM subjects s
     JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.student_id = $1
@@ -591,7 +673,7 @@ export async function addStudentCounseling(req, res) {
   if (!note) return res.status(400).json({ error: 'note required' });
   if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
   const r = await query(
-    'INSERT INTO counseling_notes (id, mentor_id, student_id, note, meeting_date) VALUES ($1,$2,$3,$4,CURRENT_DATE) RETURNING *',
+    `INSERT INTO counseling_notes (id, mentor_id, student_id, note, meeting_date) VALUES ($1,$2,$3,$4,${SQL_TODAY_IST}) RETURNING *`,
     [uuidv4(), req.user.id, student_id, note]
   );
   res.status(201).json(r.rows[0]);

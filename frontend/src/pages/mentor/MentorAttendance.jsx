@@ -1,23 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import AttendanceRoster from '../../components/AttendanceRoster';
+import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, lockDateFor } from '../../utils/datetime';
 
 function Spinner() {
   return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
 }
 
-function fmtDate(d) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
 export default function MentorAttendance() {
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState([]); // one row per day (sessions merged)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // new session form
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayIST());
   const [creating, setCreating] = useState(false);
 
   // marking
@@ -46,6 +43,7 @@ export default function MentorAttendance() {
     e.preventDefault();
     setCreating(true); setError('');
     try {
+      // Reuses the existing record if this day already has one.
       const r = await api.post('/mentor/sessions', { title: title || null, session_date: date });
       setTitle('');
       await loadSessions();
@@ -78,8 +76,9 @@ export default function MentorAttendance() {
     setRoster(prev => prev.map(s => s.id === studentId ? { ...s, status } : s));
   }
 
-  function markAll(status) {
-    setRoster(prev => prev.map(s => ({ ...s, status })));
+  function markAll(status, ids) {
+    const only = new Set(ids);
+    setRoster(prev => prev.map(s => only.has(s.id) ? { ...s, status } : s));
   }
 
   async function save() {
@@ -94,13 +93,16 @@ export default function MentorAttendance() {
     finally { setSaving(false); }
   }
 
-  const presentCount = roster.filter(s => s.status === 'present').length;
+  const locked = !!activeSession?.locked;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Weekly Class Attendance</h1>
-        <p className="text-sm text-gray-400 mt-0.5">One common weekly class for all your students — create a session and mark attendance.</p>
+        <p className="text-sm text-gray-400 mt-0.5">
+          One common weekly class for all your students. Sessions held on the same day are merged into one record.
+          Records can be changed until the Saturday after the following week, when they lock.
+        </p>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
@@ -113,10 +115,10 @@ export default function MentorAttendance() {
         </div>
         <div className="w-44">
           <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-          <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
+          <input type="date" className="input" value={date} max={todayIST()} onChange={e => setDate(e.target.value)} />
         </div>
         <button type="submit" className="btn-primary" disabled={creating}>
-          {creating ? 'Creating…' : '+ Manual Session'}
+          {creating ? 'Opening…' : '+ Manual Session'}
         </button>
         <button type="button" onClick={generateCode} className="btn-secondary" disabled={generating}>
           {generating ? 'Generating…' : '🔢 Generate Code'}
@@ -141,86 +143,62 @@ export default function MentorAttendance() {
       {/* Marking panel */}
       {activeSession && (
         <div className="card">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <div>
-              <h2 className="font-semibold text-gray-800">{activeSession.title || 'Session'} · {fmtDate(activeSession.session_date)}</h2>
-              <p className="text-xs text-gray-400">{presentCount} / {roster.length} present</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => markAll('present')} className="text-xs px-3 py-1 rounded-md border border-emerald-300 text-emerald-700 hover:bg-emerald-50">All present</button>
-              <button onClick={() => markAll('absent')} className="text-xs px-3 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50">All absent</button>
-            </div>
+          <div className="mb-3">
+            <h2 className="font-semibold text-gray-800">{activeSession.title || 'Session'} · {fmtDayIST(activeSession.session_date)}</h2>
+            {locked ? (
+              <p className="mt-2 text-xs bg-gray-100 text-gray-600 rounded-md px-3 py-2">
+                🔒 This day is locked — attendance locked on {fmtDateIST(lockDateFor(activeSession.session_date))}.
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-gray-400">Editable until {fmtDateIST(lockDateFor(activeSession.session_date))}.</p>
+            )}
           </div>
 
           {loadingRoster ? <Spinner /> : (
             <>
-              <div className="overflow-x-auto mb-4">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Roll No</th>
-                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Student</th>
-                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Attendance</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {roster.length === 0 && (
-                      <tr><td colSpan={3} className="text-center py-8 text-gray-400">No students assigned to you in this class.</td></tr>
-                    )}
-                    {roster.map(s => (
-                      <tr key={s.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-400 font-mono text-xs">{s.roll_number || '—'}</td>
-                        <td className="px-4 py-2 text-gray-800 font-medium">{s.name}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex gap-1.5 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => setStatus(s.id, 'present')}
-                              className={`text-xs font-medium px-3 py-1 rounded-md border transition-colors ${
-                                s.status === 'present' ? 'bg-emerald-600 text-white border-emerald-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                              }`}
-                            >Present</button>
-                            <button
-                              type="button"
-                              onClick={() => setStatus(s.id, 'absent')}
-                              className={`text-xs font-medium px-3 py-1 rounded-md border transition-colors ${
-                                s.status === 'absent' ? 'bg-red-600 text-white border-red-600' : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                              }`}
-                            >Absent</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex items-center gap-3">
-                <button onClick={save} disabled={saving || roster.length === 0} className="btn-primary">
-                  {saving ? 'Saving…' : 'Save Attendance'}
-                </button>
-                {savedMsg && <span className="text-emerald-600 text-sm font-semibold">✓ {savedMsg}</span>}
-              </div>
+              <AttendanceRoster
+                roster={roster}
+                onStatus={setStatus}
+                onMarkAll={markAll}
+                disabled={locked}
+                emptyText="No students assigned to you in this class."
+              />
+              {!locked && (
+                <div className="flex items-center gap-3 mt-4">
+                  <button onClick={save} disabled={saving || roster.length === 0} className="btn-primary">
+                    {saving ? 'Saving…' : 'Save Attendance'}
+                  </button>
+                  {savedMsg && <span className="text-emerald-600 text-sm font-semibold">✓ {savedMsg}</span>}
+                </div>
+              )}
             </>
           )}
         </div>
       )}
 
-      {/* Past sessions */}
+      {/* Past days */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100"><h2 className="font-semibold text-gray-800 text-sm">Sessions</h2></div>
+        <div className="px-4 py-3 border-b border-gray-100"><h2 className="font-semibold text-gray-800 text-sm">Attendance records</h2></div>
         {loading ? <Spinner /> : sessions.length === 0 ? (
           <p className="px-4 py-8 text-center text-gray-400 text-sm">No sessions yet for this class.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {sessions.map(s => (
-              <li key={s.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer" onClick={() => openSession(s.id)}>
+              <li key={s.session_date} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer" onClick={() => openSession(s.id)}>
                 <div>
-                  <p className="font-medium text-gray-800 text-sm">{s.title || 'Session'}</p>
-                  <p className="text-xs text-gray-400">{fmtDate(s.session_date)}</p>
+                  <p className="font-medium text-gray-800 text-sm">{fmtDayIST(s.session_date)}</p>
+                  <p className="text-xs text-gray-400">
+                    {s.title || 'Session'}{s.session_count > 1 ? ` · ${s.session_count} sessions merged` : ''}
+                    {s.last_marked_at ? ` · last marked ${fmtDateTimeIST(s.last_marked_at)}` : ''}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-600 font-semibold">{s.present_count} present · {s.absent_count} absent</p>
-                  <span className="text-xs text-emerald-600">Mark / edit →</span>
+                  <p className="text-xs text-gray-600 font-semibold">
+                    {s.present_count} present{s.service_count ? ` · ${s.service_count} service` : ''}
+                  </p>
+                  {s.locked
+                    ? <span className="text-xs text-gray-400">🔒 Locked · view</span>
+                    : <span className="text-xs text-emerald-600">Mark / edit →</span>}
                 </div>
               </li>
             ))}

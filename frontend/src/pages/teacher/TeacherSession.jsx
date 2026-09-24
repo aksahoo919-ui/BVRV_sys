@@ -16,6 +16,7 @@ export default function TeacherSession() {
   const [closed, setClosed] = useState(false);
   const [closing, setClosing] = useState(false);
   const [overriding, setOverriding] = useState({});
+  const [closedSession, setClosedSession] = useState(null); // { subject_id, session_day }
 
   const pollRef = useRef(null);
 
@@ -58,7 +59,8 @@ export default function TeacherSession() {
   async function closeSession() {
     setClosing(true);
     try {
-      await api.post(`/teacher/sessions/${id}/close`);
+      const r = await api.post(`/teacher/sessions/${id}/close`);
+      setClosedSession(r.data);
       clearInterval(pollRef.current);
       setClosed(true);
     } catch (err) {
@@ -80,7 +82,7 @@ export default function TeacherSession() {
     }
   }
 
-  const presentCount = students.filter(s => s.status === 'present' || s.status === 'late').length;
+  const presentCount = students.filter(s => ['present', 'late', 'service'].includes(s.status)).length;
 
   return (
     <div>
@@ -110,6 +112,14 @@ export default function TeacherSession() {
       {closed && (
         <div className="bg-gray-100 border border-gray-200 text-gray-600 rounded-lg px-4 py-3 text-center font-medium mb-6">
           Session closed — attendance has been recorded.
+          {closedSession?.subject_id && (
+            <Link
+              to={`/teacher/manual-attendance?subject_id=${closedSession.subject_id}&date=${closedSession.session_day}`}
+              className="block text-sm text-blue-600 hover:underline mt-1"
+            >
+              Review or change this day's attendance →
+            </Link>
+          )}
         </div>
       )}
 
@@ -140,7 +150,7 @@ export default function TeacherSession() {
           <p className="text-sm text-gray-500 mb-2 font-medium">Present Now</p>
           <p className="text-4xl font-bold text-green-600">{presentCount}</p>
           <p className="text-xs text-gray-400 mt-1">
-            {students.length} total marked &nbsp;·&nbsp; {students.filter(s => s.status === 'late').length} late &nbsp;·&nbsp; {students.filter(s => s.status === 'flagged').length} flagged
+            {students.length} total marked &nbsp;·&nbsp; {students.filter(s => s.status === 'late').length} late &nbsp;·&nbsp; {students.filter(s => s.status === 'flagged').length} flagged &nbsp;·&nbsp; {students.filter(s => s.status === 'service').length} service
           </p>
         </div>
       </div>
@@ -167,7 +177,7 @@ export default function TeacherSession() {
                   <p className="font-medium text-gray-900 text-sm truncate">{s.name}</p>
                   <p className="text-xs text-gray-400">
                     {s.submitted_at
-                      ? new Date(s.submitted_at).toLocaleTimeString()
+                      ? new Date(s.submitted_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' IST'
                       : '—'}
                   </p>
                 </div>
@@ -180,10 +190,16 @@ export default function TeacherSession() {
                   <option value="present">Present</option>
                   <option value="late">Late</option>
                   <option value="flagged">Flagged</option>
+                  <option value="service">Service</option>
                 </select>
                 {s.status === 'flagged' && (
                   <span className="text-xs bg-red-100 text-red-600 rounded px-1.5 py-0.5">
                     flagged
+                  </span>
+                )}
+                {s.status === 'service' && (
+                  <span className="text-xs bg-indigo-100 text-indigo-600 rounded px-1.5 py-0.5">
+                    service
                   </span>
                 )}
                 {s.status === 'late' && (

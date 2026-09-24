@@ -10,6 +10,7 @@
 import cron from 'node-cron';
 import { query } from '../config/db.js';
 import { sendEmail, emailLayout } from './emailService.js';
+import { istDateString } from '../utils/istDate.js';
 
 const TZ = 'Asia/Kolkata';
 
@@ -18,7 +19,7 @@ const TZ = 'Asia/Kolkata';
 const TEST_LIST = (process.env.TEST_EMAIL_RECIPIENTS || '')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
-function ymd(d) { return d.toISOString().slice(0, 10); }
+function ymd(d) { return istDateString(d); }
 function isRealEmail(e) {
   const s = String(e || '').toLowerCase();
   return s.includes('@') && !s.endsWith('@noemail.bvrv');
@@ -44,26 +45,26 @@ async function getBVLeaders() {
 //  - ac: academic attendance across the subjects the student is enrolled in
 async function studentsForLeader(mentorId, start, end) {
   const totalR = await query(
-    `SELECT COUNT(*)::int AS n FROM mentor_sessions
+    `SELECT COUNT(DISTINCT session_date)::int AS n FROM mentor_sessions
      WHERE mentor_id = $1 AND session_date >= $2 AND session_date <= $3`,
     [mentorId, start, end]
   );
   const bvTotal = totalR.rows[0].n;
   const r = await query(`
     SELECT u.name, u.roll_number,
-      (SELECT COUNT(*) FROM mentor_attendance mat
+      (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
          WHERE ms.mentor_id = $1 AND ms.session_date >= $2 AND ms.session_date <= $3
-           AND mat.student_id = u.id AND mat.status='present')::int AS bv_attended,
-      (SELECT COUNT(DISTINCT sess.id) FROM class_enrollments ce
+           AND mat.student_id = u.id AND mat.status IN ('present','service'))::int AS bv_attended,
+      (SELECT COUNT(DISTINCT (sess.subject_id, sess.session_date)) FROM class_enrollments ce
          JOIN sessions sess ON sess.subject_id = ce.subject_id AND sess.closed = true
-           AND sess.opened_at::date BETWEEN $2 AND $3
+           AND sess.session_date BETWEEN $2 AND $3
          WHERE ce.student_id = u.id)::int AS ac_total,
-      (SELECT COUNT(DISTINCT al.session_id) FROM attendance_logs al
+      (SELECT COUNT(DISTINCT (sess.subject_id, sess.session_date)) FROM attendance_logs al
          JOIN sessions sess ON sess.id = al.session_id AND sess.closed = true
-           AND sess.opened_at::date BETWEEN $2 AND $3
+           AND sess.session_date BETWEEN $2 AND $3
          JOIN class_enrollments ce ON ce.subject_id = sess.subject_id AND ce.student_id = u.id
-         WHERE al.student_id = u.id AND al.status='present' AND al.replayed = false)::int AS ac_attended
+         WHERE al.student_id = u.id AND al.status IN ('present','service') AND al.replayed = false)::int AS ac_attended
     FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
     JOIN users u ON u.id = cma.student_id
     ORDER BY u.name
@@ -147,12 +148,12 @@ export async function sendAttendanceReminders() {
 
 export async function runMonthlyReports() {
   // previous calendar month
-  const now = new Date();
-  const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastPrev = new Date(firstThisMonth.getTime() - 86400000);
-  const firstPrev = new Date(lastPrev.getFullYear(), lastPrev.getMonth(), 1);
-  const label = firstPrev.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-  return sendBVLeaderReports(ymd(firstPrev), ymd(lastPrev), label);
+  const [y, m] = istDateString().split('-').map(Number); // current IST year/month
+  const firstPrev = new Date(Date.UTC(y, m - 2, 1));
+  const lastPrev = new Date(Date.UTC(y, m - 1, 0));
+  const iso = d => d.toISOString().slice(0, 10);
+  const label = firstPrev.toLocaleString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return sendBVLeaderReports(iso(firstPrev), iso(lastPrev), label);
 }
 
 export async function runWeeklyReports() {

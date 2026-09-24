@@ -5,20 +5,7 @@ import api from '../../utils/api';
 import StatCard from '../../components/dashboard/StatCard';
 import AlertBanner from '../../components/dashboard/AlertBanner';
 import RoleSwitcher from '../../components/RoleSwitcher';
-
-// ── timeAgo util ────────────────────────────────────────────────────────────
-function timeAgo(dateStr) {
-  if (!dateStr) return '—';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'yesterday';
-  return `${days} days ago`;
-}
+import { fmtDateIST, fmtDateTimeIST, nowPartsIST } from '../../utils/datetime';
 
 // ── SessionCountdown (inline) ───────────────────────────────────────────────
 function SessionCountdown({ expiresAt }) {
@@ -113,18 +100,17 @@ export default function TeacherDashboard() {
   }, []);
 
   // Today's day_of_week: Mon=0 … Sun=6
-  const todayDow = (new Date().getDay() + 6) % 7;
+  const todayDow = (nowPartsIST().dow + 6) % 7;
   const todaySlots = timetable.filter(slot => slot.day_of_week === todayDow);
 
   const totalStudents = subjects.reduce((sum, s) => sum + Number(s.student_count ?? 0), 0);
 
   function isSlotNow(slot) {
-    const now = new Date();
     const [sh, sm] = (slot.start_time || '').split(':').map(Number);
     const [eh, em] = (slot.end_time || '').split(':').map(Number);
     const startMins = sh * 60 + sm - 30;
     const endMins = eh * 60 + em + 30;
-    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const nowMins = nowPartsIST().minutes;
     return nowMins >= startMins && nowMins <= endMins;
   }
 
@@ -309,13 +295,19 @@ export default function TeacherDashboard() {
           <ul className="divide-y divide-gray-100">
             {recentSessions.map(session => (
               <li
-                key={session.id}
-                onClick={() => navigate(`/teacher/session/${session.id}`)}
+                key={`${session.subject_id}-${session.session_date}`}
+                onClick={() => session.closed
+                  ? navigate(`/teacher/manual-attendance?subject_id=${session.subject_id}&date=${session.session_date}`)
+                  : navigate(`/teacher/session/${session.id}`)}
                 className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 text-sm truncate">{session.subject_name}</p>
-                  <p className="text-xs text-gray-400">{timeAgo(session.opened_at)}</p>
+                  <p className="text-xs text-gray-400">
+                    {fmtDateIST(session.session_date || session.opened_at)}
+                    {session.session_count > 1 ? ` · ${session.session_count} sessions merged` : session.manual ? ' · Manual' : ' · PIN'}
+                    <span className="text-gray-300"> · recorded {fmtDateTimeIST(session.opened_at)}</span>
+                  </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-semibold text-gray-700">

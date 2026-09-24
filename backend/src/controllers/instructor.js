@@ -135,12 +135,12 @@ export async function getSubjectReport(req, res) {
     const result = await query(`
       SELECT
         u.id, u.name, u.email, u.avatar_url,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS attended,
-        CASE WHEN COUNT(DISTINCT sess.id) > 0
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+        CASE WHEN COUNT(DISTINCT sess.session_date) > 0
           THEN ROUND(
-            (COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false)::numeric
-            / COUNT(DISTINCT sess.id)) * 100, 1
+            (COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+            / COUNT(DISTINCT sess.session_date)) * 100, 1
           )
           ELSE 0
         END AS percentage

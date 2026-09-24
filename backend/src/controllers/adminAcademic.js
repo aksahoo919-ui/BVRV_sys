@@ -551,8 +551,8 @@ export async function getReportCard(req, res) {
       ORDER BY s.name, m.assessment_type`, [student_id, semester_id]),
     query(`
       SELECT s.name AS subject_name, s.code,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status='present' AND al.replayed=false) AS attended
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended
       FROM subjects s
       JOIN class_enrollments ce ON ce.subject_id=s.id AND ce.student_id=$1
       LEFT JOIN sessions sess ON sess.subject_id=s.id AND sess.closed=true

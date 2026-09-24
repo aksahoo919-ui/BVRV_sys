@@ -745,12 +745,12 @@ export async function reportStudents(req, res) {
       SELECT
         u.id, u.name, u.email, u.avatar_url,
         s.id AS subject_id, s.name AS subject_name, s.code AS subject_code,
-        COUNT(DISTINCT sess.id) AS total_sessions,
-        COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS attended,
-        CASE WHEN COUNT(DISTINCT sess.id) > 0
+        COUNT(DISTINCT sess.session_date) AS total_sessions,
+        COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
+        CASE WHEN COUNT(DISTINCT sess.session_date) > 0
           THEN ROUND(
-            (COUNT(DISTINCT al.session_id) FILTER (WHERE al.status = 'present' AND al.replayed = false)::numeric
-            / COUNT(DISTINCT sess.id)) * 100, 1
+            (COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false)::numeric
+            / COUNT(DISTINCT sess.session_date)) * 100, 1
           )
           ELSE 0
         END AS percentage
@@ -788,11 +788,11 @@ export async function reportSubject(req, res) {
     const sessionsResult = await query(`
       SELECT
         sess.id, sess.opened_at, sess.closed,
-        COUNT(al.id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS present_count,
+        COUNT(al.id) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS present_count,
         COUNT(al.id) FILTER (WHERE al.status = 'flagged') AS flagged_count,
         (
           SELECT COUNT(*) FROM class_enrollments ce WHERE ce.subject_id = sess.subject_id AND ce.student_id IS NOT NULL
-        ) - COUNT(al.id) FILTER (WHERE al.status = 'present' AND al.replayed = false) AS absent_count
+        ) - COUNT(al.id) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS absent_count
       FROM sessions sess
       LEFT JOIN attendance_logs al ON al.session_id = sess.id
       WHERE sess.subject_id = $1
@@ -910,12 +910,13 @@ export async function reportDepartmentAttendance(req, res) {
           s.course_id,
           (SELECT COUNT(*) FROM class_enrollments ce
              WHERE ce.subject_id = s.id AND ce.student_id IS NOT NULL) AS students,
-          (SELECT COUNT(*) FROM sessions sess
+          -- Multiple sessions of a class on the same day count as one day.
+          (SELECT COUNT(DISTINCT sess.session_date) FROM sessions sess
              WHERE sess.subject_id = s.id AND sess.closed = true) AS sessions,
-          (SELECT COUNT(*) FROM attendance_logs al
+          (SELECT COUNT(DISTINCT (al.student_id, sess.session_date)) FROM attendance_logs al
              JOIN sessions sess ON sess.id = al.session_id
              WHERE sess.subject_id = s.id AND sess.closed = true
-               AND al.status = 'present' AND al.replayed = false) AS present
+               AND al.status IN ('present','service') AND al.replayed=false) AS present
         FROM subjects s
       )
       SELECT
@@ -938,10 +939,6 @@ export async function reportDepartmentAttendance(req, res) {
 // GET /api/admin/reports/teacher-activity-today
 export async function reportTeacherActivityToday(req, res) {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today.getTime() + 86400000);
-
     const r = await query(`
       SELECT
         u.id AS teacher_id,
@@ -959,10 +956,10 @@ export async function reportTeacherActivityToday(req, res) {
       JOIN subjects s ON s.id = ce.subject_id
       LEFT JOIN sessions sess ON sess.subject_id = s.id
         AND sess.instructor_id = u.id
-        AND sess.opened_at >= $1 AND sess.opened_at < $2
+        AND sess.session_date = (NOW() AT TIME ZONE 'Asia/Kolkata')::date
       WHERE u.role = 'teacher' AND u.status = 'active'
       ORDER BY u.name, s.name
-    `, [today, tomorrow]);
+    `);
     res.json(r.rows);
   } catch (err) {
     console.error(err);

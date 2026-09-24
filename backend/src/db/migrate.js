@@ -27,6 +27,8 @@ const migrations = [
   '016_username_password.sql',
   '017_mentor_sessions_common.sql',
   '018_password_reset_tokens.sql',
+  '019_attendance_service_status.sql',
+  '020_session_date_ist.sql',
 ];
 
 async function migrate() {

@@ -79,7 +79,7 @@ export async function resetAttendance(req, res) {
     const params = [];
     const clauses = [];
     if (subject_id) { params.push(subject_id); clauses.push(`subject_id = $${params.length}`); }
-    if (date)       { params.push(date);       clauses.push(`opened_at::date = $${params.length}`); }
+    if (date)       { params.push(date);       clauses.push(`session_date = $${params.length}`); }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
     const del = await query(`DELETE FROM sessions ${where} RETURNING id`, params);
