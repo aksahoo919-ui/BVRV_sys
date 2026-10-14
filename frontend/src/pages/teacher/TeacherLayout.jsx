@@ -8,6 +8,7 @@ const NAV = [
   { to: '/teacher/home',           label: 'Dashboard',     icon: HomeIcon },
   { to: '/teacher/classes',        label: 'Classes',       icon: ClassesIcon },
   { to: '/teacher/manual-attendance', label: 'Manual Attend.', icon: CalendarIcon },
+  { to: '/teacher/attendance-records', label: 'Attendance Records', icon: CalendarIcon },
   { to: '/teacher/marks',          label: 'Marks',         icon: MarksIcon },
   { to: '/teacher/marks-history',  label: 'Marks History', icon: MarksIcon },
   { to: '/teacher/performance',    label: 'Performance',   icon: PerformanceIcon },

@@ -20,14 +20,13 @@ function addDays(ymd, n) {
   return new Date(t).toISOString().slice(0, 10);
 }
 
-// Weekly lock: every Saturday (00:00 IST) the previous week's attendance locks.
-// A day is locked when it is on or before (most recent Saturday − 7 days), so
-// every record stays editable for at least a full week after it was taken.
+// Edit window: attendance can be changed for 7 days after the class day
+// (e.g. a class on the 7th is editable through the 14th). Older days are locked.
+export const EDIT_WINDOW_DAYS = 7;
+
+// Days on or before this date are locked.
 export function lockCutoffDate(now = new Date()) {
-  const today = istDateString(now);
-  const dow = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun … 6=Sat
-  const lastSaturday = addDays(today, -((dow + 1) % 7));
-  return addDays(lastSaturday, -7);
+  return addDays(istDateString(now), -(EDIT_WINDOW_DAYS + 1));
 }
 
 export function isDateLocked(ymd, now = new Date()) {

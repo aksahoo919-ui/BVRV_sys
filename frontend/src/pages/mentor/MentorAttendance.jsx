@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 import AttendanceRoster from '../../components/AttendanceRoster';
-import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, lockDateFor } from '../../utils/datetime';
+import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, editableUntil } from '../../utils/datetime';
 
 function Spinner() {
   return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -101,7 +101,7 @@ export default function MentorAttendance() {
         <h1 className="text-xl font-bold text-gray-900">Weekly Class Attendance</h1>
         <p className="text-sm text-gray-400 mt-0.5">
           One common weekly class for all your students. Sessions held on the same day are merged into one record.
-          Records can be changed until the Saturday after the following week, when they lock.
+          Records can be changed for 7 days after the class; older days are locked.
         </p>
       </div>
 
@@ -147,10 +147,10 @@ export default function MentorAttendance() {
             <h2 className="font-semibold text-gray-800">{activeSession.title || 'Session'} · {fmtDayIST(activeSession.session_date)}</h2>
             {locked ? (
               <p className="mt-2 text-xs bg-gray-100 text-gray-600 rounded-md px-3 py-2">
-                🔒 This day is locked — attendance locked on {fmtDateIST(lockDateFor(activeSession.session_date))}.
+                🔒 This day is locked — it could be changed until {fmtDateIST(editableUntil(activeSession.session_date))}.
               </p>
             ) : (
-              <p className="mt-1 text-xs text-gray-400">Editable until {fmtDateIST(lockDateFor(activeSession.session_date))}.</p>
+              <p className="mt-1 text-xs text-gray-400">Editable until {fmtDateIST(editableUntil(activeSession.session_date))}.</p>
             )}
           </div>
 

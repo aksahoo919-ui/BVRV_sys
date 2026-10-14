@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import AttendanceRoster from '../../components/AttendanceRoster';
-import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, lockDateFor } from '../../utils/datetime';
+import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, editableUntil } from '../../utils/datetime';
 
 function Spinner() {
   return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -81,7 +81,7 @@ export default function TeacherManualAttendance() {
         <h1 className="text-xl font-bold text-gray-900">Manual Attendance</h1>
         <p className="text-sm text-gray-400 mt-0.5">
           Mark or edit a class's attendance for a day. All sessions of a class on the same day are merged into one record.
-          Records can be changed until the Saturday after the following week, when they lock.
+          Records can be changed for 7 days after the class; older days are locked.
         </p>
       </div>
 
@@ -107,15 +107,15 @@ export default function TeacherManualAttendance() {
             <h2 className="font-semibold text-gray-800">{subject?.name} · {fmtDayIST(date)}</h2>
             {locked ? (
               <p className="mt-2 text-xs bg-gray-100 text-gray-600 rounded-md px-3 py-2">
-                🔒 This day is locked — attendance locked on {fmtDateIST(lockDateFor(date))}. Ask an admin for a correction.
+                🔒 This day is locked — it could be changed until {fmtDateIST(editableUntil(date))}. Ask an admin for a correction.
               </p>
             ) : day.has_record ? (
               <p className="mt-2 text-xs bg-blue-50 text-blue-700 rounded-md px-3 py-2">
                 ✎ Editing the saved record{day.session_count > 1 ? ` (${day.session_count} sessions merged)` : ''} — last recorded {fmtDateTimeIST(day.recorded_at)}.
-                Editable until {fmtDateIST(lockDateFor(date))}.
+                Editable until {fmtDateIST(editableUntil(date))}.
               </p>
             ) : (
-              <p className="mt-2 text-xs text-gray-400">No attendance recorded for this day yet. Editable until {fmtDateIST(lockDateFor(date))}.</p>
+              <p className="mt-2 text-xs text-gray-400">No attendance recorded for this day yet. Editable until {fmtDateIST(editableUntil(date))}.</p>
             )}
           </div>
 

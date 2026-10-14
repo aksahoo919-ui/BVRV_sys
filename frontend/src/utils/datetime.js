@@ -62,11 +62,8 @@ export function fmtDateTimeIST(v) {
   return `${d.toLocaleString('en-IN', { timeZone: IST, day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })} IST`;
 }
 
-// Weekly lock: every Saturday (IST) the previous week's attendance locks, so a
-// day stays editable for at least a week. Returns the 'YYYY-MM-DD' Saturday on
-// which the given day locks (mirrors backend/src/utils/istDate.js).
-export function lockDateFor(ymd) {
-  const t = Date.parse(`${ymd}T00:00:00Z`) + 7 * 86400000;
-  const dow = new Date(t).getUTCDay();
-  return new Date(t + ((6 - dow + 7) % 7) * 86400000).toISOString().slice(0, 10);
+// Edit window: attendance can be changed for 7 days after the class day
+// (mirrors backend/src/utils/istDate.js). Returns the last editable 'YYYY-MM-DD'.
+export function editableUntil(ymd) {
+  return new Date(Date.parse(`${ymd}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
 }

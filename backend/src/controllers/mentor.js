@@ -313,7 +313,7 @@ function resolveSessionDate(session_date) {
   const date = session_date || istDateString();
   if (!isValidYmd(date)) return { error: 'Invalid date' };
   if (date > istDateString()) return { error: 'Attendance cannot be recorded for a future date' };
-  if (isDateLocked(date)) return { error: `Attendance for ${date} is locked (weeks lock every Saturday)` };
+  if (isDateLocked(date)) return { error: `Attendance for ${date} is locked (attendance can only be changed within 7 days)` };
   return { date };
 }
 
@@ -440,7 +440,7 @@ export async function markMentorAttendance(req, res) {
   if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
   const day = sess.rows[0].session_date;
   if (isDateLocked(day))
-    return res.status(423).json({ error: `Attendance for ${day} is locked (weeks lock every Saturday)` });
+    return res.status(423).json({ error: `Attendance for ${day} is locked (attendance can only be changed within 7 days)` });
 
   const mine = await query(
     'SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id=$1', [req.user.id]
@@ -477,6 +477,62 @@ export async function markMentorAttendance(req, res) {
     client.release();
   }
   res.json({ saved });
+}
+
+// ── Attendance records by date (view; edit within 7 days) ─────────────────
+
+// GET /mentor/attendance/day?date=YYYY-MM-DD — the day's merged record
+export async function getMentorAttendanceDay(req, res) {
+  const date = req.query.date || istDateString();
+  if (!isValidYmd(date)) return res.status(400).json({ error: 'Invalid date' });
+  const sessR = await query(
+    `SELECT id, created_at FROM mentor_sessions WHERE mentor_id=$1 AND session_date=$2 ORDER BY created_at`,
+    [req.user.id, date]
+  );
+  const r = await query(`
+    SELECT u.id, u.name, u.roll_number,
+      (SELECT mat.status FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND ms.session_date = $2 AND mat.student_id = u.id
+         ORDER BY CASE mat.status WHEN 'present' THEN 0 WHEN 'service' THEN 1 ELSE 2 END
+         LIMIT 1) AS status,
+      (SELECT MAX(mat.marked_at) FROM mentor_attendance mat
+         JOIN mentor_sessions ms ON ms.id = mat.session_id
+         WHERE ms.mentor_id = $1 AND ms.session_date = $2 AND mat.student_id = u.id) AS marked_at
+    FROM (SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id = $1) cma
+    JOIN users u ON u.id = cma.student_id
+    ORDER BY u.name`,
+    [req.user.id, date]
+  );
+  const hasRecord = sessR.rows.length > 0;
+  const marks = r.rows.map(x => x.marked_at).filter(Boolean).map(d => new Date(d).getTime());
+  res.json({
+    date,
+    locked: isDateLocked(date),
+    has_record: hasRecord,
+    session_count: sessR.rows.length,
+    recorded_at: marks.length ? new Date(Math.max(...marks)) : (hasRecord ? sessR.rows[0].created_at : null),
+    roster: r.rows.map(({ marked_at, ...x }) => ({ ...x, status: x.status || (hasRecord ? 'absent' : null) })),
+  });
+}
+
+// POST /mentor/attendance/day { date, entries } — save/edit the day's record
+export async function saveMentorAttendanceDay(req, res) {
+  const { error, date } = resolveSessionDate(req.body.date);
+  if (error) return res.status(error.includes('locked') ? 423 : 400).json({ error });
+  if (!Array.isArray(req.body.entries)) return res.status(400).json({ error: 'entries array required' });
+  let s = await query(
+    `SELECT id FROM mentor_sessions WHERE mentor_id=$1 AND session_date=$2 ORDER BY created_at LIMIT 1`,
+    [req.user.id, date]
+  );
+  if (!s.rows.length) {
+    s = await query(
+      `INSERT INTO mentor_sessions (id, mentor_id, title, session_date) VALUES ($1,$2,NULL,$3) RETURNING id`,
+      [uuidv4(), req.user.id, date]
+    );
+  }
+  req.params.id = s.rows[0].id;
+  return markMentorAttendance(req, res);
 }
 
 // ── Mentor defaulters (based on mentor-class attendance) ──────────────────

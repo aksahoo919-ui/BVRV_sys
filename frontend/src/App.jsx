@@ -44,6 +44,7 @@ import TeacherReports from './pages/teacher/TeacherReports';
 import TeacherMarks from './pages/teacher/TeacherMarks';
 import TeacherMarksHistory from './pages/teacher/TeacherMarksHistory';
 import TeacherManualAttendance from './pages/teacher/TeacherManualAttendance';
+import AttendanceRecords from './components/AttendanceRecords';
 import TeacherTimetable from './pages/teacher/TeacherTimetable';
 import TeacherStudentPerformance from './pages/teacher/TeacherStudentPerformance';
 import TeacherDefaulters from './pages/teacher/TeacherDefaulters';
@@ -137,6 +138,7 @@ export default function App() {
         <Route path="marks" element={<TeacherMarks />} />
         <Route path="marks-history" element={<TeacherMarksHistory />} />
         <Route path="manual-attendance" element={<TeacherManualAttendance />} />
+        <Route path="attendance-records" element={<AttendanceRecords role="teacher" />} />
         <Route path="performance" element={<TeacherStudentPerformance />} />
         <Route path="defaulters" element={<TeacherDefaulters />} />
         <Route path="timetable" element={<TeacherTimetable />} />
@@ -154,6 +156,7 @@ export default function App() {
         <Route path="contacts" element={<MentorParentContacts />} />
         <Route path="meetings" element={<MentorMeetings />} />
         <Route path="attendance" element={<MentorAttendance />} />
+        <Route path="attendance-records" element={<AttendanceRecords role="mentor" />} />
         <Route path="defaulters" element={<MentorDefaulters />} />
       </Route>
 

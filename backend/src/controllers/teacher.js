@@ -6,7 +6,7 @@ import { logAudit } from '../middleware/audit.js';
 import { istDateString, isDateLocked, lockCutoffDate, isValidYmd } from '../utils/istDate.js';
 
 const LOG_STATUSES = ['present', 'late', 'flagged', 'service'];
-const LOCK_MSG = d => `Attendance for ${d} is locked (weeks lock every Saturday)`;
+const LOCK_MSG = d => `Attendance for ${d} is locked (attendance can only be changed within 7 days)`;
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 
@@ -422,7 +422,7 @@ export async function editMark(req, res) {
 // single attendance day: a student counts as attended if present (or on service)
 // in any of them. Saving a day writes the record to the day's first session and
 // clears the student's rows in the other sessions of that day, so the saved
-// roster is exactly the merged result. Days lock every Saturday (see istDate.js).
+// roster is exactly the merged result. Days older than 7 days are locked (see istDate.js).
 
 async function ownsSubject(subjectId, userId) {
   const r = await query(

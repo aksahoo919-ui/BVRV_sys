@@ -43,6 +43,8 @@ router.post('/sessions/open-code',            ...guard, mc.openMentorCodeSession
 router.post('/sessions/:id/close',            ...guard, mc.closeMentorCodeSession);
 router.get('/sessions/:id/attendance',        ...guard, mc.getMentorSessionAttendance);
 router.post('/sessions/:id/attendance',       ...guard, mc.markMentorAttendance);
+router.get('/attendance/day',                 ...guard, mc.getMentorAttendanceDay);
+router.post('/attendance/day',                ...guard, mc.saveMentorAttendanceDay);
 router.get('/defaulters',                     ...guard, mc.getMentorDefaulters);
 
 export default router;
