@@ -56,16 +56,17 @@ export default function AdminClassMentors() {
     finally { setSavingId(null); }
   }
 
-  async function handleImport() {
+  // dryRun=true only checks the file; false applies it.
+  async function handleImport(dryRun) {
     const file = importFileRef.current?.files[0];
-    if (!file) return;
+    if (!file) { setImportResult({ error: 'Choose a CSV file first' }); return; }
     setImporting(true); setImportResult(null);
     try {
       const form = new FormData();
       form.append('file', file);
-      const r = await api.post('/admin/class-mentors/import', form);
+      const r = await api.post(`/admin/class-mentors/import${dryRun ? '?dry_run=1' : ''}`, form);
       setImportResult(r.data);
-      load();
+      if (!dryRun) load();
     } catch (err) {
       setImportResult({ error: err.response?.data?.error || 'Import failed' });
     } finally {
@@ -73,12 +74,14 @@ export default function AdminClassMentors() {
     }
   }
 
-  function downloadImportTemplate() {
-    const csv = 'student name,bv leader name\nManoj Kumar Sahoo,Vimal Das\nMahesh Pupala,Gita Devi';
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'class_mentors_template.csv'; a.click();
+  async function download(path, filename) {
+    try {
+      const r = await api.get(path, { responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch { setImportResult({ error: 'Download failed' }); }
   }
 
   const subject = subjects.find(s => String(s.id) === subjectId);
@@ -95,7 +98,7 @@ export default function AdminClassMentors() {
           onClick={() => { setShowImport(true); setImportResult(null); }}
           className="btn-primary text-sm"
         >
-          Import CSV
+          Bulk map from CSV
         </button>
       </div>
 
@@ -163,25 +166,49 @@ export default function AdminClassMentors() {
       {/* Import modal */}
       {showImport && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-md">
+          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-gray-900">Import BV Leader assignments</h2>
+              <h2 className="font-bold text-gray-900">Bulk map students to BV Leaders</h2>
               <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <p className="text-sm text-gray-500 mb-1">
-              Columns: <code className="bg-gray-100 px-1 rounded text-xs">student name, bv leader name</code>.
+            <ol className="text-sm text-gray-600 space-y-3 mb-4 list-decimal list-inside">
+              <li>
+                Download the BV Leader names (spell them exactly like this).
+                <button onClick={() => download('/admin/class-mentors/leaders.csv', 'bv_leaders.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5">⬇ BV Leader list (CSV)</button>
+              </li>
+              <li>
+                Download the student list, then type each student's BV Leader in column 2 (<code className="bg-gray-100 px-1 rounded text-xs">bv leader name</code>). Leave it blank to skip a student.
+                <button onClick={() => download('/admin/class-mentors/template.csv', 'student_bv_leader_mapping.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5">⬇ Student list with BV Leader column (CSV)</button>
+              </li>
+              <li>Upload the filled file. <span className="text-gray-400">Check it first — nothing is saved until you click Import.</span></li>
+            </ol>
+            <p className="text-xs text-gray-400 mb-3">
+              Column 1 = student name (or roll number / email), column 2 = BV Leader name (or email). Names are matched ignoring case and extra spaces.
+              Each student is mapped to the BV Leader in every class they're enrolled in; an existing mapping is replaced.
             </p>
-            <p className="text-xs text-gray-400 mb-3">Each student is assigned the named BV Leader across every class they're enrolled in. Names are matched case-insensitively.</p>
-            <button onClick={downloadImportTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download sample CSV</button>
-            <input ref={importFileRef} type="file" accept=".csv" className="input mb-3" />
+            <input ref={importFileRef} type="file" accept=".csv,text/csv" className="input mb-3" onChange={() => setImportResult(null)} />
             {importResult && (
-              <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                {importResult.error
-                  ? importResult.error
-                  : `Students mapped: ${importResult.students} · Class assignments: ${importResult.assignments} · Skipped: ${importResult.skipped?.length || 0}`}
+              <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : importResult.dry_run ? 'bg-blue-50 text-blue-800' : 'bg-green-50 text-green-700'}`}>
+                {importResult.error ? importResult.error : (
+                  <>
+                    <p className="font-semibold">
+                      {importResult.dry_run
+                        ? `Ready to map ${importResult.students} student(s) — nothing saved yet.`
+                        : `✓ Mapped ${importResult.students} student(s) (${importResult.assignments} class assignments).`}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {importResult.skipped?.length || 0} problem row(s){importResult.blank_rows ? ` · ${importResult.blank_rows} row(s) with no BV Leader ignored` : ''}
+                    </p>
+                    {Object.keys(importResult.by_leader || {}).length > 0 && (
+                      <ul className="text-xs mt-2 max-h-24 overflow-y-auto">
+                        {Object.entries(importResult.by_leader).sort().map(([name, n]) => <li key={name}>{name}: {n} student(s)</li>)}
+                      </ul>
+                    )}
+                  </>
+                )}
                 {importResult.skipped?.length > 0 && (
-                  <ul className="mt-2 text-xs text-red-600 max-h-32 overflow-y-auto list-disc list-inside">
-                    {importResult.skipped.slice(0, 20).map((s, i) => (
+                  <ul className="mt-2 text-xs text-red-600 max-h-40 overflow-y-auto list-disc list-inside">
+                    {importResult.skipped.map((s, i) => (
                       <li key={i}>Row {s.row}: {s.reason}</li>
                     ))}
                   </ul>
@@ -189,9 +216,10 @@ export default function AdminClassMentors() {
               </div>
             )}
             <div className="flex gap-2">
-              <button onClick={handleImport} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
-              <button onClick={() => setShowImport(false)} className="btn-secondary flex-1">Close</button>
+              <button onClick={() => handleImport(true)} disabled={importing} className="btn-secondary flex-1">{importing ? 'Checking…' : 'Check file'}</button>
+              <button onClick={() => handleImport(false)} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
             </div>
+            <button onClick={() => setShowImport(false)} className="text-xs text-gray-400 hover:text-gray-600 mt-3 w-full">Close</button>
           </div>
         </div>
       )}

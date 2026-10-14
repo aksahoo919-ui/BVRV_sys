@@ -1,4 +1,4 @@
-import { query } from '../config/db.js';
+import { query, pool } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '../middleware/audit.js';
 
@@ -421,68 +421,158 @@ export async function assignClassMentor(req, res) {
 // Import student→mentor mappings from a CSV (student name, mentor name).
 // Subject-independent: each student gets the named mentor across EVERY class
 // they are enrolled in. Name matching is case-insensitive.
+// ── Bulk BV Leader mapping (CSV) ──────────────────────────────────────────
+// Admin downloads the BV Leader list and a student template, fills column 2
+// with each student's BV Leader, and uploads it. Each student is then mapped to
+// that BV Leader in every class they're enrolled in.
+
+// Minimal CSV parser: handles quoted fields, "" escapes, CRLF and an Excel BOM.
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', quoted = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else field += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(field); field = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.map(r => r.map(c => c.trim())).filter(r => r.some(Boolean));
+}
+
+const csvCell = v => {
+  const t = v == null ? '' : String(v);
+  return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+const toCsv = rows => '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+const norm = v => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// GET /admin/class-mentors/leaders.csv — every active BV Leader
+export async function downloadBVLeaders(req, res) {
+  const r = await query(
+    `SELECT name, email FROM users
+     WHERE (role='mentor' OR secondary_role='mentor') AND status='active' ORDER BY name`
+  );
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="bv_leaders.csv"');
+  res.send(toCsv([['bv leader name', 'email'], ...r.rows.map(m => [m.name, m.email])]));
+}
+
+// GET /admin/class-mentors/template.csv — every student with their current BV Leader
+// (blank if none). Fill column 2 and upload it back.
+export async function downloadMentorMappingTemplate(req, res) {
+  const r = await query(`
+    SELECT u.name, u.roll_number, u.email,
+      (SELECT STRING_AGG(DISTINCT m.name, ' / ') FROM class_mentor_assignments cma
+         JOIN users m ON m.id = cma.mentor_id WHERE cma.student_id = u.id) AS leader,
+      EXISTS (SELECT 1 FROM class_enrollments ce WHERE ce.student_id = u.id) AS enrolled
+    FROM users u WHERE u.role = 'student' ORDER BY u.name`);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="student_bv_leader_mapping.csv"');
+  res.send(toCsv([
+    ['student name', 'bv leader name', 'roll number', 'email', 'note'],
+    ...r.rows.map(s => [s.name, s.leader || '', s.roll_number || '', s.email, s.enrolled ? '' : 'not enrolled in any class']),
+  ]));
+}
+
+// POST /admin/class-mentors/import  (multipart "file"; ?dry_run=1 only checks)
+// Column 1 = student (name, roll number or email), column 2 = BV Leader (name or email).
+// A header row is optional. Rows with a blank BV Leader are ignored.
 export async function bulkImportClassMentors(req, res) {
   if (!req.file) return res.status(400).json({ error: 'CSV file required' });
+  const dryRun = ['1', 'true'].includes(String(req.query.dry_run || req.body?.dry_run));
 
-  const csv = req.file.buffer.toString('utf8');
-  const lines = csv.split('\n').map(l => l.replace(/\r$/, '').trim()).filter(Boolean);
-  if (lines.length < 2) return res.status(400).json({ error: 'CSV has no data rows' });
+  const rows = parseCsv(req.file.buffer.toString('utf8'));
+  if (!rows.length) return res.status(400).json({ error: 'The file is empty' });
 
-  const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const idx = (...names) => { for (const n of names) { const i = header.indexOf(n); if (i !== -1) return i; } return -1; };
-  const studentIdx = idx('student name', 'student');
-  const mentorIdx = idx('bv leader name', 'bv leader', 'mentor name', 'mentor');
-  if (studentIdx === -1 || mentorIdx === -1)
-    return res.status(400).json({ error: 'CSV must have columns: student name, bv leader name' });
+  // Optional header: use named columns if present, else column 1 / column 2.
+  const header = rows[0].map(norm);
+  const find = names => header.findIndex(h => names.includes(h));
+  let sIdx = find(['student name', 'student', 'name', 'student_name']);
+  let mIdx = find(['bv leader name', 'bv leader', 'bv_leader', 'mentor name', 'mentor', 'leader']);
+  const hasHeader = sIdx !== -1 || mIdx !== -1;
+  if (sIdx === -1) sIdx = 0;
+  if (mIdx === -1) mIdx = 1;
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  const rowNo = i => i + (hasHeader ? 2 : 1);
 
-  // All students, keyed by lowercased name
-  const studR = await query(`SELECT id, name FROM users WHERE role = 'student'`);
-  const studentMap = {};
-  for (const s of studR.rows) { const k = s.name.trim().toLowerCase(); (studentMap[k] = studentMap[k] || []).push(s.id); }
-
-  // Mentors (primary or secondary), keyed by lowercased name
+  const addTo = (map, key, id) => { if (key) (map[key] = map[key] || new Set()).add(id); };
+  const studR = await query(`SELECT id, name, email, roll_number FROM users WHERE role='student'`);
+  const studByKey = {};
+  for (const s of studR.rows) { addTo(studByKey, norm(s.name), s.id); addTo(studByKey, norm(s.email), s.id); addTo(studByKey, norm(s.roll_number), s.id); }
   const mentR = await query(
-    `SELECT id, name FROM users WHERE (role='mentor' OR secondary_role='mentor') AND status='active'`
+    `SELECT id, name, email FROM users WHERE (role='mentor' OR secondary_role='mentor') AND status='active'`
   );
-  const mentorMap = {};
-  for (const m of mentR.rows) { const k = m.name.trim().toLowerCase(); (mentorMap[k] = mentorMap[k] || []).push(m.id); }
+  const mentByKey = {};
+  const mentorName = {};
+  for (const m of mentR.rows) { addTo(mentByKey, norm(m.name), m.id); addTo(mentByKey, norm(m.email), m.id); mentorName[m.id] = m.name; }
 
-  let students = 0;     // students successfully mapped
-  let assignments = 0;  // (student, subject) rows written
+  const enrolR = await query(`SELECT student_id, subject_id FROM class_enrollments WHERE student_id IS NOT NULL`);
+  const subjectsOf = {};
+  for (const e of enrolR.rows) (subjectsOf[e.student_id] = subjectsOf[e.student_id] || []).push(e.subject_id);
+
   const skipped = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim());
-    const sName = cols[studentIdx];
-    const mName = cols[mentorIdx];
-    if (!sName || !mName) { skipped.push({ row: i + 1, reason: 'Missing student or mentor name' }); continue; }
-    const sIds = studentMap[sName.toLowerCase()];
-    const mIds = mentorMap[mName.toLowerCase()];
-    if (!sIds) { skipped.push({ row: i + 1, reason: `Student "${sName}" not found` }); continue; }
-    if (sIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple students named "${sName}"` }); continue; }
-    if (!mIds) { skipped.push({ row: i + 1, reason: `Mentor "${mName}" not found` }); continue; }
-    if (mIds.length > 1) { skipped.push({ row: i + 1, reason: `Multiple mentors named "${mName}"` }); continue; }
+  const plan = new Map(); // student_id -> { mentor_id, row }
+  let blank = 0;
+  dataRows.forEach((cols, i) => {
+    const sName = cols[sIdx] || '';
+    const mName = cols[mIdx] || '';
+    if (!sName && !mName) return;
+    if (!mName) { blank++; return; }
+    if (!sName) return skipped.push({ row: rowNo(i), student: '', reason: 'Student name is missing' });
+    const sIds = [...(studByKey[norm(sName)] || [])];
+    const mIds = [...(mentByKey[norm(mName)] || [])];
+    if (!sIds.length) return skipped.push({ row: rowNo(i), student: sName, reason: `Student "${sName}" not found` });
+    if (sIds.length > 1) return skipped.push({ row: rowNo(i), student: sName, reason: `More than one student is named "${sName}" — use their roll number or email instead` });
+    if (!mIds.length) return skipped.push({ row: rowNo(i), student: sName, reason: `BV Leader "${mName}" not found` });
+    if (mIds.length > 1) return skipped.push({ row: rowNo(i), student: sName, reason: `More than one BV Leader is named "${mName}" — use their email instead` });
+    if (!subjectsOf[sIds[0]]) return skipped.push({ row: rowNo(i), student: sName, reason: `"${sName}" is not enrolled in any class — enrol them first` });
+    const prev = plan.get(sIds[0]);
+    if (prev && prev.mentor_id !== mIds[0])
+      return skipped.push({ row: rowNo(i), student: sName, reason: `"${sName}" is listed again (row ${prev.row}) with a different BV Leader` });
+    plan.set(sIds[0], { mentor_id: mIds[0], row: rowNo(i) });
+  });
 
-    try {
-      // Every class the student is enrolled in
-      const subs = await query(
-        `SELECT DISTINCT subject_id FROM class_enrollments WHERE student_id = $1 AND student_id IS NOT NULL`,
-        [sIds[0]]
-      );
-      if (!subs.rows.length) { skipped.push({ row: i + 1, reason: `"${sName}" is not enrolled in any class` }); continue; }
-      for (const sub of subs.rows) {
-        await query(
+  const byLeader = {};
+  for (const { mentor_id } of plan.values()) byLeader[mentorName[mentor_id]] = (byLeader[mentorName[mentor_id]] || 0) + 1;
+  const summary = { dry_run: dryRun, students: plan.size, blank_rows: blank, skipped, by_leader: byLeader, assignments: 0 };
+  if (dryRun) {
+    summary.assignments = [...plan.keys()].reduce((n, sid) => n + subjectsOf[sid].length, 0);
+    return res.json(summary);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const [sid, { mentor_id }] of plan) {
+      for (const subject_id of subjectsOf[sid]) {
+        await client.query(
           `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id)
            VALUES ($1,$2,$3,$4)
            ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id=$3, assigned_at=NOW()`,
-          [uuidv4(), sub.subject_id, mIds[0], sIds[0]]
+          [uuidv4(), subject_id, mentor_id, sid]
         );
-        assignments++;
+        summary.assignments++;
       }
-      students++;
-    } catch (err) { skipped.push({ row: i + 1, reason: err.message }); }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[bulkImportClassMentors]', err);
+    return res.status(500).json({ error: 'Import failed — nothing was changed' });
+  } finally {
+    client.release();
   }
-  await logAudit(req.user.id, 'import_class_mentors', 'user', null, { students, assignments });
-  res.json({ students, assignments, skipped });
+  await logAudit(req.user.id, 'import_class_mentors', 'user', null, { students: summary.students, assignments: summary.assignments });
+  res.json(summary);
 }
 
 // ── Rank List ─────────────────────────────────────────────────────────────
