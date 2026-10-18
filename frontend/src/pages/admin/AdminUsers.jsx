@@ -232,7 +232,8 @@ export default function AdminUsers() {
     if (filterRole && u.role !== filterRole && u.secondary_role !== filterRole) return false;
     if (search) {
       const q = search.toLowerCase();
-      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+        || u.bv_leader?.toLowerCase().includes(q);
     }
     return true;
   });
@@ -253,7 +254,7 @@ export default function AdminUsers() {
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           className="input text-sm max-w-xs"
-          placeholder="Search name or email…"
+          placeholder="Search name, email or BV Leader…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -534,6 +535,14 @@ export default function AdminUsers() {
                         <div>
                           <p className="font-medium text-gray-900">{u.name}</p>
                           <p className="text-xs text-gray-400">{u.email}</p>
+                          {u.role === 'student' && (
+                            <p className="text-xs mt-0.5">
+                              <span className="text-gray-400">BV Leader: </span>
+                              {u.bv_leader
+                                ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
+                                : <span className="text-gray-300">None</span>}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>

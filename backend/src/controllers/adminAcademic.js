@@ -395,6 +395,55 @@ export async function getSubjectMentorAssignments(req, res) {
   res.json(r.rows);
 }
 
+// ── BV Members (students assigned to each BV Leader) ──────────────────────
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// GET /admin/bv-members/leaders — every active BV Leader with their member count
+export async function getBVLeadersWithCounts(req, res) {
+  const r = await query(`
+    SELECT u.id, u.name, u.email, COUNT(DISTINCT cma.student_id)::int AS member_count
+    FROM users u
+    LEFT JOIN class_mentor_assignments cma ON cma.mentor_id = u.id
+    WHERE (u.role='mentor' OR u.secondary_role='mentor') AND u.status='active'
+    GROUP BY u.id
+    ORDER BY u.name`);
+  res.json(r.rows);
+}
+
+// GET /admin/bv-members/:mentor_id — students assigned to one BV Leader.
+// "classes" = their class codes in the current academic year (the one flagged
+// is_current, else the latest); falls back to all their codes if none that year.
+export async function getBVMembers(req, res) {
+  const { mentor_id } = req.params;
+  if (!UUID_RE.test(mentor_id)) return res.status(400).json({ error: 'Invalid BV Leader id' });
+
+  const leaderR = await query(
+    `SELECT id, name, email FROM users
+     WHERE id=$1 AND (role='mentor' OR secondary_role='mentor')`, [mentor_id]);
+  if (!leaderR.rows[0]) return res.status(404).json({ error: 'BV Leader not found' });
+
+  const r = await query(`
+    WITH cur AS (
+      SELECT id FROM academic_years
+      ORDER BY is_current DESC, start_date DESC
+      LIMIT 1
+    )
+    SELECT u.id AS student_id, u.name, u.email, u.phone, u.roll_number, u.status,
+      COALESCE(
+        STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)),
+        STRING_AGG(DISTINCT s.code, ', ')
+      ) AS classes
+    FROM class_mentor_assignments cma
+    JOIN users u    ON u.id = cma.student_id
+    JOIN subjects s ON s.id = cma.subject_id
+    WHERE cma.mentor_id = $1
+    GROUP BY u.id
+    ORDER BY u.name`, [mentor_id]);
+
+  res.json({ leader: leaderR.rows[0], members: r.rows, count: r.rows.length });
+}
+
 // Assign (or change) a mentor for a student in a subject. mentor_id null clears it.
 export async function assignClassMentor(req, res) {
   const { subject_id, student_id, mentor_id } = req.body;

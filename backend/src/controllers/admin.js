@@ -23,8 +23,15 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, secondary_role, status, avatar_url, phone, username, created_at
-       FROM users ORDER BY created_at DESC`
+      `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at,
+              bl.bv_leader
+       FROM users u
+       LEFT JOIN (
+         SELECT cma.student_id, STRING_AGG(DISTINCT m.name, ' / ') AS bv_leader
+         FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
+         GROUP BY cma.student_id
+       ) bl ON bl.student_id = u.id
+       ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -897,6 +904,160 @@ export async function reportAttendanceSummary(req, res) {
     }
 
     res.json({ summary, rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// ── Data quality report ─────────────────────────────────────────────────────
+// Sections 1, 2 and 4 cover active students; section 3 (shared email/phone)
+// covers every user so a student sharing with a teacher still shows up.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PLACEHOLDER_EMAIL = /@noemail\.bvrv$/i;
+
+function emailProblem(raw) {
+  const e = String(raw || '').trim();
+  if (!e) return 'Missing';
+  if (PLACEHOLDER_EMAIL.test(e)) return 'Missing (placeholder)';
+  return EMAIL_RE.test(e) ? null : 'Invalid format';
+}
+
+// Valid = 10 digits starting 6-9, after dropping a leading 91 (12 digits) or 0 (11 digits).
+function normalizePhone(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return d;
+}
+
+function phoneProblem(raw) {
+  const d = normalizePhone(raw);
+  if (!d) return 'Missing';
+  if (d.length !== 10) return `Invalid: ${d.length} digits`;
+  return /^[6-9]/.test(d) ? null : 'Invalid: does not start with 6-9';
+}
+
+export async function reportDataQuality(req, res) {
+  try {
+    const result = await query(`
+      WITH cur AS (SELECT id FROM academic_years ORDER BY is_current DESC, start_date DESC LIMIT 1),
+      enr AS (
+        SELECT ce.student_id,
+          STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
+            FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)) AS cur_course,
+          STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
+        FROM class_enrollments ce
+        JOIN subjects s ON s.id = ce.subject_id
+        LEFT JOIN courses c ON c.id = s.course_id
+        WHERE ce.student_id IS NOT NULL
+        GROUP BY ce.student_id
+      ),
+      lead AS (
+        SELECT cma.student_id, STRING_AGG(DISTINCT m.name, ' / ') AS bv_leader
+        FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
+        GROUP BY cma.student_id
+      )
+      SELECT u.id, u.name, u.email, u.phone, u.role, u.status,
+        lead.bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
+      FROM users u
+      LEFT JOIN lead ON lead.student_id = u.id
+      LEFT JOIN enr  ON enr.student_id  = u.id
+      ORDER BY u.name
+    `);
+
+    const users = result.rows.map(u => ({
+      name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, status: u.status,
+      bv_leader: u.bv_leader || '', course: u.course || '',
+    }));
+    const students = users.filter(u => u.role === 'student' && u.status === 'active');
+
+    const emailIssues = students.flatMap(u => { const p = emailProblem(u.email); return p ? [{ ...u, problem: p }] : []; });
+    const phoneIssues = students.flatMap(u => { const p = phoneProblem(u.phone); return p ? [{ ...u, problem: p }] : []; });
+    const noLeader = students.filter(u => !u.bv_leader);
+
+    const groups = new Map();
+    const addTo = (key, type, value, u) => {
+      if (!groups.has(key)) groups.set(key, { type, value, users: [] });
+      groups.get(key).users.push(u);
+    };
+    for (const u of users) {
+      const e = u.email.trim().toLowerCase();
+      if (e && !emailProblem(e)) addTo(`e:${e}`, 'Email', e, u);
+      const p = normalizePhone(u.phone);
+      if (!phoneProblem(u.phone)) addTo(`p:${p}`, 'Phone', p, u);
+    }
+    const shared = [...groups.values()]
+      .filter(g => g.users.length > 1)
+      .sort((a, b) => b.users.length - a.users.length || a.value.localeCompare(b.value))
+      .map(g => ({ type: g.type, value: g.value, count: g.users.length, users: g.users }));
+
+    const summary = {
+      active_students: students.length,
+      email_issues: emailIssues.length,
+      phone_issues: phoneIssues.length,
+      shared_groups: shared.length,
+      shared_users: shared.reduce((n, g) => n + g.count, 0),
+      no_bv_leader: noLeader.length,
+    };
+
+    if (req.query.export === 'xlsx') {
+      const ExcelJS = (await import('exceljs')).default;
+      const wb = new ExcelJS.Workbook();
+      const generatedAt = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+      const addSheet = (name, columns, rows) => {
+        const ws = wb.addWorksheet(name);
+        ws.columns = columns.map(([header, width]) => ({ header, width }));
+        ws.getRow(1).font = { bold: true };
+        ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+        rows.forEach(r => ws.addRow(r));
+        ws.views = [{ state: 'frozen', ySplit: 1 }];
+        ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
+        return ws;
+      };
+
+      const sum = wb.addWorksheet('Summary');
+      sum.columns = [{ width: 42 }, { width: 70 }];
+      [
+        ['BVRV data quality report'],
+        ['Generated (IST)', generatedAt],
+        [],
+        ['Active students', summary.active_students],
+        ['1. Email missing or invalid', summary.email_issues],
+        ['2. Phone missing or invalid', summary.phone_issues],
+        ['3. Shared email / phone (groups)', summary.shared_groups],
+        ['3. Users in shared groups', summary.shared_users],
+        ['4. Active students with no BV Leader', summary.no_bv_leader],
+        [],
+        ['Rules'],
+        ['Sections 1, 2, 4', 'Active students only'],
+        ['Section 3', 'All users (any role / status) sharing one email or phone'],
+        ['Valid email', 'name@domain.tld; blank = Missing; @noemail.bvrv = Missing (placeholder)'],
+        ['Valid phone', '10 digits starting 6-9, after removing spaces/symbols, a leading 91 or a leading 0'],
+        ['Current course', 'Classes in the current academic year (or the latest year), else any enrolled class'],
+      ].forEach(r => sum.addRow(r));
+      sum.getRow(1).font = { bold: true, size: 14 };
+      sum.getRow(11).font = { bold: true };
+
+      const issueCols = [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Problem', 30], ['BV Leader', 30], ['Current Course', 40]];
+      addSheet('1 Email missing-invalid', issueCols,
+        emailIssues.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
+      addSheet('2 Phone missing-invalid', issueCols,
+        phoneIssues.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
+      addSheet('3 Shared email-phone',
+        [['Shared value', 34], ['Type', 8], ['Users sharing', 14], ['Devotee Name', 32], ['Role', 10], ['Email ID', 36], ['Phone', 16], ['BV Leader', 30], ['Current Course', 40]],
+        shared.flatMap(g => g.users.map(u => [g.value, g.type, g.count, u.name, u.role, u.email, u.phone, u.bv_leader, u.course])));
+      addSheet('4 No BV Leader', [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Current Course', 40]],
+        noLeader.map(u => [u.name, u.email, u.phone, u.course]));
+
+      const buf = await wb.xlsx.writeBuffer();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="bvrv-data-quality.xlsx"');
+      return res.send(Buffer.from(buf));
+    }
+
+    res.json({ summary, email_issues: emailIssues, phone_issues: phoneIssues, shared, no_bv_leader: noLeader });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

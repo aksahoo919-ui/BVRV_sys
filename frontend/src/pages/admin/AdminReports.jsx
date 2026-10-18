@@ -17,6 +17,7 @@ export default function AdminReports() {
   }, [tab, selectedSubject]);
 
   async function loadReport() {
+    if (tab === 'quality') return;
     if (tab === 'subject' && !selectedSubject) return;
     setLoading(true);
     try {
@@ -41,13 +42,16 @@ export default function AdminReports() {
     { id: 'instructors', label: 'Instructors' },
     { id: 'students', label: 'Students' },
     { id: 'subject', label: 'Subject Detail' },
+    { id: 'quality', label: 'Data quality' },
   ];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-gray-900">Reports</h1>
-        <button onClick={exportCSV} disabled={tab === 'subject' && !selectedSubject} className="btn-secondary text-sm">Export CSV</button>
+        {tab !== 'quality' && (
+          <button onClick={exportCSV} disabled={tab === 'subject' && !selectedSubject} className="btn-secondary text-sm">Export CSV</button>
+        )}
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200">
@@ -71,7 +75,7 @@ export default function AdminReports() {
         </div>
       )}
 
-      {loading ? <Spinner /> : (
+      {tab === 'quality' ? <DataQualityPanel /> : loading ? <Spinner /> : (
         <div className="card overflow-hidden p-0">
           {tab === 'instructors' && <InstructorsTable data={data} />}
           {tab === 'students' && <StudentsTable data={data} />}
@@ -174,6 +178,98 @@ function SubjectTable({ data }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function DataQualityPanel() {
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const [section, setSection] = useState('email');
+
+  useEffect(() => {
+    api.get('/admin/reports/data-quality')
+      .then(r => setReport(r.data))
+      .catch(e => setError(e.response?.data?.error || 'Failed to load report'));
+  }, []);
+
+  async function downloadExcel() {
+    setDownloading(true); setError('');
+    try {
+      const r = await api.get('/admin/reports/data-quality?export=xlsx', { responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'bvrv-data-quality.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { setError('Download failed'); }
+    finally { setDownloading(false); }
+  }
+
+  if (error && !report) return <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>;
+  if (!report) return <Spinner />;
+
+  const s = report.summary;
+  const cards = [
+    { id: 'email', label: 'Email missing / invalid', value: s.email_issues },
+    { id: 'phone', label: 'Phone missing / invalid', value: s.phone_issues },
+    { id: 'shared', label: 'Shared email / phone', value: s.shared_groups, sub: `${s.shared_users} users` },
+    { id: 'noleader', label: 'No BV Leader', value: s.no_bv_leader },
+  ];
+  const preview = section === 'shared'
+    ? report.shared.slice(0, 10).flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type} ${g.value} (${g.count} users)` })))
+    : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : report.no_bv_leader).slice(0, 10);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-gray-500">
+          {s.active_students} active students checked. Valid phone = 10 digits starting 6–9; valid email = name@domain.
+        </p>
+        <button onClick={downloadExcel} disabled={downloading} className="btn-primary text-sm">
+          {downloading ? 'Preparing…' : 'Download Excel'}
+        </button>
+      </div>
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {cards.map(c => (
+          <button key={c.id} onClick={() => setSection(c.id)}
+            className={`card text-left ${section === c.id ? 'ring-2 ring-primary-400' : ''}`}>
+            <p className="text-xs text-gray-500">{c.label}</p>
+            <p className={`text-2xl font-bold ${c.value ? 'text-amber-600' : 'text-gray-900'}`}>{c.value}</p>
+            {c.sub && <p className="text-xs text-gray-400">{c.sub}</p>}
+          </button>
+        ))}
+      </div>
+      <div className="card overflow-x-auto p-0">
+        <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
+          Preview (first {section === 'shared' ? '10 groups' : '10 rows'}) — download the Excel for the full list
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b"><tr>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium">Devotee</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium">Email</th>
+            <th className="text-left px-4 py-3 text-gray-500 font-medium">Phone</th>
+            {section !== 'noleader' && <th className="text-left px-4 py-3 text-gray-500 font-medium">{section === 'shared' ? 'Shared' : 'Problem'}</th>}
+            {section !== 'noleader' && <th className="text-left px-4 py-3 text-gray-500 font-medium">BV Leader</th>}
+            <th className="text-left px-4 py-3 text-gray-500 font-medium">Current Course</th>
+          </tr></thead>
+          <tbody className="divide-y divide-gray-100">
+            {preview.length === 0 ? (
+              <tr><td colSpan={6} className="text-center py-10 text-gray-400">Nothing to fix here.</td></tr>
+            ) : preview.map((u, i) => (
+              <tr key={i} className="hover:bg-gray-50">
+                <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{section === 'shared' && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
+                <td className="px-4 py-2.5 text-gray-600">{u.email || '—'}</td>
+                <td className="px-4 py-2.5 text-gray-600">{u.phone || '—'}</td>
+                {section !== 'noleader' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
+                {section !== 'noleader' && <td className="px-4 py-2.5 text-gray-600">{u.bv_leader || '—'}</td>}
+                <td className="px-4 py-2.5 text-gray-600">{u.course || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

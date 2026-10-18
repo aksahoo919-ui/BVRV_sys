@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { setTokenGetter } from './utils/api';
 
 // ── Auth pages ────────────────────────────────────────────────────────────
 import LoginPage from './pages/auth/LoginPage';
@@ -30,6 +29,7 @@ import AdminCourses from './pages/admin/AdminCourses';
 import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
+import AdminBVMembers from './pages/admin/AdminBVMembers';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
@@ -84,8 +84,7 @@ function RequireAuth({ roles, children }) {
 }
 
 export default function App() {
-  const { token, logout } = useAuth();
-  useEffect(() => { setTokenGetter(() => token); }, [token]);
+  const { logout } = useAuth();
   useEffect(() => {
     const handler = () => logout();
     window.addEventListener('auth:logout', handler);
@@ -120,6 +119,7 @@ export default function App() {
         <Route path="classes" element={<AdminClasses />} />
         <Route path="timetable" element={<AdminTimetable />} />
         <Route path="class-mentors" element={<AdminClassMentors />} />
+        <Route path="bv-members" element={<AdminBVMembers />} />
         <Route path="enrollments" element={<AdminEnrollments />} />
         <Route path="corrections" element={<AdminAttendanceCorrections />} />
         <Route path="results" element={<AdminResults />} />

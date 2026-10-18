@@ -43,6 +43,7 @@ router.get('/reports/instructors', ...guard, adminCtrl.reportInstructors);
 router.get('/reports/teachers', ...guard, adminCtrl.reportInstructors); // alias
 router.get('/reports/students', ...guard, adminCtrl.reportStudents);
 router.get('/reports/attendance-summary', ...guard, adminCtrl.reportAttendanceSummary);
+router.get('/reports/data-quality', ...guard, adminCtrl.reportDataQuality);
 router.get('/reports/subject/:id', ...guard, adminCtrl.reportSubject);
 router.get('/reports/rank-list/:semester_id', ...guard, acad.getRankList);
 router.get('/reports/report-card/:student_id/:semester_id', ...guard, acad.getReportCard);
@@ -91,6 +92,8 @@ router.post('/class-mentors', ...guard, acad.assignClassMentor);
 router.post('/class-mentors/import', ...guard, upload.single('file'), acad.bulkImportClassMentors);
 router.get('/class-mentors/leaders.csv', ...guard, acad.downloadBVLeaders);
 router.get('/class-mentors/template.csv', ...guard, acad.downloadMentorMappingTemplate);
+router.get('/bv-members/leaders', ...guard, acad.getBVLeadersWithCounts);
+router.get('/bv-members/:mentor_id', ...guard, acad.getBVMembers);
 router.get('/attendance-import/template.csv', ...guard, acad.downloadAttendanceTemplate);
 router.post('/attendance-import', ...guard, upload.single('file'), acad.importPastAttendance);
 
