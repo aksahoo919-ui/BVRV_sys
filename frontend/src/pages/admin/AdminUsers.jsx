@@ -234,7 +234,7 @@ export default function AdminUsers() {
     if (search) {
       const q = search.toLowerCase();
       return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
-        || u.bv_leader?.toLowerCase().includes(q);
+        || u.bv_leader?.toLowerCase().includes(q) || u.course?.toLowerCase().includes(q);
     }
     return true;
   });
@@ -244,6 +244,7 @@ export default function AdminUsers() {
     if (key === 'created_at') return u.created_at ? new Date(u.created_at).getTime() : null;
     if (key === 'role') return u.role ? roleLabel(u.role) : null;
     if (key === 'bv_leader') return u.role === 'student' ? (u.bv_leader || null) : null;
+    if (key === 'course') return u.role === 'student' ? (u.course || null) : null;
     return u[key] || null;
   };
   const rows = !sort.key ? visible : [...visible].sort((a, b) => {
@@ -550,6 +551,7 @@ export default function AdminUsers() {
                 <tr>
                   <SortTh k="name" label="User" />
                   <SortTh k="bv_leader" label="BV Leader" />
+                  <SortTh k="course" label="Course" />
                   <SortTh k="role" label="Role" />
                   <SortTh k="status" label="Status" />
                   <SortTh k="created_at" label="Joined" className="hidden md:table-cell" />
@@ -558,7 +560,7 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                  <tr><td colSpan={7} className="text-center py-10 text-gray-400">No users found.</td></tr>
                 )}
                 {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -575,6 +577,9 @@ export default function AdminUsers() {
                       {u.role === 'student' && (u.bv_leader
                         ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
                         : <span className="text-gray-300">—</span>)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {u.role === 'student' && (u.course || <span className="text-gray-300">—</span>)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">

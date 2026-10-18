@@ -23,14 +23,27 @@ export async function getPendingUsers(req, res) {
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at,
-              bl.bv_leader
+      `WITH cur AS (SELECT id FROM academic_years ORDER BY is_current DESC, start_date DESC LIMIT 1)
+       SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at,
+              bl.bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
        FROM users u
        LEFT JOIN (
          SELECT cma.student_id, STRING_AGG(DISTINCT m.name, ' / ') AS bv_leader
          FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
          GROUP BY cma.student_id
        ) bl ON bl.student_id = u.id
+       LEFT JOIN (
+         -- same "current course" rule as the Data quality report
+         SELECT ce.student_id,
+           STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
+             FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)) AS cur_course,
+           STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
+         FROM class_enrollments ce
+         JOIN subjects s ON s.id = ce.subject_id
+         LEFT JOIN courses c ON c.id = s.course_id
+         WHERE ce.student_id IS NOT NULL
+         GROUP BY ce.student_id
+       ) enr ON enr.student_id = u.id
        ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
