@@ -23,6 +23,7 @@ export default function AdminUsers() {
   const [importing, setImporting]   = useState(false);
   const [filterRole, setFilterRole] = useState('');
   const [search, setSearch]         = useState('');
+  const [sort, setSort]             = useState({ key: null, dir: 'asc' }); // key null = API order (newest first)
 
   // Participant import (course sheet)
 
@@ -237,6 +238,37 @@ export default function AdminUsers() {
     }
     return true;
   });
+
+  // ── Sorting (after filtering; empty values always last) ──────────────────
+  const sortValue = (u, key) => {
+    if (key === 'created_at') return u.created_at ? new Date(u.created_at).getTime() : null;
+    if (key === 'role') return u.role ? roleLabel(u.role) : null;
+    if (key === 'bv_leader') return u.role === 'student' ? (u.bv_leader || null) : null;
+    return u[key] || null;
+  };
+  const rows = !sort.key ? visible : [...visible].sort((a, b) => {
+    const va = sortValue(a, sort.key), vb = sortValue(b, sort.key);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    const c = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), undefined, { sensitivity: 'base' });
+    return sort.dir === 'asc' ? c : -c;
+  });
+  const toggleSort = (key) => setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+
+  function SortTh({ k, label, className = '' }) {
+    const active = sort.key === k;
+    return (
+      <th className={`text-left px-4 py-3 font-medium text-gray-500 ${className}`}>
+        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-gray-800">
+          {label}
+          <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-300'}`}>
+            {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+          </span>
+        </button>
+      </th>
+    );
+  }
 
   return (
     <div>
@@ -516,18 +548,19 @@ export default function AdminUsers() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">User</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Role</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Joined</th>
+                  <SortTh k="name" label="User" />
+                  <SortTh k="bv_leader" label="BV Leader" />
+                  <SortTh k="role" label="Role" />
+                  <SortTh k="status" label="Status" />
+                  <SortTh k="created_at" label="Joined" className="hidden md:table-cell" />
                   <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {visible.length === 0 && (
-                  <tr><td colSpan={5} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                {rows.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-10 text-gray-400">No users found.</td></tr>
                 )}
-                {visible.map(u => (
+                {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -535,16 +568,13 @@ export default function AdminUsers() {
                         <div>
                           <p className="font-medium text-gray-900">{u.name}</p>
                           <p className="text-xs text-gray-400">{u.email}</p>
-                          {u.role === 'student' && (
-                            <p className="text-xs mt-0.5">
-                              <span className="text-gray-400">BV Leader: </span>
-                              {u.bv_leader
-                                ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
-                                : <span className="text-gray-300">None</span>}
-                            </p>
-                          )}
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.role === 'student' && (u.bv_leader
+                        ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
+                        : <span className="text-gray-300">—</span>)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
