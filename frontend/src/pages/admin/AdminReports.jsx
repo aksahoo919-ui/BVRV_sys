@@ -187,6 +187,7 @@ function DataQualityPanel() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [section, setSection] = useState('email');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.get('/admin/reports/data-quality')
@@ -216,9 +217,13 @@ function DataQualityPanel() {
     { id: 'shared', label: 'Shared email / phone', value: s.shared_groups, sub: `${s.shared_users} users` },
     { id: 'noleader', label: 'No BV Leader', value: s.no_bv_leader },
   ];
-  const preview = section === 'shared'
-    ? report.shared.slice(0, 10).flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type} ${g.value} (${g.count} users)` })))
-    : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : report.no_bv_leader).slice(0, 10);
+  const all = section === 'shared'
+    ? report.shared.flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type} ${g.value} (${g.count} users)` })))
+    : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : report.no_bv_leader);
+  const q = search.trim().toLowerCase();
+  const rows = q
+    ? all.filter(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course].some(v => v && String(v).toLowerCase().includes(q)))
+    : all;
 
   return (
     <div className="space-y-4">
@@ -242,11 +247,16 @@ function DataQualityPanel() {
         ))}
       </div>
       <div className="card overflow-x-auto p-0">
-        <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
-          Preview (first {section === 'shared' ? '10 groups' : '10 rows'}) — download the Excel for the full list
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs text-gray-400">
+            {q ? `${rows.length} of ${all.length}` : `All ${all.length}`} {section === 'shared' ? `users in ${report.shared.length} groups` : 'rows'}
+          </span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone, BV leader, course"
+            className="input text-sm w-72 max-w-full" />
         </div>
+        <div className="max-h-[70vh] overflow-y-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b"><tr>
+          <thead className="bg-gray-50 border-b sticky top-0 z-10"><tr>
             <th className="text-left px-4 py-3 text-gray-500 font-medium">Devotee</th>
             <th className="text-left px-4 py-3 text-gray-500 font-medium">Email</th>
             <th className="text-left px-4 py-3 text-gray-500 font-medium">Phone</th>
@@ -255,9 +265,9 @@ function DataQualityPanel() {
             <th className="text-left px-4 py-3 text-gray-500 font-medium">Current Course</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
-            {preview.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">Nothing to fix here.</td></tr>
-            ) : preview.map((u, i) => (
+            {rows.length === 0 ? (
+              <tr><td colSpan={6} className="text-center py-10 text-gray-400">{q ? 'No matches.' : 'Nothing to fix here.'}</td></tr>
+            ) : rows.map((u, i) => (
               <tr key={i} className="hover:bg-gray-50">
                 <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{section === 'shared' && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.email || '—'}</td>
@@ -269,6 +279,7 @@ function DataQualityPanel() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
