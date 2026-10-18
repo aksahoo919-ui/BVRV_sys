@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { jwtDecode } from '../../utils/jwt';
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Still signed in (session restored after a reload) → straight to the portal.
-  if (user?.status === 'active' && ['admin', 'teacher', 'mentor', 'student'].includes(user.role)) {
-    return <Navigate to={`/${user.role}`} replace />;
-  }
 
   async function handleLogin(e) {
     e.preventDefault();
