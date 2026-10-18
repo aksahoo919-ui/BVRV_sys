@@ -24,7 +24,7 @@ export async function getAllUsers(req, res) {
   try {
     const result = await query(
       `WITH cur AS (SELECT id FROM academic_years ORDER BY is_current DESC, start_date DESC LIMIT 1)
-       SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at,
+       SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender,
               bl.bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
        FROM users u
        LEFT JOIN (

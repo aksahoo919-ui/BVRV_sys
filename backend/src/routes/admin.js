@@ -3,6 +3,7 @@ import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as adminCtrl from '../controllers/admin.js';
 import * as acad from '../controllers/adminAcademic.js';
 import * as ops from '../controllers/adminOperations.js';
+import * as mentors from '../controllers/adminMentors.js';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -24,6 +25,14 @@ router.patch('/users/:id', ...guard, adminCtrl.updateUser);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
 router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);
+
+// ── Mentor directory (BVRV Mentors / BV Mentors) ──────────────────────────
+router.get('/mentors/options', ...guard, mentors.mentorOptionsSafe);
+router.post('/mentors/coordinator', ...guard, mentors.setCoordinatorSafe);
+router.get('/mentors', ...guard, mentors.listMentorsSafe);
+router.post('/mentors', ...guard, mentors.createMentorSafe);
+router.patch('/mentors/:id', ...guard, mentors.updateMentorSafe);
+router.delete('/mentors/:id', ...guard, mentors.deleteMentorSafe);
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 router.get('/subjects', ...guard, adminCtrl.getSubjects);

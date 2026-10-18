@@ -31,6 +31,7 @@ import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminBVMembers from './pages/admin/AdminBVMembers';
+import AdminMentors from './pages/admin/AdminMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
@@ -115,6 +116,8 @@ export default function App() {
         <Route path="home" element={<AdminDashboard />} />
         <Route path="pending" element={<AdminPendingUsers />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="mentors/bvrv" element={<AdminMentors key="bvrv" kind="bvrv" />} />
+        <Route path="mentors/bv" element={<AdminMentors key="bv" kind="bv" />} />
         <Route path="courses" element={<AdminCourses />} />
         <Route path="academic-years" element={<AdminAcademicYears />} />
         <Route path="subjects" element={<AdminSubjects />} />

@@ -552,6 +552,7 @@ export default function AdminUsers() {
                   <SortTh k="name" label="User" />
                   <SortTh k="bv_leader" label="BV Leader" />
                   <SortTh k="course" label="Course" />
+                  <SortTh k="gender" label="Gender" />
                   <SortTh k="role" label="Role" />
                   <SortTh k="status" label="Status" />
                   <SortTh k="created_at" label="Joined" className="hidden md:table-cell" />
@@ -560,7 +561,7 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10 text-gray-400">No users found.</td></tr>
                 )}
                 {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -581,6 +582,7 @@ export default function AdminUsers() {
                     <td className="px-4 py-3 text-gray-600">
                       {u.role === 'student' && (u.course || <span className="text-gray-300">—</span>)}
                     </td>
+                    <td className="px-4 py-3 text-gray-600">{u.gender || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{roleLabel(u.role)}</span>
