@@ -15,6 +15,85 @@ const ROLE_COLORS = {
 const ROLE_LABEL = { mentor: 'BV Leader', teacher: 'Teacher', student: 'Student', admin: 'Admin' };
 const roleLabel = (r) => ROLE_LABEL[r] || r || '—';
 
+// Change a student's classes: change (enrolment + BV leader move to the new class), add, or remove.
+function CourseModal({ user, onClose, onChanged }) {
+  const [classes, setClasses] = useState(null);
+  const [subjects, setSubjects] = useState([]);
+  const [pick, setPick] = useState({});      // from_subject_id -> new subject_id
+  const [addId, setAddId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  useEffect(() => {
+    api.get(`/admin/users/${user.id}/classes`).then(r => setClasses(r.data)).catch(() => setError('Failed to load classes'));
+    api.get('/admin/subjects').then(r => setSubjects([...r.data].filter(s => s.code !== 'TEST').sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
+  }, [user.id]);
+
+  async function send(body, msg) {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const r = await api.post(`/admin/users/${user.id}/classes`, body);
+      setClasses(r.data); setPick({}); setAddId(''); setNotice(msg); onChanged();
+    } catch (err) { setError(err.response?.data?.error || 'Update failed'); }
+    finally { setBusy(false); }
+  }
+  const mine = new Set((classes || []).map(c => c.subject_id));
+  const label = id => subjects.find(s => s.id === id)?.code || '';
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-gray-900">Course: {user.name}</h2>
+            <p className="text-xs text-gray-400">Changing a class moves the student and their BV leader to the new class. Past attendance stays with the old class.</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+        </div>
+        {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
+        {notice && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">{notice}</div>}
+        {!classes ? <p className="text-sm text-gray-400">Loading…</p> : (
+          <div className="space-y-3">
+            {classes.length === 0 && <p className="text-sm text-gray-400">Not in any class yet.</p>}
+            {classes.map(c => (
+              <div key={c.subject_id} className="border border-gray-100 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-gray-800 text-sm">{c.label}</p>
+                    <p className="text-xs text-gray-400">BV Leader: {c.bv_leader || '—'} · {c.days_present} day{c.days_present === 1 ? '' : 's'} present</p>
+                  </div>
+                  <button disabled={busy} onClick={() => send({ from_subject_id: c.subject_id }, `Removed from ${c.code}.`)}
+                    className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50">Remove</button>
+                </div>
+                <div className="flex gap-2">
+                  <select className="input text-sm" value={pick[c.subject_id] || ''} onChange={e => setPick(p => ({ ...p, [c.subject_id]: e.target.value }))}>
+                    <option value="">Change to…</option>
+                    {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+                  </select>
+                  <button disabled={busy || !pick[c.subject_id]} className="btn-primary text-sm whitespace-nowrap"
+                    onClick={() => send({ from_subject_id: c.subject_id, to_subject_id: pick[c.subject_id] }, `Changed ${c.code} to ${label(pick[c.subject_id])}.`)}>
+                    Change
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <select className="input text-sm" value={addId} onChange={e => setAddId(e.target.value)}>
+                <option value="">Add another class…</option>
+                {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+              </select>
+              <button disabled={busy || !addId} className="btn-secondary text-sm whitespace-nowrap"
+                onClick={() => send({ to_subject_id: addId }, `Added ${label(addId)}.`)}>Add</button>
+            </div>
+          </div>
+        )}
+        <button onClick={onClose} className="btn-secondary w-full">Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsers() {
   const [users, setUsers]           = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -24,6 +103,7 @@ export default function AdminUsers() {
   const [filterRole, setFilterRole] = useState('');
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState({ key: null, dir: 'asc' }); // key null = API order (newest first)
+  const [courseTarget, setCourseTarget] = useState(null); // student whose classes are being changed
 
   // Participant import (course sheet)
 
@@ -504,6 +584,8 @@ export default function AdminUsers() {
         </div>
       )}
 
+      {courseTarget && <CourseModal user={courseTarget} onClose={() => setCourseTarget(null)} onChanged={load} />}
+
       {/* Delete confirmation modal */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -609,6 +691,15 @@ export default function AdminUsers() {
                           >
                             Edit
                           </button>
+                          {/* Course — students only */}
+                          {u.role === 'student' && (
+                            <button
+                              onClick={() => setCourseTarget(u)}
+                              className="text-xs font-medium py-1 px-2 rounded-md border border-primary-200 text-primary-700 hover:bg-primary-50 transition-colors"
+                            >
+                              Course
+                            </button>
+                          )}
                           {/* Dual role — only for teacher/mentor */}
                           {(u.role === 'teacher' || u.role === 'mentor') && (
                             <button

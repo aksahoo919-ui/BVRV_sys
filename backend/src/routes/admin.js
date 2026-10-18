@@ -4,6 +4,7 @@ import * as adminCtrl from '../controllers/admin.js';
 import * as acad from '../controllers/adminAcademic.js';
 import * as ops from '../controllers/adminOperations.js';
 import * as mentors from '../controllers/adminMentors.js';
+import * as studentClasses from '../controllers/adminStudentClasses.js';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -22,6 +23,8 @@ router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
 router.post('/users', ...guard, adminCtrl.createUser);
 router.patch('/users/:id', ...guard, adminCtrl.updateUser);
+router.get('/users/:id/classes', ...guard, studentClasses.getStudentClassesSafe);
+router.post('/users/:id/classes', ...guard, studentClasses.changeStudentClassSafe);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
 router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);
