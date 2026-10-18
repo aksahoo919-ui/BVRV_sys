@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { stringify } from 'csv-stringify/sync';
 import { logAudit } from '../middleware/audit.js';
 import { hashPassword, defaultUsername } from '../utils/password.js';
+import { isValidYmd } from '../utils/istDate.js';
 
 // ── Users ──────────────────────────────────────────────────────────────────
 
@@ -776,6 +777,126 @@ export async function reportStudents(req, res) {
       return res.send(csv);
     }
     res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// GET /api/admin/reports/attendance-summary
+// One row per active student with their BVRV (class/subject) attendance %.
+// BV Leader attendance is not included. Same counting rules as the student
+// view: several sessions of a class on one day count as one day, 'service'
+// counts as attended, replayed logs never count.
+// Optional filters: academic_year_id, course_id, subject_id, from, to.
+// ?export=csv | xlsx downloads the same rows.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function reportAttendanceSummary(req, res) {
+  const { academic_year_id, course_id, subject_id, from, to } = req.query;
+  for (const [k, v] of Object.entries({ academic_year_id, course_id, subject_id })) {
+    if (v && !UUID_RE.test(v)) return res.status(400).json({ error: `Invalid ${k}` });
+  }
+  for (const [k, v] of Object.entries({ from, to })) {
+    if (v && !isValidYmd(v)) return res.status(400).json({ error: `Invalid ${k} date (use YYYY-MM-DD)` });
+  }
+
+  try {
+    const settingsResult = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
+    const threshold = Number(settingsResult.rows[0]?.min_attendance_threshold) || 75;
+
+    const hasSubjectFilter = Boolean(academic_year_id || course_id || subject_id);
+    const params = [academic_year_id || null, course_id || null, subject_id || null, from || null, to || null, hasSubjectFilter];
+    const SUBJ = `($1::uuid IS NULL OR s.academic_year_id = $1)
+              AND ($2::uuid IS NULL OR s.course_id = $2)
+              AND ($3::uuid IS NULL OR s.id = $3)`;
+
+    const result = await query(`
+      WITH stu AS (
+        SELECT u.id, u.name, u.email, u.phone, u.roll_number, u.avatar_url
+        FROM users u
+        WHERE u.role = 'student' AND u.status = 'active'
+          AND ($6::boolean = false OR EXISTS (
+                SELECT 1 FROM class_enrollments ce JOIN subjects s ON s.id = ce.subject_id
+                WHERE ce.student_id = u.id AND ${SUBJ}))
+      ),
+      cls AS (
+        SELECT ce.student_id,
+          COUNT(DISTINCT (sess.subject_id, sess.session_date)) AS total,
+          COUNT(DISTINCT (sess.subject_id, sess.session_date))
+            FILTER (WHERE al.status IN ('present','service') AND al.replayed = false) AS attended
+        FROM class_enrollments ce
+        JOIN stu ON stu.id = ce.student_id
+        JOIN subjects s ON s.id = ce.subject_id
+        JOIN sessions sess ON sess.subject_id = ce.subject_id AND sess.closed = true
+          AND ($4::date IS NULL OR sess.session_date >= $4)
+          AND ($5::date IS NULL OR sess.session_date <= $5)
+        LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = ce.student_id
+        WHERE ${SUBJ}
+        GROUP BY ce.student_id
+      ),
+      info AS (
+        SELECT ce.student_id,
+          STRING_AGG(DISTINCT c.name, ', ') AS courses,
+          STRING_AGG(DISTINCT s.code, ', ') AS classes
+        FROM class_enrollments ce
+        JOIN stu ON stu.id = ce.student_id
+        JOIN subjects s ON s.id = ce.subject_id
+        LEFT JOIN courses c ON c.id = s.course_id
+        WHERE ${SUBJ}
+        GROUP BY ce.student_id
+      )
+      SELECT stu.*, info.courses, info.classes,
+        COALESCE(cls.total, 0)::int    AS total_sessions,
+        COALESCE(cls.attended, 0)::int AS attended
+      FROM stu
+      LEFT JOIN cls  ON cls.student_id = stu.id
+      LEFT JOIN info ON info.student_id = stu.id
+      ORDER BY stu.name
+    `, params);
+
+    const rows = result.rows.map((r) => {
+      const percentage = r.total_sessions > 0 ? Math.round(r.attended / r.total_sessions * 1000) / 10 : null;
+      return {
+        ...r, percentage,
+        status: percentage == null ? 'no_data' : percentage < threshold ? 'low' : 'ok',
+      };
+    });
+
+    const measured = rows.filter((r) => r.percentage != null);
+    const summary = {
+      threshold,
+      students: rows.length,
+      with_data: measured.length,
+      below_threshold: rows.filter((r) => r.status === 'low').length,
+      average_pct: measured.length
+        ? Math.round(measured.reduce((s, r) => s + r.percentage, 0) / measured.length * 10) / 10
+        : null,
+    };
+
+    if (req.query.export === 'csv' || req.query.export === 'xlsx') {
+      const headers = ['Name', 'Roll No', 'Email', 'Phone', 'Course', 'Classes', 'Attended', 'Total Sessions', 'Attendance %', 'Status'];
+      const STATUS = { ok: 'OK', low: `Below ${threshold}%`, no_data: 'No sessions yet' };
+      const data = rows.map((r) => [
+        r.name, r.roll_number, r.email, r.phone, r.courses, r.classes,
+        r.attended, r.total_sessions, r.percentage, STATUS[r.status],
+      ]);
+      if (req.query.export === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename="attendance-percentage.csv"');
+        return res.send(stringify([headers, ...data]));
+      }
+      const { generateExcelReport } = await import('../services/reportService.js');
+      const range = from || to ? ` (${from || '…'} to ${to || '…'})` : '';
+      const buf = await generateExcelReport({
+        sheetName: 'Attendance %', headers, rows: data, title: `BVRV Attendance Percentage${range}`,
+      });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename="attendance-percentage.xlsx"');
+      return res.send(buf);
+    }
+
+    res.json({ summary, rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

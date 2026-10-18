@@ -24,6 +24,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminSubjects from './pages/admin/AdminSubjects';
 import AdminClasses from './pages/admin/AdminClasses';
 import AdminReports from './pages/admin/AdminReports';
+import AdminAttendancePercentage from './pages/admin/AdminAttendancePercentage';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminAcademicYears from './pages/admin/AdminAcademicYears';
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="corrections" element={<AdminAttendanceCorrections />} />
         <Route path="results" element={<AdminResults />} />
         <Route path="reports" element={<AdminReports />} />
+        <Route path="attendance" element={<AdminAttendancePercentage />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="audit" element={<AdminAuditLogs />} />
         <Route path="backups" element={<AdminBackups />} />

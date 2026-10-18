@@ -1,6 +1,7 @@
 import { query, pool } from '../config/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { logAudit } from '../middleware/audit.js';
+import { istDateString } from '../utils/istDate.js';
 
 // ── Departments ────────────────────────────────────────────────────────────
 
@@ -572,6 +573,274 @@ export async function bulkImportClassMentors(req, res) {
     client.release();
   }
   await logAudit(req.user.id, 'import_class_mentors', 'user', null, { students: summary.students, assignments: summary.assignments });
+  res.json(summary);
+}
+
+// ── Past attendance import (BVRV class attendance) ───────────────────────
+// Upload a class register the way it is kept in Google Sheets: one row per
+// student, one column per class date, cells P / A / S. Admin picks the class.
+// Each date becomes (or merges into) that day's closed manual session, exactly
+// like the teacher's Weekly Class Attendance, so it counts in every attendance %.
+// The 1-week edit lock does not apply here: this is for old records.
+
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const pad2 = n => String(n).padStart(2, '0');
+
+function ymd(y, m, d) {
+  if (y < 100) y += 2000;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return `${y}-${pad2(m)}-${pad2(d)}`;
+}
+
+// Turns a column header into YYYY-MM-DD, or null if it isn't a date.
+// Numeric dates are read day-first (06/07/2026 = 6 July) unless order='mdy'.
+function parseHeaderDate(h, order, fallbackYear) {
+  if (h instanceof Date) return ymd(h.getUTCFullYear(), h.getUTCMonth() + 1, h.getUTCDate());
+  if (typeof h === 'number') {
+    if (h < 40000 || h > 60000) return null; // Excel serial day numbers only
+    const dt = new Date(Math.round((h - 25569) * 86400000));
+    return ymd(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+  }
+  const s = norm(h).replace(/(\d)(st|nd|rd|th)\b/g, '$1');
+  let m;
+  if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return ymd(+m[1], +m[2], +m[3]);
+  if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2}|\d{4}))?$/))) {
+    const [a, b] = order === 'mdy' ? [+m[2], +m[1]] : [+m[1], +m[2]];
+    return ymd(m[3] ? +m[3] : fallbackYear, b, a);
+  }
+  if ((m = s.match(/^(\d{1,2})[\s\-/]*([a-z]{3,9})[\s\-/,]*(\d{2}|\d{4})?$/)) && MONTHS[m[2].slice(0, 3)])
+    return ymd(m[3] ? +m[3] : fallbackYear, MONTHS[m[2].slice(0, 3)], +m[1]);
+  if ((m = s.match(/^([a-z]{3,9})[\s\-/]*(\d{1,2})[\s\-/,]*(\d{2}|\d{4})?$/)) && MONTHS[m[1].slice(0, 3)])
+    return ymd(m[3] ? +m[3] : fallbackYear, MONTHS[m[1].slice(0, 3)], +m[2]);
+  return null;
+}
+
+// Cell → 'present' | 'service' | 'absent' | '' (blank: leave as is) | null (not understood)
+function parseMark(v) {
+  const s = norm(v);
+  if (!s) return '';
+  if (['p', 'present', '1', 'y', 'yes', 'true', '✓', '✔', '☑', '✅'].includes(s)) return 'present';
+  if (['s', 'service', 'seva'].includes(s)) return 'service';
+  if (['a', 'ab', 'abs', 'absent', '0', 'n', 'no', 'false', '✗', '✘', '❌'].includes(s)) return 'absent';
+  return null;
+}
+
+const phoneKey = v => { const d = String(v || '').replace(/\D/g, ''); return d.length >= 10 ? d.slice(-10) : ''; };
+
+async function readSheet(file) {
+  if (/\.xlsx$/i.test(file.originalname || '')) {
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(file.buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) return [];
+    const rows = [];
+    ws.eachRow({ includeEmpty: true }, (row) => {
+      const out = [];
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        let v = cell.value;
+        if (v && typeof v === 'object' && !(v instanceof Date)) v = v.result ?? v.text ?? (v.richText ? v.richText.map(t => t.text).join('') : '');
+        out[col - 1] = typeof v === 'string' ? v.trim() : v;
+      });
+      rows.push(Array.from(out, c => c ?? ''));
+    });
+    return rows.filter(r => r.some(c => c !== '' && c != null));
+  }
+  return parseCsv(file.buffer.toString('utf8'));
+}
+
+// GET /admin/attendance-import/template.csv?subject_id=  — the class's students
+// with the dates already recorded (P / A / S) so it can be edited and re-uploaded.
+export async function downloadAttendanceTemplate(req, res) {
+  const { subject_id } = req.query;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id is required' });
+  const [subjR, studR, datesR, marksR] = await Promise.all([
+    query('SELECT code FROM subjects WHERE id=$1', [subject_id]),
+    query(`SELECT u.id, u.name, u.roll_number, u.email, u.phone
+           FROM class_enrollments ce JOIN users u ON u.id = ce.student_id
+           WHERE ce.subject_id = $1 ORDER BY u.name`, [subject_id]),
+    query(`SELECT DISTINCT to_char(session_date, 'YYYY-MM-DD') AS d FROM sessions
+           WHERE subject_id = $1 AND closed = true ORDER BY d`, [subject_id]),
+    query(`SELECT al.student_id, to_char(sess.session_date, 'YYYY-MM-DD') AS d,
+             BOOL_OR(al.status = 'present' AND al.replayed = false) AS p,
+             BOOL_OR(al.status = 'service' AND al.replayed = false) AS s
+           FROM attendance_logs al JOIN sessions sess ON sess.id = al.session_id
+           WHERE sess.subject_id = $1 AND sess.closed = true
+           GROUP BY al.student_id, sess.session_date`, [subject_id]),
+  ]);
+  if (!subjR.rows.length) return res.status(404).json({ error: 'Class not found' });
+  const dates = datesR.rows.map(r => r.d);
+  const mark = {};
+  for (const m of marksR.rows) mark[`${m.student_id}|${m.d}`] = m.p ? 'P' : m.s ? 'S' : 'A';
+  const rows = studR.rows.map(s => [s.name, s.roll_number || '', s.email || '', s.phone || '',
+    ...dates.map(d => mark[`${s.id}|${d}`] || 'A')]);
+  const file = `attendance_${(subjR.rows[0].code || 'class').replace(/[^\w-]+/g, '_')}.csv`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
+  res.send(toCsv([['name', 'roll number', 'email', 'phone', ...dates], ...rows]));
+}
+
+// POST /admin/attendance-import  (multipart "file" = .csv or .xlsx)
+// Body: subject_id, date_order ('dmy' | 'mdy'), year (for headers without one),
+//       enroll ('1' = also enrol matched students who aren't in the class),
+//       dry_run ('1' = only check and preview, change nothing)
+export async function importPastAttendance(req, res) {
+  if (!req.file) return res.status(400).json({ error: 'File required (.csv or .xlsx)' });
+  const { subject_id } = req.body;
+  if (!subject_id) return res.status(400).json({ error: 'Pick a class first' });
+  const dryRun = ['1', 'true'].includes(String(req.query.dry_run || req.body.dry_run));
+  const enroll = ['1', 'true'].includes(String(req.body.enroll));
+  const order = req.body.date_order === 'mdy' ? 'mdy' : 'dmy';
+  const today = istDateString();
+  const fallbackYear = Number(req.body.year) || Number(today.slice(0, 4));
+
+  const subjR = await query('SELECT id, code, name FROM subjects WHERE id=$1', [subject_id]);
+  if (!subjR.rows.length) return res.status(404).json({ error: 'Class not found' });
+
+  let rows;
+  try { rows = await readSheet(req.file); } catch { return res.status(400).json({ error: 'Could not read the file' }); }
+  if (!rows.length) return res.status(400).json({ error: 'The file is empty' });
+
+  // Header = first of the top 10 rows that has at least one date column.
+  let headerAt = -1, dateCols = [];
+  for (let i = 0; i < Math.min(rows.length, 10) && headerAt === -1; i++) {
+    const cols = rows[i].map((h, c) => ({ c, date: parseHeaderDate(h, order, fallbackYear) })).filter(x => x.date);
+    if (cols.length) { headerAt = i; dateCols = cols; }
+  }
+  if (headerAt === -1) return res.status(400).json({ error: 'No date columns found. The header row needs one column per class date, e.g. 06/07/2026 or 6-Jul-2026.' });
+
+  const header = rows[headerAt].map(h => (h instanceof Date ? '' : norm(h)));
+  const col = names => header.findIndex(h => names.includes(h));
+  const idx = {
+    name:  col(['name', 'student name', 'student', 'devotee name', 'full name', 'name of the devotee']),
+    roll:  col(['roll number', 'roll no', 'roll no.', 'roll_number', 'roll']),
+    email: col(['email', 'email id', 'e-mail', 'mail', 'email address']),
+    phone: col(['phone', 'mobile', 'mobile number', 'mobile no', 'phone number', 'contact', 'contact number', 'whatsapp', 'whatsapp number']),
+  };
+  if (Object.values(idx).every(i => i === -1))
+    return res.status(400).json({ error: 'Add a column called name, roll number, email or phone so students can be matched.' });
+
+  const futureDates = [...new Set(dateCols.filter(d => d.date > today).map(d => d.date))];
+  dateCols = dateCols.filter(d => d.date <= today);
+
+  // Students: those in the class first, then anyone else (only used with "enroll").
+  const [studR, enrolR] = await Promise.all([
+    query(`SELECT id, name, email, roll_number, phone FROM users WHERE role='student'`),
+    query('SELECT student_id FROM class_enrollments WHERE subject_id=$1 AND student_id IS NOT NULL', [subject_id]),
+  ]);
+  const inClass = new Set(enrolR.rows.map(r => r.student_id));
+  const byKey = { roll: {}, email: {}, phone: {}, name: {} };
+  const add = (map, k, id) => { if (k) (map[k] = map[k] || new Set()).add(id); };
+  const studentName = {};
+  for (const s of studR.rows) {
+    studentName[s.id] = s.name;
+    add(byKey.roll, norm(s.roll_number), s.id); add(byKey.email, norm(s.email), s.id);
+    add(byKey.phone, phoneKey(s.phone), s.id); add(byKey.name, norm(s.name), s.id);
+  }
+  const lookup = (r) => {
+    const keys = { roll: norm(r[idx.roll]), email: norm(r[idx.email]), phone: phoneKey(r[idx.phone]), name: norm(r[idx.name]) };
+    for (const k of ['roll', 'email', 'phone', 'name']) {
+      if (idx[k] === -1 || !keys[k]) continue;
+      const ids = [...(byKey[k][keys[k]] || [])];
+      const local = ids.filter(id => inClass.has(id));
+      if (local.length === 1) return { id: local[0] };
+      if (ids.length === 1) return { id: ids[0], notInClass: true };
+      if (ids.length > 1) return { error: `More than one student has this ${k}` };
+    }
+    return { error: 'Student not found in the portal' };
+  };
+
+  const RANK = { present: 3, service: 2, absent: 1 };
+  const marks = {};            // date -> Map(student_id -> status)
+  const unmatched = [], badCells = [], toEnroll = new Set(), seen = new Map();
+  let matchedRows = 0;
+  for (let i = headerAt + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const label = [r[idx.name], r[idx.roll], r[idx.email], r[idx.phone]].filter((v, k) => Object.values(idx)[k] !== -1 && v).join(' · ');
+    const hasMarks = dateCols.some(d => parseMark(r[d.c]));
+    if (!label) { if (hasMarks) unmatched.push({ row: i + 1, who: '', reason: 'No name / phone / email in this row' }); continue; }
+    const hit = lookup(r);
+    if (hit.error) { unmatched.push({ row: i + 1, who: label, reason: hit.error }); continue; }
+    if (hit.notInClass && !enroll) { unmatched.push({ row: i + 1, who: label, reason: `${studentName[hit.id]} is not enrolled in this class` }); continue; }
+    if (seen.has(hit.id)) { unmatched.push({ row: i + 1, who: label, reason: `Same student as row ${seen.get(hit.id)}; marks merged` }); }
+    else seen.set(hit.id, i + 1);
+    if (hit.notInClass) toEnroll.add(hit.id);
+    matchedRows++;
+    for (const d of dateCols) {
+      const st = parseMark(r[d.c]);
+      if (st === null) { if (badCells.length < 200) badCells.push({ row: i + 1, date: d.date, value: String(r[d.c]) }); continue; }
+      if (!st) continue;
+      const m = (marks[d.date] = marks[d.date] || new Map());
+      if (!m.has(hit.id) || RANK[st] > RANK[m.get(hit.id)]) m.set(hit.id, st);
+    }
+  }
+
+  const existingR = await query(
+    `SELECT DISTINCT to_char(session_date, 'YYYY-MM-DD') AS d FROM sessions WHERE subject_id=$1 AND closed=true`, [subject_id]);
+  const existing = new Set(existingR.rows.map(r => r.d));
+  const dates = Object.keys(marks).sort().map(d => {
+    const vals = [...marks[d].values()];
+    return { date: d, present: vals.filter(v => v === 'present').length, service: vals.filter(v => v === 'service').length,
+             absent: vals.filter(v => v === 'absent').length, new_session: !existing.has(d) };
+  });
+  const summary = {
+    dry_run: dryRun, subject: subjR.rows[0], date_order: order,
+    rows_read: rows.length - headerAt - 1, students_matched: seen.size, matched_rows: matchedRows,
+    to_enroll: toEnroll.size, dates, future_dates_skipped: futureDates, unmatched, bad_cells: badCells,
+  };
+  if (dryRun || !dates.length) return res.json(summary);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const sid of toEnroll) {
+      await client.query(
+        `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+        [uuidv4(), subject_id, sid]);
+    }
+    for (const { date } of dates) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`att:${subject_id}:${date}`]);
+      const ex = await client.query(
+        `SELECT id FROM sessions WHERE subject_id=$1 AND session_date=$2 AND closed=true ORDER BY opened_at LIMIT 1`,
+        [subject_id, date]);
+      let sessionId = ex.rows[0]?.id;
+      if (!sessionId) {
+        sessionId = uuidv4();
+        await client.query(
+          `INSERT INTO sessions (id, subject_id, instructor_id, token_hash, pin_display,
+                                 opened_at, expires_at, closed, manual, session_date)
+           VALUES ($1,$2,$3,'manual','MANUAL',NOW(),NOW(),true,true,$4)`,
+          [sessionId, subject_id, req.user.id, date]);
+      }
+      const entries = [...marks[date].entries()];
+      // Replace these students' marks for the day (all of that day's sessions), then write the new ones.
+      await client.query(
+        `DELETE FROM attendance_logs al USING sessions sess
+         WHERE al.session_id = sess.id AND sess.subject_id = $1 AND sess.session_date = $2
+           AND sess.closed = true AND al.student_id = ANY($3::uuid[])`,
+        [subject_id, date, entries.map(e => e[0])]);
+      const attended = entries.filter(e => e[1] !== 'absent');
+      if (attended.length) {
+        await client.query(
+          `INSERT INTO attendance_logs (id, session_id, student_id, status, replayed)
+           SELECT gen_random_uuid(), $1, t.sid, t.st::attendance_status, false
+           FROM unnest($2::uuid[], $3::text[]) AS t(sid, st)`,
+          [sessionId, attended.map(e => e[0]), attended.map(e => e[1])]);
+      }
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[importPastAttendance]', err);
+    return res.status(500).json({ error: 'Import failed — nothing was changed' });
+  } finally {
+    client.release();
+  }
+  await logAudit(req.user.id, 'import_past_attendance', 'subject', subject_id, {
+    dates: dates.length, students: seen.size, enrolled: toEnroll.size,
+    from: dates[0]?.date, to: dates[dates.length - 1]?.date,
+  });
   res.json(summary);
 }
 

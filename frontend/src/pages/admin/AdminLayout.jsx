@@ -21,6 +21,7 @@ const NAV = [
   { to: '/admin/corrections', label: 'Attend. Corrections', icon: '✏️' },
   { to: '/admin/results', label: 'Results', icon: '🏆' },
   { section: 'Reports' },
+  { to: '/admin/attendance', label: 'Attendance %', icon: '📈' },
   { to: '/admin/reports', label: 'Reports', icon: '📊' },
   { section: 'System' },
   { to: '/admin/settings', label: 'Settings', icon: '⚙️' },
