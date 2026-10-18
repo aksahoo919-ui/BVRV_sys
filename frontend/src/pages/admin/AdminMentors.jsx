@@ -68,7 +68,7 @@ function MentorForm({ kind, row, people, subjects, onClose, onSaved }) {
     setSaving(true); setError('');
     try {
       const body = { ...f, kind };
-      const r = row ? await api.patch(`/admin/mentors/${row.id}`, body) : await api.post('/admin/mentors', body);
+      const r = row ? await api.patch(`/admin/mentor-directory/${row.id}`, body) : await api.post('/admin/mentor-directory', body);
       onSaved(r.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Save failed');
@@ -181,14 +181,14 @@ export default function AdminMentors({ kind }) {
   const [notice, setNotice] = useState('');
 
   function load() {
-    return api.get('/admin/mentors', { params: { kind } })
+    return api.get('/admin/mentor-directory', { params: { kind } })
       .then(r => setRows(r.data))
       .catch(e => setError(e.response?.data?.error || 'Failed to load mentors'));
   }
   useEffect(() => {
     setRows(null); setSelected(new Set()); setSearch(''); setSort({ key: null, dir: 'asc' }); setError(''); setNotice('');
     load();
-    api.get('/admin/mentors/options').then(r => setPeople(r.data)).catch(() => {});
+    api.get('/admin/mentor-directory/options').then(r => setPeople(r.data)).catch(() => {});
     if (kind === 'bvrv') api.get('/admin/subjects').then(r => setSubjects([...r.data].sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
   }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -226,13 +226,13 @@ export default function AdminMentors({ kind }) {
   function toggleOne(id) { setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
 
   async function applyBulk(c) {
-    const r = await api.post('/admin/mentors/coordinator', { ids: [...selected], ...c });
+    const r = await api.post('/admin/mentor-directory/coordinator', { ids: [...selected], ...c });
     setBulk(false); setSelected(new Set()); setNotice(`Coordinator updated for ${r.data.updated} mentor${r.data.updated === 1 ? '' : 's'}.`);
     load();
   }
   async function confirmDelete() {
     try {
-      await api.delete(`/admin/mentors/${deleting.id}`);
+      await api.delete(`/admin/mentor-directory/${deleting.id}`);
       setDeleting(null); setNotice('Removed from the list.'); load();
     } catch (e) { setError(e.response?.data?.error || 'Delete failed'); setDeleting(null); }
   }

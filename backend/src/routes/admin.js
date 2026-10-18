@@ -30,12 +30,12 @@ router.post('/users/import-participants', ...guard, upload.single('file'), admin
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);
 
 // ── Mentor directory (BVRV Mentors / BV Mentors) ──────────────────────────
-router.get('/mentors/options', ...guard, mentors.mentorOptionsSafe);
-router.post('/mentors/coordinator', ...guard, mentors.setCoordinatorSafe);
-router.get('/mentors', ...guard, mentors.listMentorsSafe);
-router.post('/mentors', ...guard, mentors.createMentorSafe);
-router.patch('/mentors/:id', ...guard, mentors.updateMentorSafe);
-router.delete('/mentors/:id', ...guard, mentors.deleteMentorSafe);
+router.get('/mentor-directory/options', ...guard, mentors.mentorOptionsSafe);
+router.post('/mentor-directory/coordinator', ...guard, mentors.setCoordinatorSafe);
+router.get('/mentor-directory', ...guard, mentors.listMentorsSafe);
+router.post('/mentor-directory', ...guard, mentors.createMentorSafe);
+router.patch('/mentor-directory/:id', ...guard, mentors.updateMentorSafe);
+router.delete('/mentor-directory/:id', ...guard, mentors.deleteMentorSafe);
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 router.get('/subjects', ...guard, adminCtrl.getSubjects);

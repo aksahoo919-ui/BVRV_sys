@@ -25,7 +25,7 @@ const SELECT = `
 
 const clean = v => (v == null ? null : String(v).trim() || null);
 
-// GET /admin/mentors?kind=bvrv|bv
+// GET /admin/mentor-directory?kind=bvrv|bv
 async function listMentors(req, res) {
   const { kind } = req.query;
   if (!KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be bvrv or bv' });
@@ -34,7 +34,7 @@ async function listMentors(req, res) {
   res.json(r.rows);
 }
 
-// GET /admin/mentors/options — people for the mentor / coordinator pickers
+// GET /admin/mentor-directory/options — people for the mentor / coordinator pickers
 async function mentorOptions(req, res) {
   const r = await query(`
     SELECT id, name, phone, email, role, secondary_role
@@ -84,7 +84,7 @@ async function readBody(body, kind) {
 const dupError = err => (err.code === '23505'
   ? 'This mentor is already listed for that course / language' : null);
 
-// POST /admin/mentors  { kind, ...fields }
+// POST /admin/mentor-directory  { kind, ...fields }
 async function createMentor(req, res) {
   const { kind } = req.body;
   if (!KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be bvrv or bv' });
@@ -107,7 +107,7 @@ async function createMentor(req, res) {
   }
 }
 
-// PATCH /admin/mentors/:id
+// PATCH /admin/mentor-directory/:id
 async function updateMentor(req, res) {
   const { id } = req.params;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
@@ -133,7 +133,7 @@ async function updateMentor(req, res) {
   }
 }
 
-// DELETE /admin/mentors/:id  (removes the listing only, never the user account)
+// DELETE /admin/mentor-directory/:id  (removes the listing only, never the user account)
 async function deleteMentor(req, res) {
   const { id } = req.params;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
@@ -143,7 +143,7 @@ async function deleteMentor(req, res) {
   res.json({ message: 'Removed from the list' });
 }
 
-// POST /admin/mentors/coordinator  { ids: [...], coordinator_user_id | coordinator_name + coordinator_phone }
+// POST /admin/mentor-directory/coordinator  { ids: [...], coordinator_user_id | coordinator_name + coordinator_phone }
 async function setCoordinator(req, res) {
   const ids = Array.isArray(req.body.ids) ? req.body.ids.filter(x => UUID_RE.test(x)) : [];
   if (!ids.length) return res.status(400).json({ error: 'Select at least one mentor' });
