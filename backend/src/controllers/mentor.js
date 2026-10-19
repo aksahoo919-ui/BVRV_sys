@@ -37,7 +37,7 @@ export async function getAssignedStudents(req, res) {
          WHERE ms.mentor_id = $1 AND mat.student_id = u.id AND mat.status IN ('present','service'))::int AS attended_sessions
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
-    JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN subjects s ON s.id = cma.subject_id   -- NULL class = member without a class
     WHERE cma.mentor_id = $1
     GROUP BY u.id
     ORDER BY u.name`,

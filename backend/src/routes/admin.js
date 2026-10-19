@@ -27,6 +27,8 @@ router.patch('/users/:id', ...guard, adminCtrl.updateUser);
 router.get('/users/:id/classes', ...guard, studentClasses.getStudentClassesSafe);
 router.post('/users/:id/classes', ...guard, studentClasses.changeStudentClassSafe);
 router.get('/users/:id/timeline', ...guard, semesters.getStudentTimelineSafe);
+router.get('/users/:id/bv-leader', ...guard, semesters.getStudentLeaderSafe);
+router.put('/users/:id/bv-leader', ...guard, semesters.putStudentLeaderSafe);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
 router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);

@@ -1,48 +1,62 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
+import { classLabel } from '../../utils/classLabel';
 
 function Spinner() {
   return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
 }
 
+// Enrollments per class (e.g. "Bhakti Shastri 1 - English"), current semester by default.
 export default function AdminEnrollments() {
-  const [courses, setCourses] = useState([]);
-  const [years, setYears] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
-  const [enrollments, setEnrollments] = useState([]);
-  const [courseId, setCourseId] = useState('');
-  const [yearId, setYearId] = useState('');
+  const [rows, setRows] = useState([]);
+  const [subjectId, setSubjectId] = useState('');
+  const [showPast, setShowPast] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [modal, setModal] = useState(false);
+  const [q, setQ] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      api.get('/admin/courses'),
-      api.get('/admin/academic-years'),
-      api.get('/admin/users'),
-    ]).then(([cr, yr, ur]) => {
-      setCourses(cr.data);
-      setYears(yr.data);
-      setStudents(ur.data.filter(u => u.role === 'student' && u.status === 'active').sort((a, b) => (a.name || '').localeCompare(b.name || '')));
-      // Auto-select current
-      const cur = yr.data.find(y => y.is_current) || yr.data[0];
-      if (cur) setYearId(String(cur.id));
-      if (cr.data[0]) setCourseId(String(cr.data[0].id));
-    }).catch(() => setError('Failed to load data'));
+    Promise.all([api.get('/admin/subjects'), api.get('/admin/users')])
+      .then(([sr, ur]) => {
+        const list = sr.data.filter(s => s.code !== 'TEST')
+          .sort((a, b) => (a.course_name || '').localeCompare(b.course_name || '') || a.code.localeCompare(b.code));
+        setClasses(list);
+        setStudents(ur.data.filter(u => u.role === 'student' && u.status === 'active').sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+        const first = list.find(s => s.semester_is_current) || list[0];
+        if (first) setSubjectId(String(first.id));
+      })
+      .catch(() => setError('Failed to load data'));
   }, []);
 
-  useEffect(() => {
-    if (!courseId || !yearId) return;
+  function load() {
+    if (!subjectId) return;
     setLoading(true);
-    api.get(`/admin/enrollments?course_id=${courseId}&academic_year_id=${yearId}`)
-      .then(r => setEnrollments(r.data))
+    api.get(`/admin/subjects/${subjectId}/mentor-assignments`)
+      .then(r => setRows(r.data))
       .catch(() => setError('Failed to load enrollments'))
       .finally(() => setLoading(false));
-  }, [courseId, yearId]);
+  }
+  useEffect(() => { setNotice(''); load(); }, [subjectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // grouped by course for the dropdown
+  const groups = useMemo(() => {
+    const m = new Map();
+    for (const s of classes) {
+      if (!showPast && !s.semester_is_current && String(s.id) !== subjectId) continue;
+      const k = s.course_name || 'Other';
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(s);
+    }
+    return [...m.entries()];
+  }, [classes, showPast, subjectId]);
+  const current = classes.find(s => String(s.id) === subjectId);
 
   async function handleEnroll(e) {
     e.preventDefault();
@@ -50,12 +64,12 @@ export default function AdminEnrollments() {
     setEnrolling(true);
     setEnrollError('');
     try {
-      await api.post('/admin/enroll', { student_id: selectedStudent, course_id: courseId, academic_year_id: yearId });
-      setModal(false);
-      setSelectedStudent('');
-      // Refresh
-      const r = await api.get(`/admin/enrollments?course_id=${courseId}&academic_year_id=${yearId}`);
-      setEnrollments(r.data);
+      // same route as All Users > Course > Add: the student's BV leader comes along
+      await api.post(`/admin/users/${selectedStudent}/classes`, { to_subject_id: subjectId });
+      const who = students.find(s => s.id === selectedStudent)?.name;
+      setModal(false); setSelectedStudent(''); setQ('');
+      setNotice(`Enrolled ${who} in ${current ? classLabel(current, { semester: false }) : 'the class'}.`);
+      load();
     } catch (err) {
       setEnrollError(err.response?.data?.error || 'Failed to enroll');
     } finally {
@@ -63,58 +77,70 @@ export default function AdminEnrollments() {
     }
   }
 
-  const enrolledIds = new Set(enrollments.map(e => String(e.student_id)));
-  const availableStudents = students.filter(s => !enrolledIds.has(String(s.id)));
+  const enrolledIds = new Set(rows.map(r => String(r.student_id)));
+  const matches = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (t.length < 2) return [];
+    return students.filter(s => !enrolledIds.has(String(s.id)) &&
+      [s.name, s.phone, s.email].some(v => String(v || '').toLowerCase().includes(t))).slice(0, 30);
+  }, [q, students, rows]); // eslint-disable-line react-hooks/exhaustive-deps
+  const picked = students.find(s => s.id === selectedStudent);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-bold text-gray-900">Course Enrollments</h1>
-        <button className="btn-primary" onClick={() => { setModal(true); setEnrollError(''); }} disabled={!courseId || !yearId}>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Course Enrollments</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Students in each class, e.g. Bhakti Shastri 1 - English. Current semester unless you tick past semesters.</p>
+        </div>
+        <button className="btn-primary" onClick={() => { setModal(true); setEnrollError(''); setSelectedStudent(''); setQ(''); }} disabled={!subjectId}>
           + Enroll Student
         </button>
       </div>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
+      {notice && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3">{notice}</div>}
 
-      {/* Filters */}
-      <div className="card flex flex-wrap gap-4">
-        <div className="flex-1 min-w-40">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-          <select className="input" value={courseId} onChange={e => setCourseId(e.target.value)}>
+      <div className="card">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+        <div className="flex items-center gap-4 flex-wrap">
+          <select className="input max-w-lg" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
             <option value="">— Select course —</option>
-            {courses.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+            {groups.map(([course, list]) => (
+              <optgroup key={course} label={course}>
+                {list.map(s => <option key={s.id} value={s.id}>{classLabel(s)}</option>)}
+              </optgroup>
+            ))}
           </select>
-        </div>
-        <div className="flex-1 min-w-40">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-          <select className="input" value={yearId} onChange={e => setYearId(e.target.value)}>
-            <option value="">— Select year —</option>
-            {years.map(y => <option key={y.id} value={y.id}>{y.label}{y.is_current ? ' (current)' : ''}</option>)}
-          </select>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
+            Show past semesters
+          </label>
         </div>
       </div>
 
-      {/* Table */}
       {loading ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
+          <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
+            {current ? `${classLabel(current)} · ` : ''}{rows.length} student{rows.length === 1 ? '' : 's'}
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Name','Email','Roll No','Classes'].map(h => (
+                {['#', 'Name', 'Email', 'BV Leader'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {enrollments.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-10 text-gray-400">No students enrolled{!courseId || !yearId ? ' — select a course and year' : ''}.</td></tr>
-              ) : enrollments.map(e => (
-                <tr key={e.student_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{e.student_name}</td>
-                  <td className="px-4 py-3 text-gray-500">{e.student_email}</td>
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{e.roll_number || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{e.subject_codes || '—'}</td>
+              {rows.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-10 text-gray-400">No students enrolled{!subjectId ? ' — select a course' : ''}.</td></tr>
+              ) : rows.map((r, i) => (
+                <tr key={r.student_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800">{r.student_name}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.student_email}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.mentor_name || <span className="text-gray-300">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -122,18 +148,37 @@ export default function AdminEnrollments() {
         </div>
       )}
 
-      {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="card w-full max-w-sm shadow-xl">
-            <h2 className="font-semibold text-gray-800 mb-4">Enroll Student</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md shadow-xl">
+            <h2 className="font-semibold text-gray-800 mb-1">Enroll Student</h2>
+            <p className="text-xs text-gray-400 mb-4">{current ? classLabel(current) : ''}</p>
             <form onSubmit={handleEnroll} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-                <select className="input" required value={selectedStudent} onChange={e => setSelectedStudent(e.target.value)}>
-                  <option value="">— Select student —</option>
-                  {availableStudents.map(s => <option key={s.id} value={s.id}>{s.name} ({s.email})</option>)}
-                </select>
+                {picked ? (
+                  <div className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{picked.name}</p>
+                      <p className="text-xs text-gray-400">{picked.phone || picked.email} · {picked.course || 'no class'}</p>
+                    </div>
+                    <button type="button" onClick={() => setSelectedStudent('')} className="text-xs text-primary-600 hover:underline">Change</button>
+                  </div>
+                ) : (
+                  <>
+                    <input className="input mb-1" placeholder="Type a name, phone or email…" value={q} onChange={e => setQ(e.target.value)} autoFocus />
+                    <div className="border border-gray-100 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
+                      {q.trim().length < 2 ? <p className="text-xs text-gray-400 px-3 py-2">Type at least 2 letters.</p>
+                        : matches.length === 0 ? <p className="text-xs text-gray-400 px-3 py-2">No student found (or already in this class).</p>
+                        : matches.map(s => (
+                          <button type="button" key={s.id} onClick={() => setSelectedStudent(s.id)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
+                            <p className="text-sm text-gray-800">{s.name}</p>
+                            <p className="text-xs text-gray-400">{s.phone || s.email} · {s.course || 'no class'}</p>
+                          </button>
+                        ))}
+                    </div>
+                  </>
+                )}
               </div>
               {enrollError && <p className="text-red-600 text-sm">{enrollError}</p>}
               <div className="flex gap-2 justify-end pt-1">

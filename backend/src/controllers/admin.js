@@ -44,7 +44,7 @@ const CURRENT_LEADER_SQL = `
     STRING_AGG(DISTINCT m.name, ' / ') AS any_leader
   FROM class_mentor_assignments cma
   JOIN users m ON m.id = cma.mentor_id
-  JOIN subjects s ON s.id = cma.subject_id
+  LEFT JOIN subjects s ON s.id = cma.subject_id   -- NULL class = leader link without a class
   LEFT JOIN semesters sem ON sem.id = s.semester_id
   GROUP BY cma.student_id`;
 

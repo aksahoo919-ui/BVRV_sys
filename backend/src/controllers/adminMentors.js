@@ -15,13 +15,17 @@ const SELECT = `
     COALESCE(NULLIF(md.phone, ''), u.phone) AS phone,
     COALESCE(NULLIF(md.email, ''), u.email) AS email,
     s.code AS course_code, s.name AS course_name,
+    sem.id AS semester_id, COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
+    to_char(sem.start_date, 'YYYY-MM-DD') AS semester_start, to_char(sem.end_date, 'YYYY-MM-DD') AS semester_end,
+    (sem.id IS NULL OR sem.is_current) AS semester_is_current,
     COALESCE(NULLIF(md.coordinator_name, ''),  cu.name)  AS coordinator_name,
     COALESCE(NULLIF(md.coordinator_phone, ''), cu.phone) AS coordinator_phone,
     md.updated_at
   FROM mentor_directory md
   LEFT JOIN users u    ON u.id  = md.user_id
   LEFT JOIN users cu   ON cu.id = md.coordinator_user_id
-  LEFT JOIN subjects s ON s.id  = md.subject_id`;
+  LEFT JOIN subjects s ON s.id  = md.subject_id
+  LEFT JOIN semesters sem ON sem.id = s.semester_id`;
 
 const clean = v => (v == null ? null : String(v).trim() || null);
 
@@ -30,7 +34,7 @@ async function listMentors(req, res) {
   const { kind } = req.query;
   if (!KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be bvrv or bv' });
   const r = await query(`${SELECT} WHERE md.kind = $1
-    ORDER BY ${kind === 'bvrv' ? 's.code NULLS LAST' : 'md.language NULLS LAST'}, 7`, [kind]);
+    ORDER BY ${kind === 'bvrv' ? 's.code NULLS LAST, sem.start_date DESC NULLS LAST' : 'md.language NULLS LAST'}, 7`, [kind]);
   res.json(r.rows);
 }
 

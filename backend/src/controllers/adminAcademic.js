@@ -426,13 +426,13 @@ export async function getBVMembers(req, res) {
   const r = await query(`
     SELECT u.id AS student_id, u.name, u.email, u.phone, u.roll_number, u.status,
       COALESCE(
-        STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE sem.id IS NULL OR sem.is_current),
+        STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE s.id IS NOT NULL AND (sem.id IS NULL OR sem.is_current)),
         STRING_AGG(DISTINCT s.code, ', ')
       ) AS classes,
       STRING_AGG(DISTINCT COALESCE(sem.label, 'Sem ' || sem.number), ', ') FILTER (WHERE sem.is_current) AS semester
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
-    JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN subjects s ON s.id = cma.subject_id   -- NULL class = added without a class
     LEFT JOIN semesters sem ON sem.id = s.semester_id
     WHERE cma.mentor_id = $1
     GROUP BY u.id

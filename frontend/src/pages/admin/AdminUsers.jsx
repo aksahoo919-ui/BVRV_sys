@@ -119,6 +119,8 @@ export default function AdminUsers() {
   // Edit user (email / phone / role)
   const [editTarget, setEditTarget] = useState(null); // user object
   const [editForm, setEditForm] = useState({ email: '', phone: '', role: '', username: '', password: '' });
+  const [editLeader, setEditLeader] = useState(null); // { original, value, mixed, leaders } for students
+  const [leaderList, setLeaderList] = useState(null);  // BV Leaders for the Edit dropdown
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -249,7 +251,23 @@ export default function AdminUsers() {
     }
   }
 
-  // ── Edit user (email / phone / role) ────────────────────────────────────────
+  // ── Edit user (email / phone / role / BV Leader) ───────────────────────────
+  function openEdit(u) {
+    setEditTarget(u);
+    setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
+    setEditError('');
+    setEditLeader(null);
+    if (u.role === 'student') {
+      Promise.all([api.get(`/admin/users/${u.id}/bv-leader`), leaderList ? Promise.resolve(null) : api.get('/admin/mentors')])
+        .then(([lr, mr]) => {
+          if (mr) setLeaderList(mr.data);
+          const original = lr.data.mentor_id || '';
+          setEditLeader({ original: lr.data.mixed ? '__mixed' : original, value: lr.data.mixed ? '__mixed' : original, mixed: lr.data.mixed, leaders: lr.data.leaders });
+        })
+        .catch(() => setEditError('Could not load the BV Leader'));
+    }
+  }
+
   async function saveEdit() {
     if (!editTarget) return;
     setSavingEdit(true);
@@ -263,6 +281,9 @@ export default function AdminUsers() {
       };
       if (editForm.password.trim()) payload.password = editForm.password.trim();
       await api.patch(`/admin/users/${editTarget.id}`, payload);
+      if (editLeader && editLeader.value !== editLeader.original) {
+        await api.put(`/admin/users/${editTarget.id}/bv-leader`, { mentor_id: editLeader.value || null });
+      }
       setEditTarget(null);
       load();
     } catch (err) {
@@ -535,7 +556,7 @@ export default function AdminUsers() {
       {/* Edit user modal */}
       {editTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-sm">
+          <div className="card w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Edit user</h2>
               <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -559,6 +580,21 @@ export default function AdminUsers() {
               <option value="teacher">Teacher</option>
               <option value="mentor">BV Leader</option>
             </select>
+            {editTarget.role === 'student' && (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader</label>
+                {!editLeader ? <p className="text-sm text-gray-400 mb-3">Loading…</p> : (
+                  <>
+                    <select className="input mb-1" value={editLeader.value} onChange={e => setEditLeader(l => ({ ...l, value: e.target.value }))}>
+                      {editLeader.mixed && <option value="__mixed">Different per course: {editLeader.leaders.map(l => l.name).join(' / ')}</option>}
+                      <option value="">— No BV Leader —</option>
+                      {(leaderList || []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                    <p className="text-xs text-gray-400 mb-3">Applies to all of the student's current-semester courses.</p>
+                  </>
+                )}
+              </>
+            )}
             <p className="text-xs text-gray-400 mb-3">A real email lets this person sign in with Google.</p>
             {editError && <p className="text-sm text-red-600 mb-3">{editError}</p>}
             <div className="flex gap-2">
@@ -727,7 +763,7 @@ export default function AdminUsers() {
                         <div className="flex gap-1.5 justify-end">
                           {/* Edit user */}
                           <button
-                            onClick={() => { setEditTarget(u); setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' }); setEditError(''); }}
+                            onClick={() => openEdit(u)}
                             className="text-xs font-medium py-1 px-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                           >
                             Edit

@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
+import { className, classLabel } from '../../utils/classLabel';
 
 // Mentors > BVRV Mentors (kind="bvrv": Course ID) and BV Mentors (kind="bv": Language).
 // Mentor and coordinator are picked from portal users or typed in.
 
 const LANGUAGES = ['English', 'Hindi', 'Telugu'];
 const TITLES = {
-  bvrv: { title: 'BVRV Mentors', first: { key: 'course_code', label: 'Course ID' }, hint: 'Mentor for each BVRV class (course ID such as GF1-E).' },
+  bvrv: { title: 'BVRV Mentors', first: { key: 'course_code', label: 'Course' }, hint: 'Mentor for each BVRV class (e.g. Bhakti Shastri 1 - English). One row per mentor of each class; remove a row if that devotee is not the class's mentor.' },
   bv:   { title: 'BV Mentors',   first: { key: 'language',    label: 'Language' },  hint: 'BV mentors by language, with their coordinator.' },
 };
 
@@ -86,10 +87,10 @@ function MentorForm({ kind, row, people, subjects, onClose, onSaved }) {
 
         {kind === 'bvrv' ? (
           <label className="block text-sm">
-            <span className="text-gray-600">Course ID</span>
+            <span className="text-gray-600">Course</span>
             <select className="input mt-1" value={f.subject_id} onChange={e => set('subject_id', e.target.value)} required>
-              <option value="">— Select a class —</option>
-              {subjects.map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+              <option value="">— Select a course —</option>
+              {subjects.filter(s => s.semester_is_current || s.id === f.subject_id).map(s => <option key={s.id} value={s.id}>{classLabel(s)}</option>)}
             </select>
           </label>
         ) : (
@@ -189,17 +190,19 @@ export default function AdminMentors({ kind }) {
     setRows(null); setSelected(new Set()); setSearch(''); setSort({ key: null, dir: 'asc' }); setError(''); setNotice('');
     load();
     api.get('/admin/mentor-directory/options').then(r => setPeople(r.data)).catch(() => {});
-    if (kind === 'bvrv') api.get('/admin/subjects').then(r => setSubjects([...r.data].sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
+    if (kind === 'bvrv') api.get('/admin/subjects').then(r => setSubjects([...r.data].filter(s => s.code !== 'TEST').sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
   }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const coordText = r => [r.coordinator_name, r.coordinator_phone].filter(Boolean).join(' · ');
-  const cols = [meta.first, { key: 'name', label: 'Name' }, { key: 'phone', label: 'Phone Number' },
+  const cols = [meta.first, ...(kind === 'bvrv' ? [{ key: 'semester_label', label: 'Semester' }] : []),
+    { key: 'name', label: 'Name' }, { key: 'phone', label: 'Phone Number' },
     { key: 'email', label: 'Email ID' }, { key: 'coordinator', label: 'Coordinator (Name & Mobile)' }];
   const val = (r, k) => (k === 'coordinator' ? coordText(r) : r[k]) || null;
+  const semText = r => (r.semester_id ? `${r.semester_label}${r.semester_is_current ? '' : ' (past)'}` : '');
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = (rows || []).filter(r => !q || [r.course_code, r.course_name, r.language, r.name, r.phone, r.email, r.coordinator_name, r.coordinator_phone]
+    let list = (rows || []).filter(r => !q || [r.course_code, r.course_name, className(r.course_name), r.semester_label, r.language, r.name, r.phone, r.email, r.coordinator_name, r.coordinator_phone]
       .some(v => v && String(v).toLowerCase().includes(q)));
     if (sort.key) {
       list = [...list].sort((a, b) => {
@@ -238,7 +241,9 @@ export default function AdminMentors({ kind }) {
   }
 
   function exportCsv() {
-    const out = [cols.map(c => c.label), ...shown.map(r => [kind === 'bvrv' ? r.course_code : r.language, r.name, r.phone, r.email, coordText(r)])];
+    const out = [cols.map(c => c.label), ...shown.map(r => kind === 'bvrv'
+      ? [r.course_code ? `${className(r.course_name)} (${r.course_code})` : '', semText(r), r.name, r.phone, r.email, coordText(r)]
+      : [r.language, r.name, r.phone, r.email, coordText(r)])];
     const blob = new Blob(['﻿' + out.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -292,14 +297,30 @@ export default function AdminMentors({ kind }) {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {shown.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-10 text-gray-400">{search ? 'No matches.' : 'No mentors yet.'}</td></tr>
+                  <tr><td colSpan={cols.length + 2} className="text-center py-10 text-gray-400">{search ? 'No matches.' : 'No mentors yet.'}</td></tr>
                 )}
                 {shown.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2.5"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} aria-label={`Select ${r.name}`} /></td>
                     <td className="px-4 py-2.5 font-medium text-gray-800">
-                      {kind === 'bvrv' ? (r.course_code || <span className="text-gray-300">—</span>) : (r.language || <span className="text-gray-300">—</span>)}
+                      {kind === 'bvrv'
+                        ? (r.course_code
+                          ? <>{className(r.course_name)} <span className="text-xs font-mono text-gray-400">{r.course_code}</span></>
+                          : <span className="text-gray-300">—</span>)
+                        : (r.language || <span className="text-gray-300">—</span>)}
                     </td>
+                    {kind === 'bvrv' && (
+                      <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                        {r.semester_id ? (
+                          <>
+                            {r.semester_label}
+                            {r.semester_is_current
+                              ? <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>
+                              : <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Past</span>}
+                          </>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 text-gray-800">
                       {r.name}
                       {!r.user_id && <span className="ml-1 text-xs text-gray-400">(no account)</span>}

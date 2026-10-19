@@ -666,7 +666,7 @@ export async function getMyMentor(req, res) {
              u.id AS mentor_id, u.name AS mentor_name, u.email AS mentor_email,
              u.avatar_url, u.phone
       FROM class_mentor_assignments cma
-      JOIN subjects s ON s.id = cma.subject_id
+      LEFT JOIN subjects s ON s.id = cma.subject_id   -- NULL class = leader without a class
       JOIN users u    ON u.id = cma.mentor_id
       WHERE cma.student_id = $1
       ORDER BY s.name

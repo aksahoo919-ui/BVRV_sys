@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
 import StudentTimelineModal from '../../components/StudentTimelineModal';
+import { classLabel } from '../../utils/classLabel';
 
 function Spinner() {
   return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -11,7 +12,7 @@ const csvCell = v => {
   return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 };
 
-// Add a student (existing or new) to the selected BV Leader in one class of the current semester.
+// Add a student (existing or new) to the selected BV Leader, optionally in a class of the current semester.
 function AddMemberModal({ leader, onClose, onAdded }) {
   const [mode, setMode] = useState('existing');
   const [students, setStudents] = useState([]);
@@ -39,8 +40,8 @@ function AddMemberModal({ leader, onClose, onAdded }) {
     setBusy(true); setError('');
     try {
       const body = mode === 'existing'
-        ? { subject_id: subjectId, student_id: studentId }
-        : { subject_id: subjectId, new_student: { ...form, gender: form.gender || null } };
+        ? { subject_id: subjectId || null, student_id: studentId }
+        : { subject_id: subjectId || null, new_student: { ...form, gender: form.gender || null } };
       const r = await api.post(`/admin/bv-members/${leader.id}/members`, body);
       const who = mode === 'existing' ? picked?.name : form.name.trim();
       onAdded(r.data.previous_leader
@@ -50,7 +51,7 @@ function AddMemberModal({ leader, onClose, onAdded }) {
     finally { setBusy(false); }
   }
 
-  const ready = subjectId && (mode === 'existing' ? studentId : form.name.trim());
+  const ready = mode === 'existing' ? studentId : form.name.trim();
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -111,12 +112,16 @@ function AddMemberModal({ leader, onClose, onAdded }) {
           </>
         )}
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">Class (current semester) <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Course <span className="text-gray-400 font-normal">(optional, current semester)</span></label>
         <select className="input mb-3" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
-          <option value="">— Select class —</option>
-          {classes.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}{c.semester_id ? ` · ${c.semester_label}` : ''}</option>)}
+          <option value="">— No course —</option>
+          {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
         </select>
-        <p className="text-xs text-gray-400 mb-3">The student is enrolled in this class if not already, and linked to {leader.name} there.</p>
+        <p className="text-xs text-gray-400 mb-3">
+          {subjectId
+            ? `The student is enrolled in this course if not already, and linked to ${leader.name} there.`
+            : `The student is linked to ${leader.name} in their current courses, or without a course if they have none. A course can be added later in All Users > Course.`}
+        </p>
         {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
         <div className="flex gap-2">
           <button onClick={save} disabled={busy || !ready} className="btn-primary flex-1">{busy ? 'Adding…' : 'Add BV Member'}</button>
@@ -239,8 +244,8 @@ export default function AdminBVMembers() {
                   </td>
                   <td className="px-4 py-2.5 text-gray-600">{m.email || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{m.phone || '—'}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{m.classes || '—'}</td>
-                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-400">past only</span>}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{m.classes || <span className="font-sans text-gray-400">No course yet</span>}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-400">{m.classes ? 'past only' : '—'}</span>}</td>
                 </tr>
               ))}
             </tbody>

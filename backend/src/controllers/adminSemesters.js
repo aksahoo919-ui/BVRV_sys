@@ -100,6 +100,12 @@ async function startNextSemester(req, res) {
           `INSERT INTO timetable_slots (id, subject_id, teacher_id, day_of_week, start_time, end_time, room)
            SELECT gen_random_uuid(), $2, teacher_id, day_of_week, start_time, end_time, room FROM timetable_slots WHERE subject_id = $1`,
           [s.id, sid]);
+        // BVRV Mentors listings follow the class into the new semester
+        await client.query(
+          `INSERT INTO mentor_directory (kind, user_id, name, phone, email, subject_id, coordinator_user_id, coordinator_name, coordinator_phone)
+           SELECT kind, user_id, name, phone, email, $2, coordinator_user_id, coordinator_name, coordinator_phone
+           FROM mentor_directory WHERE kind = 'bvrv' AND subject_id = $1`,
+          [s.id, sid]);
       }
       if (carryStudents) {
         summary.students += (await client.query(
@@ -191,22 +197,95 @@ async function getClassDetails(req, res) {
   res.json({ ...s, teachers: t.rows });
 }
 
+// ── BV Leader of a student ────────────────────────────────────────────────
+// A leader link is per class. setLeader() puts the student under one leader in
+// every current-semester class they are in; with no current class it keeps a
+// single link without a class (subject_id NULL). mentorId null clears them.
+// Returns the names of the leaders that were replaced.
+async function setLeader(client, studentId, mentorId) {
+  const classes = (await client.query(`
+    SELECT ce.subject_id FROM class_enrollments ce
+    JOIN subjects s ON s.id = ce.subject_id LEFT JOIN semesters sem ON sem.id = s.semester_id
+    WHERE ce.student_id = $1 AND (sem.id IS NULL OR sem.is_current)`, [studentId])).rows.map(r => r.subject_id);
+  const replaced = (await client.query(`
+    SELECT DISTINCT m.name FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
+    WHERE cma.student_id = $1 AND (cma.subject_id IS NULL OR cma.subject_id = ANY($2::uuid[]))
+      AND cma.mentor_id IS DISTINCT FROM $3::uuid`, [studentId, classes, mentorId])).rows.map(r => r.name);
+  if (!mentorId) {
+    await client.query(`DELETE FROM class_mentor_assignments WHERE student_id = $1 AND (subject_id IS NULL OR subject_id = ANY($2::uuid[]))`,
+      [studentId, classes]);
+    return replaced;
+  }
+  if (classes.length) {
+    for (const subjectId of classes) {
+      await client.query(
+        `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
+         ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`, [subjectId, mentorId, studentId]);
+    }
+    await client.query('DELETE FROM class_mentor_assignments WHERE student_id = $1 AND subject_id IS NULL', [studentId]);
+  } else {
+    await client.query(
+      `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), NULL, $1, $2)
+       ON CONFLICT (student_id) WHERE subject_id IS NULL DO UPDATE SET mentor_id = $1, assigned_at = NOW()`, [mentorId, studentId]);
+  }
+  return replaced;
+}
+
+// GET /admin/users/:id/bv-leader — the current leader (null if none, mixed if classes differ)
+async function getStudentLeader(req, res) {
+  const { id } = req.params;
+  if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
+  const r = await query(`
+    SELECT DISTINCT cma.mentor_id, m.name FROM class_mentor_assignments cma
+    JOIN users m ON m.id = cma.mentor_id
+    LEFT JOIN subjects s ON s.id = cma.subject_id LEFT JOIN semesters sem ON sem.id = s.semester_id
+    WHERE cma.student_id = $1 AND (cma.subject_id IS NULL OR sem.id IS NULL OR sem.is_current)`, [id]);
+  res.json({ mentor_id: r.rows.length === 1 ? r.rows[0].mentor_id : null, leaders: r.rows, mixed: r.rows.length > 1 });
+}
+
+// PUT /admin/users/:id/bv-leader  { mentor_id | null }
+async function putStudentLeader(req, res) {
+  const { id } = req.params;
+  const mentorId = req.body.mentor_id || null;
+  if (!UUID_RE.test(id) || (mentorId && !UUID_RE.test(mentorId))) return res.status(400).json({ error: 'Invalid id' });
+  const s = (await query('SELECT role FROM users WHERE id = $1', [id])).rows[0];
+  if (!s) return res.status(404).json({ error: 'User not found' });
+  if (s.role !== 'student') return res.status(400).json({ error: 'Only students have a BV Leader' });
+  if (mentorId && !(await query(`SELECT 1 FROM users WHERE id = $1 AND (role = 'mentor' OR secondary_role = 'mentor')`, [mentorId])).rows.length)
+    return res.status(404).json({ error: 'BV Leader not found' });
+  const client = await pool.connect();
+  let replaced;
+  try {
+    await client.query('BEGIN');
+    replaced = await setLeader(client, id, mentorId);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+  await logAudit(req.user.id, 'set_bv_leader', 'user', id, { mentor_id: mentorId, replaced });
+  res.json({ mentor_id: mentorId, replaced });
+}
+
 // ── Add BV Member ─────────────────────────────────────────────────────────
 // POST /admin/bv-members/:mentor_id/members
-//   { subject_id, student_id }                       existing student
-//   { subject_id, new_student: { name, email?, phone?, gender? } }  new student
-// Enrols the student in the class (if not yet) and links them to the BV Leader there.
+//   { subject_id?, student_id }                       existing student
+//   { subject_id?, new_student: { name, email?, phone?, gender? } }  new student
+// With a class: enrols the student there (if not yet) and links them to the BV Leader there.
+// Without a class: links them in their current classes, or without a class if they have none.
 async function addBVMember(req, res) {
   const { mentor_id } = req.params;
   const { subject_id, student_id, new_student } = req.body;
   if (!UUID_RE.test(mentor_id)) return res.status(400).json({ error: 'Invalid BV Leader id' });
-  if (!subject_id || !UUID_RE.test(subject_id)) return res.status(400).json({ error: 'Pick a class' });
+  if (subject_id && !UUID_RE.test(subject_id)) return res.status(400).json({ error: 'Invalid class' });
   if (!student_id && !new_student) return res.status(400).json({ error: 'Pick a student or enter a new one' });
   if (student_id && !UUID_RE.test(student_id)) return res.status(400).json({ error: 'Invalid student' });
 
   const leader = (await query(`SELECT id, name FROM users WHERE id = $1 AND (role = 'mentor' OR secondary_role = 'mentor')`, [mentor_id])).rows[0];
   if (!leader) return res.status(404).json({ error: 'BV Leader not found' });
-  if (!(await query('SELECT 1 FROM subjects WHERE id = $1', [subject_id])).rows.length) return res.status(400).json({ error: 'Class not found' });
+  if (subject_id && !(await query('SELECT 1 FROM subjects WHERE id = $1', [subject_id])).rows.length) return res.status(400).json({ error: 'Class not found' });
 
   let newUser = null;
   if (new_student) {
@@ -240,15 +319,20 @@ async function addBVMember(req, res) {
         [newUser.id, newUser.name, newUser.email, newUser.phone, newUser.gender, defaultUsername(newUser.email, newUser.name)]);
       sid = newUser.id;
     }
-    await client.query(
-      `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
-       ON CONFLICT (subject_id, student_id) DO NOTHING`, [subject_id, sid]);
-    previous = (await client.query(
-      `SELECT m.name FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
-       WHERE cma.subject_id = $1 AND cma.student_id = $2 AND cma.mentor_id <> $3`, [subject_id, sid, mentor_id])).rows[0]?.name || null;
-    await client.query(
-      `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
-       ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`, [subject_id, mentor_id, sid]);
+    if (subject_id) {
+      await client.query(
+        `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
+         ON CONFLICT (subject_id, student_id) DO NOTHING`, [subject_id, sid]);
+      previous = (await client.query(
+        `SELECT m.name FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
+         WHERE cma.subject_id = $1 AND cma.student_id = $2 AND cma.mentor_id <> $3`, [subject_id, sid, mentor_id])).rows[0]?.name || null;
+      await client.query(
+        `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
+         ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`, [subject_id, mentor_id, sid]);
+      await client.query('DELETE FROM class_mentor_assignments WHERE student_id = $1 AND subject_id IS NULL', [sid]);
+    } else {
+      previous = (await setLeader(client, sid, mentor_id)).join(' / ') || null;
+    }
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -273,3 +357,5 @@ export const startNextSemesterSafe = safe(startNextSemester);
 export const getStudentTimelineSafe = safe(getStudentTimeline);
 export const getClassDetailsSafe = safe(getClassDetails);
 export const addBVMemberSafe = safe(addBVMember);
+export const getStudentLeaderSafe = safe(getStudentLeader);
+export const putStudentLeaderSafe = safe(putStudentLeader);

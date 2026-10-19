@@ -72,6 +72,10 @@ async function changeStudentClass(req, res) {
         }
       }
     }
+    // a leader link without a class is replaced once the new class has a leader
+    if (to && (await client.query('SELECT 1 FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, to])).rows.length) {
+      await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id IS NULL', [id]);
+    }
     if (from) {
       await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, from]);
       await client.query('DELETE FROM class_enrollments WHERE student_id=$1 AND subject_id=$2', [id, from]);
