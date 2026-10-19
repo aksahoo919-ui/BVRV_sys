@@ -40,7 +40,8 @@ export default function AdminAttendancePercentage() {
 const STATUS_LABEL = { ok: 'OK', low: 'Low', no_data: 'No sessions' };
 
 function PercentageReport({ subjects }) {
-  const [filters, setFilters] = useState({ academic_year_id: '', course_id: '', subject_id: '', from: '', to: '' });
+  // semester: 'current' = each course's current semester, '' = all semesters, else a semester id
+  const [filters, setFilters] = useState({ semester: 'current', course_id: '', subject_id: '', from: '', to: '' });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,13 +49,21 @@ function PercentageReport({ subjects }) {
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState({ key: 'name', dir: 1 });
 
-  const years = useMemo(() => uniqueBy(subjects, 'academic_year_id', 'academic_year_label'), [subjects]);
+  const semesters = useMemo(() => uniqueBy(
+    subjects.filter(s => s.semester_id).map(s => ({ ...s, sem_label: `${s.course_name || '—'} · ${s.semester_label}${s.semester_is_current ? ' (current)' : ''}` })),
+    'semester_id', 'sem_label'), [subjects]);
   const courses = useMemo(() => uniqueBy(subjects, 'course_id', 'course_name'), [subjects]);
   const classes = subjects.filter(s =>
-    (!filters.academic_year_id || s.academic_year_id === filters.academic_year_id) &&
+    (filters.semester !== 'current' || s.semester_is_current) &&
+    (!filters.semester || filters.semester === 'current' || s.semester_id === filters.semester) &&
     (!filters.course_id || s.course_id === filters.course_id));
 
-  const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
+  const { semester, ...rest } = filters;
+  const params = Object.fromEntries(Object.entries({
+    ...rest,
+    current: semester === 'current' ? '1' : '',
+    semester_id: semester && semester !== 'current' ? semester : '',
+  }).filter(([, v]) => v));
 
   useEffect(() => {
     setLoading(true); setError('');
@@ -99,12 +108,12 @@ function PercentageReport({ subjects }) {
   return (
     <div className="space-y-4">
       <div className="card grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Select label="Academic year" value={filters.academic_year_id} onChange={v => setFilter('academic_year_id', v)}
-          options={years} allLabel="All years" />
+        <Select label="Semester" value={filters.semester} onChange={v => setFilter('semester', v)}
+          options={[{ id: 'current', label: 'Current semesters' }, ...semesters]} allLabel="All semesters" />
         <Select label="Course" value={filters.course_id} onChange={v => setFilter('course_id', v)}
           options={courses} allLabel="All courses" />
         <Select label="Class" value={filters.subject_id} onChange={v => setFilter('subject_id', v)}
-          options={classes.map(c => ({ id: c.id, label: `${c.code} — ${c.name}` }))} allLabel="All classes" />
+          options={classes.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${c.semester_id ? ` · ${c.semester_label}` : ''}` }))} allLabel="All classes" />
         <label className="text-xs text-gray-500">From
           <input type="date" className="input mt-1" value={filters.from} onChange={e => setFilter('from', e.target.value)} />
         </label>
@@ -241,7 +250,7 @@ function PastAttendanceImport({ subjects }) {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Select label="Class" value={subjectId} onChange={setSubjectId}
-            options={subjects.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${c.academic_year_label ? ` (${c.academic_year_label})` : ''}` }))}
+            options={subjects.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${c.semester_id ? ` · ${c.course_name} ${c.semester_label}${c.semester_is_current ? '' : ' (past)'}` : ''}` }))}
             allLabel="— Select a class —" className="md:col-span-2" />
           <label className="text-xs text-gray-500">Dates in the sheet are
             <select className="input mt-1" value={dateOrder} onChange={e => setDateOrder(e.target.value)}>

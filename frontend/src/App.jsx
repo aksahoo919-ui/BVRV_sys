@@ -31,6 +31,7 @@ import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminBVMembers from './pages/admin/AdminBVMembers';
+import AdminCourseSemesters from './pages/admin/AdminCourseSemesters';
 import AdminMentors from './pages/admin/AdminMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
@@ -125,6 +126,7 @@ export default function App() {
         <Route path="timetable" element={<AdminTimetable />} />
         <Route path="class-mentors" element={<AdminClassMentors />} />
         <Route path="bv-members" element={<AdminBVMembers />} />
+        <Route path="semesters" element={<AdminCourseSemesters />} />
         <Route path="enrollments" element={<AdminEnrollments />} />
         <Route path="corrections" element={<AdminAttendanceCorrections />} />
         <Route path="results" element={<AdminResults />} />

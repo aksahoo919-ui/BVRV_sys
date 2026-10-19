@@ -5,6 +5,7 @@ import * as acad from '../controllers/adminAcademic.js';
 import * as ops from '../controllers/adminOperations.js';
 import * as mentors from '../controllers/adminMentors.js';
 import * as studentClasses from '../controllers/adminStudentClasses.js';
+import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,6 +26,7 @@ router.post('/users', ...guard, adminCtrl.createUser);
 router.patch('/users/:id', ...guard, adminCtrl.updateUser);
 router.get('/users/:id/classes', ...guard, studentClasses.getStudentClassesSafe);
 router.post('/users/:id/classes', ...guard, studentClasses.changeStudentClassSafe);
+router.get('/users/:id/timeline', ...guard, semesters.getStudentTimelineSafe);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
 router.post('/users/import-participants', ...guard, upload.single('file'), adminCtrl.bulkImportParticipants);
 router.post('/users/bulk-delete', ...guard, adminCtrl.bulkDeleteByRole);
@@ -42,6 +44,7 @@ router.get('/subjects', ...guard, adminCtrl.getSubjects);
 router.post('/subjects', ...guard, adminCtrl.createSubject);
 router.patch('/subjects/:id', ...guard, adminCtrl.updateSubject);
 router.delete('/subjects/:id', ...guard, adminCtrl.deleteSubject);
+router.get('/subjects/:id/details', ...guard, semesters.getClassDetailsSafe);
 
 // ── Classes ───────────────────────────────────────────────────────────────
 router.post('/classes/assign-instructor', ...guard, adminCtrl.assignInstructor);
@@ -92,6 +95,12 @@ router.patch('/semesters/:id', ...guard, acad.updateSemester);
 router.delete('/semesters/:id', ...guard, acad.deleteSemester);
 router.post('/semesters/:id/set-current', ...guard, acad.setCurrentSemester);
 
+// Course semesters (own months per course; each semester has its own classes)
+router.get('/course-semesters', ...guard, semesters.listCourseSemestersSafe);
+router.patch('/course-semesters/:id', ...guard, semesters.updateCourseSemesterSafe);
+router.post('/course-semesters/:id/set-current', ...guard, semesters.setCurrentCourseSemesterSafe);
+router.post('/course-semesters/:id/next', ...guard, semesters.startNextSemesterSafe);
+
 router.get('/timetable', ...guard, acad.getTimetableSlots);
 router.post('/timetable', ...guard, acad.createTimetableSlot);
 router.patch('/timetable/:id', ...guard, acad.updateTimetableSlot);
@@ -106,6 +115,7 @@ router.get('/class-mentors/leaders.csv', ...guard, acad.downloadBVLeaders);
 router.get('/class-mentors/template.csv', ...guard, acad.downloadMentorMappingTemplate);
 router.get('/bv-members/leaders', ...guard, acad.getBVLeadersWithCounts);
 router.get('/bv-members/:mentor_id', ...guard, acad.getBVMembers);
+router.post('/bv-members/:mentor_id/members', ...guard, semesters.addBVMemberSafe);
 router.get('/attendance-import/template.csv', ...guard, acad.downloadAttendanceTemplate);
 router.post('/attendance-import', ...guard, upload.single('file'), acad.importPastAttendance);
 

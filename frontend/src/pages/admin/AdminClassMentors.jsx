@@ -1,6 +1,54 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../utils/api';
 
+const fmt = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+
+// Semester and teachers of the selected class.
+function ClassDetails({ subjectId }) {
+  const [d, setD] = useState(null);
+  useEffect(() => {
+    setD(null);
+    if (subjectId) api.get(`/admin/subjects/${subjectId}/details`).then(r => setD(r.data)).catch(() => setD(false));
+  }, [subjectId]);
+  if (!subjectId || d === null) return null;
+  if (d === false) return <div className="card text-sm text-gray-400">Could not load the class details.</div>;
+  return (
+    <div className="card grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Semester</p>
+        {d.semester_id ? (
+          <>
+            <p className="font-medium text-gray-800">
+              {d.course_name ? `${d.course_name} · ` : ''}{d.semester_label}
+              {d.is_current
+                ? <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>
+                : <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Past</span>}
+            </p>
+            <p className="text-xs text-gray-400">{fmt(d.start_date)} – {fmt(d.end_date)}</p>
+          </>
+        ) : <p className="text-sm text-gray-400">Not in a semester</p>}
+        <p className="text-xs text-gray-400 mt-1">{d.class_days} class day{d.class_days === 1 ? '' : 's'} held{d.last_class ? ` · last ${fmt(d.last_class)}` : ''}</p>
+      </div>
+      <div className="md:col-span-2">
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Teacher{d.teachers.length === 1 ? '' : 's'}</p>
+        {d.teachers.length === 0 ? <p className="text-sm text-gray-400">No teacher assigned (Class Management).</p> : (
+          <div className="space-y-2">
+            {d.teachers.map(t => (
+              <div key={t.id}>
+                <p className="font-medium text-gray-800 text-sm">{t.name}</p>
+                <p className="text-xs text-gray-500">
+                  {[t.phone, t.email && !t.email.endsWith('@noemail.bvrv') ? t.email : null, t.gender].filter(Boolean).join(' · ') || 'No contact details'}
+                  {t.timetable ? ` · ${t.timetable}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Spinner() {
   return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
 }
@@ -9,6 +57,7 @@ export default function AdminClassMentors() {
   const [subjects, setSubjects] = useState([]);
   const [mentors, setMentors] = useState([]);
   const [subjectId, setSubjectId] = useState('');
+  const [showPast, setShowPast] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +75,8 @@ export default function AdminClassMentors() {
       .then(([sr, mr]) => {
         setSubjects(sr.data);
         setMentors(mr.data);
-        if (sr.data[0]) setSubjectId(String(sr.data[0].id));
+        const first = sr.data.find(s => s.semester_is_current) || sr.data[0];
+        if (first) setSubjectId(String(first.id));
       })
       .catch(() => setError('Failed to load subjects / mentors'));
   }, []);
@@ -85,6 +135,7 @@ export default function AdminClassMentors() {
   }
 
   const subject = subjects.find(s => String(s.id) === subjectId);
+  const listed = subjects.filter(s => showPast || s.semester_is_current || String(s.id) === subjectId);
   const assignedCount = rows.filter(r => r.mentor_id).length;
 
   return (
@@ -92,7 +143,7 @@ export default function AdminClassMentors() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Class BV Leaders</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders.</p>
+          <p className="text-sm text-gray-400 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders. Each semester has its own classes.</p>
         </div>
         <button
           onClick={() => { setShowImport(true); setImportResult(null); }}
@@ -106,15 +157,23 @@ export default function AdminClassMentors() {
 
       <div className="card">
         <label className="block text-sm font-medium text-gray-700 mb-1">Class (Subject)</label>
-        <select className="input max-w-md" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
-          <option value="">— Select subject —</option>
-          {subjects.map(s => (
-            <option key={s.id} value={s.id}>
-              {s.code} — {s.name}{s.academic_year_label ? ` (${s.academic_year_label})` : ''}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-4 flex-wrap">
+          <select className="input max-w-md" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
+            <option value="">— Select subject —</option>
+            {listed.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}${s.semester_is_current ? '' : ' (past)'}` : ''}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
+            Show past semesters
+          </label>
+        </div>
       </div>
+
+      <ClassDetails subjectId={subjectId} />
 
       {loading ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">

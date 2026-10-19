@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../utils/api';
+import StudentTimelineModal from '../../components/StudentTimelineModal';
 
 const STATUS_COLORS = {
   active:    'bg-green-100 text-green-700',
@@ -27,7 +28,7 @@ function CourseModal({ user, onClose, onChanged }) {
 
   useEffect(() => {
     api.get(`/admin/users/${user.id}/classes`).then(r => setClasses(r.data)).catch(() => setError('Failed to load classes'));
-    api.get('/admin/subjects').then(r => setSubjects([...r.data].filter(s => s.code !== 'TEST').sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
+    api.get('/admin/subjects').then(r => setSubjects([...r.data].filter(s => s.code !== 'TEST' && s.semester_is_current).sort((a, b) => a.code.localeCompare(b.code)))).catch(() => {});
   }, [user.id]);
 
   async function send(body, msg) {
@@ -47,7 +48,7 @@ function CourseModal({ user, onClose, onChanged }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-bold text-gray-900">Course: {user.name}</h2>
-            <p className="text-xs text-gray-400">Changing a class moves the student and their BV leader to the new class. Past attendance stays with the old class.</p>
+            <p className="text-xs text-gray-400">Changing a class moves the student and their BV leader to the new class. Past attendance stays with the old class. Only current-semester classes are offered; past semesters are on the Timeline.</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
@@ -69,7 +70,7 @@ function CourseModal({ user, onClose, onChanged }) {
                 <div className="flex gap-2">
                   <select className="input text-sm" value={pick[c.subject_id] || ''} onChange={e => setPick(p => ({ ...p, [c.subject_id]: e.target.value }))}>
                     <option value="">Change to…</option>
-                    {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+                    {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}` : ''}</option>)}
                   </select>
                   <button disabled={busy || !pick[c.subject_id]} className="btn-primary text-sm whitespace-nowrap"
                     onClick={() => send({ from_subject_id: c.subject_id, to_subject_id: pick[c.subject_id] }, `Changed ${c.code} to ${label(pick[c.subject_id])}.`)}>
@@ -81,7 +82,7 @@ function CourseModal({ user, onClose, onChanged }) {
             <div className="flex gap-2 pt-1">
               <select className="input text-sm" value={addId} onChange={e => setAddId(e.target.value)}>
                 <option value="">Add another class…</option>
-                {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
+                {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}` : ''}</option>)}
               </select>
               <button disabled={busy || !addId} className="btn-secondary text-sm whitespace-nowrap"
                 onClick={() => send({ to_subject_id: addId }, `Added ${label(addId)}.`)}>Add</button>
@@ -104,6 +105,7 @@ export default function AdminUsers() {
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState({ key: null, dir: 'asc' }); // key null = API order (newest first)
   const [courseTarget, setCourseTarget] = useState(null); // student whose classes are being changed
+  const [timelineTarget, setTimelineTarget] = useState(null); // student whose timeline is open
 
   // Participant import (course sheet)
 
@@ -122,7 +124,9 @@ export default function AdminUsers() {
 
   // Add user
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', role: 'student', email: '', phone: '' });
+  const EMPTY_ADD = { name: '', role: 'student', email: '', phone: '', subject_id: '', mentor_id: '' };
+  const [addForm, setAddForm] = useState(EMPTY_ADD);
+  const [addOptions, setAddOptions] = useState(null); // { classes, leaders } for a new student's class + BV leader
   const [addingUser, setAddingUser] = useState(false);
   const [addError, setAddError] = useState('');
 
@@ -185,19 +189,41 @@ export default function AdminUsers() {
   }
 
   // ── Add user ───────────────────────────────────────────────────────────────
+  function openAdd() {
+    setShowAdd(true); setAddError('');
+    if (!addOptions) {
+      Promise.all([api.get('/admin/subjects'), api.get('/admin/mentors')])
+        .then(([sr, mr]) => setAddOptions({
+          classes: sr.data.filter(s => s.semester_is_current && s.code !== 'TEST').sort((a, b) => a.code.localeCompare(b.code)),
+          leaders: mr.data,
+        }))
+        .catch(() => setAddOptions({ classes: [], leaders: [] }));
+    }
+  }
+
   async function handleAddUser() {
     if (!addForm.name.trim()) { setAddError('Name is required'); return; }
     setAddingUser(true);
     setAddError('');
+    if (addForm.role === 'student' && addForm.mentor_id && !addForm.subject_id) {
+      setAddError('Pick the class too: a BV Leader is linked per class'); setAddingUser(false); return;
+    }
     try {
-      await api.post('/admin/users', {
+      const r = await api.post('/admin/users', {
         name: addForm.name.trim(),
         role: addForm.role,
         email: addForm.email.trim() || null,
         phone: addForm.phone.trim() || null,
       });
+      if (addForm.role === 'student' && addForm.subject_id) {
+        if (addForm.mentor_id) {
+          await api.post(`/admin/bv-members/${addForm.mentor_id}/members`, { subject_id: addForm.subject_id, student_id: r.data.id });
+        } else {
+          await api.post(`/admin/users/${r.data.id}/classes`, { to_subject_id: addForm.subject_id });
+        }
+      }
       setShowAdd(false);
-      setAddForm({ name: '', role: 'student', email: '', phone: '' });
+      setAddForm(EMPTY_ADD);
       load();
     } catch (err) {
       setAddError(err.response?.data?.error || 'Failed to add user');
@@ -357,7 +383,7 @@ export default function AdminUsers() {
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold text-gray-900">All Users</h1>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => { setShowAdd(true); setAddError(''); }} className="btn-primary text-sm">+ Add User</button>
+          <button onClick={openAdd} className="btn-primary text-sm">+ Add User</button>
           <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">Bulk Import</button>
           <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Bulk Delete</button>
         </div>
@@ -464,7 +490,7 @@ export default function AdminUsers() {
       {/* Add user modal */}
       {showAdd && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="card w-full max-w-sm">
+          <div className="card w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Add User</h2>
               <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -481,6 +507,20 @@ export default function AdminUsers() {
             <input type="email" className="input mb-3" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
             <input className="input mb-3" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
+            {addForm.role === 'student' && (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-gray-400 font-normal">(optional, current semester)</span></label>
+                <select className="input mb-3" value={addForm.subject_id} onChange={e => setAddForm(f => ({ ...f, subject_id: e.target.value }))}>
+                  <option value="">— No class yet —</option>
+                  {(addOptions?.classes || []).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}{c.semester_id ? ` · ${c.semester_label}` : ''}</option>)}
+                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader <span className="text-gray-400 font-normal">(optional)</span></label>
+                <select className="input mb-3" value={addForm.mentor_id} onChange={e => setAddForm(f => ({ ...f, mentor_id: e.target.value }))}>
+                  <option value="">— No BV Leader —</option>
+                  {(addOptions?.leaders || []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </>
+            )}
             {addError && <p className="text-sm text-red-600 mb-3">{addError}</p>}
             <div className="flex gap-2">
               <button onClick={handleAddUser} disabled={addingUser || !addForm.name.trim()} className="btn-primary flex-1">
@@ -585,6 +625,7 @@ export default function AdminUsers() {
       )}
 
       {courseTarget && <CourseModal user={courseTarget} onClose={() => setCourseTarget(null)} onChanged={load} />}
+      {timelineTarget && <StudentTimelineModal student={timelineTarget} onClose={() => setTimelineTarget(null)} />}
 
       {/* Delete confirmation modal */}
       {deleteTarget && (
@@ -698,6 +739,14 @@ export default function AdminUsers() {
                               className="text-xs font-medium py-1 px-2 rounded-md border border-primary-200 text-primary-700 hover:bg-primary-50 transition-colors"
                             >
                               Course
+                            </button>
+                          )}
+                          {u.role === 'student' && (
+                            <button
+                              onClick={() => setTimelineTarget(u)}
+                              className="text-xs font-medium py-1 px-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                              Timeline
                             </button>
                           )}
                           {/* Dual role — only for teacher/mentor */}

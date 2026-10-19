@@ -24,6 +24,8 @@ export async function getSubjects(req, res) {
     LEFT JOIN sessions sess ON sess.subject_id = s.id
     LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
     LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN semesters sem ON sem.id = s.semester_id
+    WHERE sem.id IS NULL OR sem.is_current   -- past-semester classes are history only
     GROUP BY s.id, ay.label, ay.is_current, c.name, c.code
     ORDER BY s.name`,
     [req.user.id]

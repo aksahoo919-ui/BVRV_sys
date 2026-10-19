@@ -412,8 +412,8 @@ export async function getBVLeadersWithCounts(req, res) {
 }
 
 // GET /admin/bv-members/:mentor_id — students assigned to one BV Leader.
-// "classes" = their class codes in the current academic year (the one flagged
-// is_current, else the latest); falls back to all their codes if none that year.
+// "classes" = their class codes in the current semester of each course; falls
+// back to all their codes if none is current. Past-semester links still count.
 export async function getBVMembers(req, res) {
   const { mentor_id } = req.params;
   if (!UUID_RE.test(mentor_id)) return res.status(400).json({ error: 'Invalid BV Leader id' });
@@ -424,19 +424,16 @@ export async function getBVMembers(req, res) {
   if (!leaderR.rows[0]) return res.status(404).json({ error: 'BV Leader not found' });
 
   const r = await query(`
-    WITH cur AS (
-      SELECT id FROM academic_years
-      ORDER BY is_current DESC, start_date DESC
-      LIMIT 1
-    )
     SELECT u.id AS student_id, u.name, u.email, u.phone, u.roll_number, u.status,
       COALESCE(
-        STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)),
+        STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE sem.id IS NULL OR sem.is_current),
         STRING_AGG(DISTINCT s.code, ', ')
-      ) AS classes
+      ) AS classes,
+      STRING_AGG(DISTINCT COALESCE(sem.label, 'Sem ' || sem.number), ', ') FILTER (WHERE sem.is_current) AS semester
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
     JOIN subjects s ON s.id = cma.subject_id
+    LEFT JOIN semesters sem ON sem.id = s.semester_id
     WHERE cma.mentor_id = $1
     GROUP BY u.id
     ORDER BY u.name`, [mentor_id]);
@@ -565,7 +562,11 @@ export async function bulkImportClassMentors(req, res) {
   const mentorName = {};
   for (const m of mentR.rows) { addTo(mentByKey, norm(m.name), m.id); addTo(mentByKey, norm(m.email), m.id); mentorName[m.id] = m.name; }
 
-  const enrolR = await query(`SELECT student_id, subject_id FROM class_enrollments WHERE student_id IS NOT NULL`);
+  // Only classes of the current semester: past semesters keep their BV leader links.
+  const enrolR = await query(`
+    SELECT ce.student_id, ce.subject_id FROM class_enrollments ce
+    JOIN subjects s ON s.id = ce.subject_id LEFT JOIN semesters sem ON sem.id = s.semester_id
+    WHERE ce.student_id IS NOT NULL AND (sem.id IS NULL OR sem.is_current)`);
   const subjectsOf = {};
   for (const e of enrolR.rows) (subjectsOf[e.student_id] = subjectsOf[e.student_id] || []).push(e.subject_id);
 
@@ -584,7 +585,7 @@ export async function bulkImportClassMentors(req, res) {
     if (sIds.length > 1) return skipped.push({ row: rowNo(i), student: sName, reason: `More than one student is named "${sName}" — use their roll number or email instead` });
     if (!mIds.length) return skipped.push({ row: rowNo(i), student: sName, reason: `BV Leader "${mName}" not found` });
     if (mIds.length > 1) return skipped.push({ row: rowNo(i), student: sName, reason: `More than one BV Leader is named "${mName}" — use their email instead` });
-    if (!subjectsOf[sIds[0]]) return skipped.push({ row: rowNo(i), student: sName, reason: `"${sName}" is not enrolled in any class — enrol them first` });
+    if (!subjectsOf[sIds[0]]) return skipped.push({ row: rowNo(i), student: sName, reason: `"${sName}" is not enrolled in any current-semester class — enrol them first` });
     const prev = plan.get(sIds[0]);
     if (prev && prev.mentor_id !== mIds[0])
       return skipped.push({ row: rowNo(i), student: sName, reason: `"${sName}" is listed again (row ${prev.row}) with a different BV Leader` });

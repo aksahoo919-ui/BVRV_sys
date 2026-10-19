@@ -5,6 +5,10 @@ import { logAudit } from '../middleware/audit.js';
 import { hashPassword, defaultUsername } from '../utils/password.js';
 import { isValidYmd } from '../utils/istDate.js';
 
+// A class code repeats once per semester: imports use the current semester's class.
+const CURRENT_CLASS_BY_CODE = `SELECT s.id FROM subjects s LEFT JOIN semesters sem ON sem.id = s.semester_id
+  WHERE s.code = $1 ORDER BY (sem.id IS NULL OR sem.is_current) DESC, sem.start_date DESC NULLS LAST LIMIT 1`;
+
 // ── Users ──────────────────────────────────────────────────────────────────
 
 export async function getPendingUsers(req, res) {
@@ -20,30 +24,38 @@ export async function getPendingUsers(req, res) {
   }
 }
 
+// "Current" = classes of the current semester of their course (classes with no
+// semester count as current); falls back to every class when none is current.
+// Shared by All Users and the Data quality report.
+const CURRENT_COURSE_SQL = `
+  SELECT ce.student_id,
+    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
+      FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_course,
+    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
+  FROM class_enrollments ce
+  JOIN subjects s ON s.id = ce.subject_id
+  LEFT JOIN semesters sem ON sem.id = s.semester_id
+  LEFT JOIN courses c ON c.id = s.course_id
+  WHERE ce.student_id IS NOT NULL
+  GROUP BY ce.student_id`;
+const CURRENT_LEADER_SQL = `
+  SELECT cma.student_id,
+    STRING_AGG(DISTINCT m.name, ' / ') FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_leader,
+    STRING_AGG(DISTINCT m.name, ' / ') AS any_leader
+  FROM class_mentor_assignments cma
+  JOIN users m ON m.id = cma.mentor_id
+  JOIN subjects s ON s.id = cma.subject_id
+  LEFT JOIN semesters sem ON sem.id = s.semester_id
+  GROUP BY cma.student_id`;
+
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `WITH cur AS (SELECT id FROM academic_years ORDER BY is_current DESC, start_date DESC LIMIT 1)
-       SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender,
-              bl.bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
+      `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender,
+              COALESCE(bl.cur_leader, bl.any_leader) AS bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
        FROM users u
-       LEFT JOIN (
-         SELECT cma.student_id, STRING_AGG(DISTINCT m.name, ' / ') AS bv_leader
-         FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
-         GROUP BY cma.student_id
-       ) bl ON bl.student_id = u.id
-       LEFT JOIN (
-         -- same "current course" rule as the Data quality report
-         SELECT ce.student_id,
-           STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
-             FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)) AS cur_course,
-           STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
-         FROM class_enrollments ce
-         JOIN subjects s ON s.id = ce.subject_id
-         LEFT JOIN courses c ON c.id = s.course_id
-         WHERE ce.student_id IS NOT NULL
-         GROUP BY ce.student_id
-       ) enr ON enr.student_id = u.id
+       LEFT JOIN (${CURRENT_LEADER_SQL}) bl ON bl.student_id = u.id
+       LEFT JOIN (${CURRENT_COURSE_SQL}) enr ON enr.student_id = u.id
        ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
@@ -373,7 +385,7 @@ export async function bulkImport(req, res) {
         if (!code) {
           skipped.push({ row: i + 1, reason: `Could not map course "${courseName}" / "${language}"`, email });
         } else {
-          const subjR = await query('SELECT id FROM subjects WHERE code = $1', [code]);
+          const subjR = await query(CURRENT_CLASS_BY_CODE, [code]);
           if (!subjR.rows.length) {
             skipped.push({ row: i + 1, reason: `Subject ${code} not found`, email });
           } else {
@@ -485,7 +497,7 @@ export async function bulkImportParticipants(req, res) {
     }
 
     try {
-      const subjR = await query('SELECT id FROM subjects WHERE code = $1', [code]);
+      const subjR = await query(CURRENT_CLASS_BY_CODE, [code]);
       if (!subjR.rows.length) { skipped.push({ row: i + 1, reason: `Subject ${code} not found (run migrations)`, name }); continue; }
       const subjectId = subjR.rows[0].id;
 
@@ -567,14 +579,17 @@ export async function getSubjects(req, res) {
       `SELECT s.*,
               c.name AS course_name, c.code AS course_code,
               ay.label AS academic_year_label,
+              sem.id AS semester_id, COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
+              (sem.id IS NULL OR sem.is_current) AS semester_is_current,
               u.name AS created_by_name,
               (SELECT COUNT(*) FROM class_enrollments ce
                  WHERE ce.subject_id = s.id AND ce.student_id IS NOT NULL) AS student_count
        FROM subjects s
        LEFT JOIN courses c ON c.id = s.course_id
        LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
+       LEFT JOIN semesters sem ON sem.id = s.semester_id
        LEFT JOIN users u ON u.id = s.created_by
-       ORDER BY s.code`
+       ORDER BY s.code, sem.start_date DESC NULLS LAST`
     );
     res.json(result.rows);
   } catch (err) {
@@ -584,18 +599,21 @@ export async function getSubjects(req, res) {
 }
 
 export async function createSubject(req, res) {
-  const { code, name, course_id, academic_year_id, credits } = req.body;
+  const { code, name, course_id, academic_year_id, credits, semester_id } = req.body;
   if (!code || !name) return res.status(400).json({ error: 'code and name required' });
   try {
+    // A new class goes into the given semester, else the current semester of its course.
     const result = await query(
-      `INSERT INTO subjects (id, code, name, created_by, course_id, academic_year_id, credits)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      `INSERT INTO subjects (id, code, name, created_by, course_id, academic_year_id, credits, semester_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,
+         COALESCE($8::uuid, (SELECT id FROM semesters WHERE course_id = $5 AND is_current ORDER BY number DESC LIMIT 1)))
+       RETURNING *`,
       [uuidv4(), code.toUpperCase(), name, req.user.id,
-       course_id || null, academic_year_id || null, credits ?? 3]
+       course_id || null, academic_year_id || null, credits ?? 3, semester_id || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Subject code already exists' });
+    if (err.code === '23505') return res.status(409).json({ error: 'That class code already exists in this semester' });
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
@@ -813,8 +831,8 @@ export async function reportStudents(req, res) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function reportAttendanceSummary(req, res) {
-  const { academic_year_id, course_id, subject_id, from, to } = req.query;
-  for (const [k, v] of Object.entries({ academic_year_id, course_id, subject_id })) {
+  const { academic_year_id, course_id, subject_id, semester_id, from, to } = req.query;
+  for (const [k, v] of Object.entries({ academic_year_id, course_id, subject_id, semester_id })) {
     if (v && !UUID_RE.test(v)) return res.status(400).json({ error: `Invalid ${k}` });
   }
   for (const [k, v] of Object.entries({ from, to })) {
@@ -825,11 +843,16 @@ export async function reportAttendanceSummary(req, res) {
     const settingsResult = await query('SELECT min_attendance_threshold FROM institution_settings LIMIT 1');
     const threshold = Number(settingsResult.rows[0]?.min_attendance_threshold) || 75;
 
-    const hasSubjectFilter = Boolean(academic_year_id || course_id || subject_id);
-    const params = [academic_year_id || null, course_id || null, subject_id || null, from || null, to || null, hasSubjectFilter];
+    // current=1: only classes of each course's current semester
+    const currentOnly = ['1', 'true'].includes(String(req.query.current));
+    const hasSubjectFilter = Boolean(academic_year_id || course_id || subject_id || semester_id || currentOnly);
+    const params = [academic_year_id || null, course_id || null, subject_id || null, from || null, to || null, hasSubjectFilter,
+      semester_id || null];
     const SUBJ = `($1::uuid IS NULL OR s.academic_year_id = $1)
               AND ($2::uuid IS NULL OR s.course_id = $2)
-              AND ($3::uuid IS NULL OR s.id = $3)`;
+              AND ($3::uuid IS NULL OR s.id = $3)
+              AND ($7::uuid IS NULL OR s.semester_id = $7)
+              ${currentOnly ? 'AND (s.semester_id IS NULL OR EXISTS (SELECT 1 FROM semesters cs WHERE cs.id = s.semester_id AND cs.is_current))' : ''}`;
 
     const result = await query(`
       WITH stu AS (
@@ -954,25 +977,10 @@ function phoneProblem(raw) {
 export async function reportDataQuality(req, res) {
   try {
     const result = await query(`
-      WITH cur AS (SELECT id FROM academic_years ORDER BY is_current DESC, start_date DESC LIMIT 1),
-      enr AS (
-        SELECT ce.student_id,
-          STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
-            FILTER (WHERE s.academic_year_id = (SELECT id FROM cur)) AS cur_course,
-          STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
-        FROM class_enrollments ce
-        JOIN subjects s ON s.id = ce.subject_id
-        LEFT JOIN courses c ON c.id = s.course_id
-        WHERE ce.student_id IS NOT NULL
-        GROUP BY ce.student_id
-      ),
-      lead AS (
-        SELECT cma.student_id, STRING_AGG(DISTINCT m.name, ' / ') AS bv_leader
-        FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
-        GROUP BY cma.student_id
-      )
+      WITH enr AS (${CURRENT_COURSE_SQL}),
+      lead AS (${CURRENT_LEADER_SQL})
       SELECT u.id, u.name, u.email, u.phone, u.role, u.status,
-        lead.bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
+        COALESCE(lead.cur_leader, lead.any_leader) AS bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
       FROM users u
       LEFT JOIN lead ON lead.student_id = u.id
       LEFT JOIN enr  ON enr.student_id  = u.id

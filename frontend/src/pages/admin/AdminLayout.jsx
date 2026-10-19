@@ -14,6 +14,7 @@ const NAV = [
   { section: 'Academic' },
   { to: '/admin/courses', label: 'Courses', icon: '📚' },
   { to: '/admin/academic-years', label: 'Academic Years', icon: '📅' },
+  { to: '/admin/semesters', label: 'Semesters', icon: '🗓️' },
 { section: 'Classes' },
   { to: '/admin/subjects', label: 'Subjects', icon: '📖' },
   { to: '/admin/classes', label: 'Class Management', icon: '🏫' },
