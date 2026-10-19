@@ -7,7 +7,7 @@ import { className, classLabel } from '../../utils/classLabel';
 
 const LANGUAGES = ['English', 'Hindi', 'Telugu'];
 const TITLES = {
-  bvrv: { title: 'BVRV Mentors', first: { key: 'course_code', label: 'Course' }, hint: 'Mentor for each BVRV class (e.g. Bhakti Shastri 1 - English). One row per mentor of each class; remove a row if that devotee is not the class's mentor.' },
+  bvrv: { title: 'BVRV Mentors', first: { key: 'course_code', label: 'Course' }, hint: 'Mentor for each BVRV class (e.g. Bhakti Shastri 1 - English). One row per mentor of each class; remove a row if that devotee is not the mentor of that class.' },
   bv:   { title: 'BV Mentors',   first: { key: 'language',    label: 'Language' },  hint: 'BV mentors by language, with their coordinator.' },
 };
 
