@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
-function AttendanceBar({ pct }) {
+function AttendanceBar({ pct, label = 'Attendance' }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
   const color =
     value >= 75 ? 'bg-green-500' : value >= 60 ? 'bg-amber-400' : 'bg-red-500';
@@ -11,7 +11,7 @@ function AttendanceBar({ pct }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-gray-500">Attendance</span>
+        <span className="text-xs text-gray-500">{label}</span>
         <span className={`text-xs font-semibold ${textColor}`}>{value.toFixed(1)}%</span>
       </div>
       <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -73,6 +73,7 @@ function StudentCard({ student }) {
           <p className="font-semibold text-gray-900 truncate">{student.name}</p>
           <p className="text-xs text-gray-500 truncate">{student.roll_number}</p>
           <p className="text-xs text-gray-400 truncate">{student.email}</p>
+          <p className="text-xs text-gray-600 truncate">{student.phone ? `📞 ${student.phone}` : <span className="text-gray-300">No phone number</span>}</p>
         </div>
         {student.alert_reasons && student.alert_reasons.length > 0 && (
           <span className="flex-shrink-0 inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -81,7 +82,23 @@ function StudentCard({ student }) {
         )}
       </div>
 
-      <AttendanceBar pct={student.attendance_percentage} />
+      <div>
+        <p className="text-xs text-gray-500 mb-1">BVRV course</p>
+        {student.courses && student.courses.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {student.courses.map((c) => (
+              <span key={c.subject_id} className="inline-block bg-emerald-50 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded-full">{c.label}</span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 italic">Not registered in any BVRV course</p>
+        )}
+      </div>
+
+      {student.course_attendance_percentage != null && (
+        <AttendanceBar pct={student.course_attendance_percentage} label="BVRV course attendance" />
+      )}
+      <AttendanceBar pct={student.attendance_percentage} label="BV Leader class attendance" />
 
       <GpaBadge gpa={student.latest_gpa} />
 
@@ -121,7 +138,8 @@ export default function MentorStudents() {
     const q = search.toLowerCase();
     return (
       (s.name && s.name.toLowerCase().includes(q)) ||
-      (s.roll_number && s.roll_number.toLowerCase().includes(q))
+      (s.roll_number && s.roll_number.toLowerCase().includes(q)) ||
+      (s.phone && String(s.phone).includes(search.trim()))
     );
   });
 
@@ -136,7 +154,7 @@ export default function MentorStudents() {
         </div>
         <input
           type="text"
-          placeholder="Search by name or roll number…"
+          placeholder="Search by name, phone or roll number…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"

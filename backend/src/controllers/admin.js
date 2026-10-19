@@ -681,9 +681,26 @@ export async function assignInstructor(req, res) {
 }
 
 export async function enrollStudent(req, res) {
-  const { subject_id, student_id } = req.body;
+  const { subject_id, student_id, force } = req.body;
   if (!subject_id || !student_id) return res.status(400).json({ error: 'Missing fields' });
   try {
+    // validation: is this student already in another BVRV course (current semester)?
+    if (!force) {
+      const other = await query(`
+        SELECT COALESCE(c.name || ' (' || s.code || ')', s.code) AS label
+        FROM class_enrollments ce
+        JOIN subjects s ON s.id = ce.subject_id
+        LEFT JOIN semesters sem ON sem.id = s.semester_id
+        LEFT JOIN courses c ON c.id = s.course_id
+        WHERE ce.student_id = $1 AND ce.subject_id <> $2 AND (sem.id IS NULL OR sem.is_current)
+        ORDER BY s.code`, [student_id, subject_id]);
+      if (other.rows.length) {
+        return res.status(409).json({
+          code: 'already_in_course', courses: other.rows.map(r => r.label),
+          error: `This student is already in ${other.rows.map(r => r.label).join(', ')}`,
+        });
+      }
+    }
     const result = await query(
       `INSERT INTO class_enrollments (id, subject_id, student_id)
        VALUES ($1, $2, $3) ON CONFLICT (subject_id, student_id) DO NOTHING RETURNING *`,
@@ -1008,7 +1025,7 @@ export async function reportDataQuality(req, res) {
     `);
 
     const users = result.rows.map(u => ({
-      name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, status: u.status,
+      id: u.id, name: u.name, email: u.email || '', phone: u.phone || '', role: u.role, status: u.status,
       bv_leader: u.bv_leader || '', course: u.course || '',
     }));
     const students = users.filter(u => u.role === 'student' && u.status === 'active');
@@ -1016,6 +1033,20 @@ export async function reportDataQuality(req, res) {
     const emailIssues = students.flatMap(u => { const p = emailProblem(u.email); return p ? [{ ...u, problem: p }] : []; });
     const phoneIssues = students.flatMap(u => { const p = phoneProblem(u.phone); return p ? [{ ...u, problem: p }] : []; });
     const noLeader = students.filter(u => !u.bv_leader);
+
+    // students in more than one BVRV course at the same time (current-semester classes)
+    const multi = await query(`
+      SELECT ce.student_id, COUNT(DISTINCT s.id)::int AS n,
+        ARRAY_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code)) AS courses
+      FROM class_enrollments ce
+      JOIN subjects s ON s.id = ce.subject_id
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
+      LEFT JOIN courses c ON c.id = s.course_id
+      WHERE ce.student_id IS NOT NULL AND (sem.id IS NULL OR sem.is_current)
+      GROUP BY ce.student_id HAVING COUNT(DISTINCT s.id) > 1`);
+    const multiById = Object.fromEntries(multi.rows.map(m => [m.student_id, m]));
+    const dupCourses = students.filter(u => multiById[u.id])
+      .map(u => ({ ...u, problem: `In ${multiById[u.id].n} courses: ${multiById[u.id].courses.join(', ')}` }));
 
     const groups = new Map();
     const addTo = (key, type, value, u) => {
@@ -1059,6 +1090,7 @@ export async function reportDataQuality(req, res) {
       dup_email_groups: shared.filter(g => g.type === 'Email').length,
       dup_phone_groups: shared.filter(g => g.type === 'Phone').length,
       dup_name_groups: shared.filter(g => g.type === 'Name').length,
+      dup_course_students: dupCourses.length,
       no_bv_leader: noLeader.length,
     };
 
@@ -1091,16 +1123,17 @@ export async function reportDataQuality(req, res) {
         ['3b. Duplicate phones (groups)', summary.dup_phone_groups],
         ['3c. Duplicate names (groups)', summary.dup_name_groups],
         ['4. Active students with no BV Leader', summary.no_bv_leader],
+        ['5. Students in more than one course', summary.dup_course_students],
         [],
         ['Rules'],
-        ['Sections 1, 2, 4', 'Active students only'],
+        ['Sections 1, 2, 4, 5', 'Active students only (5 = in two or more courses of the current semester)'],
         ['Section 3', 'All users (any role / status) sharing one email, phone or name. Names: case, dots, titles (HG, Prabhu, Mataji…) and word order ignored'],
         ['Valid email', 'name@domain.tld; blank = Missing; @noemail.bvrv = Missing (placeholder)'],
         ['Valid phone', '10 digits starting 6-9, after removing spaces/symbols, a leading 91 or a leading 0'],
         ['Current course', 'Classes in the current academic year (or the latest year), else any enrolled class'],
       ].forEach(r => sum.addRow(r));
       sum.getRow(1).font = { bold: true, size: 14 };
-      sum.getRow(12).font = { bold: true };
+      sum.getRow(13).font = { bold: true };
 
       const issueCols = [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Problem', 30], ['BV Leader', 30], ['Current Course', 40]];
       addSheet('1 Email missing-invalid', issueCols,
@@ -1112,6 +1145,8 @@ export async function reportDataQuality(req, res) {
         shared.flatMap(g => g.users.map(u => [g.value, g.type, g.count, g.note || '', u.name, u.role, u.email, u.phone, u.bv_leader, u.course])));
       addSheet('4 No BV Leader', [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Current Course', 40]],
         noLeader.map(u => [u.name, u.email, u.phone, u.course]));
+      addSheet('5 Duplicate courses', issueCols,
+        dupCourses.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
 
       const buf = await wb.xlsx.writeBuffer();
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1119,7 +1154,7 @@ export async function reportDataQuality(req, res) {
       return res.send(Buffer.from(buf));
     }
 
-    res.json({ summary, email_issues: emailIssues, phone_issues: phoneIssues, shared, no_bv_leader: noLeader });
+    res.json({ summary, email_issues: emailIssues, phone_issues: phoneIssues, shared, no_bv_leader: noLeader, dup_courses: dupCourses });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

@@ -26,7 +26,7 @@ function summarise(days) {
 
 // Classes the student is in, plus classes they left but have attendance in
 // (a course change keeps the old class's attendance; those show as "Left").
-async function attendanceHistory(studentId) {
+export async function attendanceHistory(studentId) {
   const classes = (await query(`
     SELECT s.id AS subject_id, s.code, s.name AS class_name, c.name AS course_name,
       EXISTS (SELECT 1 FROM class_enrollments e WHERE e.subject_id = s.id AND e.student_id = $1) AS enrolled,
@@ -91,6 +91,15 @@ async function attendanceHistory(studentId) {
 // GET /student/attendance/history
 async function getMyAttendanceHistory(req, res) {
   res.json(await attendanceHistory(req.user.id));
+}
+
+// GET /mentor/students/:student_id/attendance-history — only for the BV Leader's own students
+async function getMentorStudentAttendanceHistory(req, res) {
+  const { student_id } = req.params;
+  if (!UUID_RE.test(student_id)) return res.status(400).json({ error: 'Invalid id' });
+  const mine = await query('SELECT 1 FROM class_mentor_assignments WHERE mentor_id = $1 AND student_id = $2 LIMIT 1', [req.user.id, student_id]);
+  if (!mine.rows.length) return res.status(403).json({ error: 'Student not assigned to you' });
+  res.json(await attendanceHistory(student_id));
 }
 
 // GET /admin/users/:id/attendance-history
@@ -265,6 +274,7 @@ const safe = fn => async (req, res) => {
 };
 export const getMyAttendanceHistorySafe = safe(getMyAttendanceHistory);
 export const getUserAttendanceHistorySafe = safe(getUserAttendanceHistory);
+export const getMentorStudentAttendanceHistorySafe = safe(getMentorStudentAttendanceHistory);
 export const getMyChangeRequestsSafe = safe(getMyChangeRequests);
 export const createChangeRequestSafe = safe(createChangeRequest);
 export const cancelChangeRequestSafe = safe(cancelChangeRequest);

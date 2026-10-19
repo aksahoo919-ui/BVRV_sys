@@ -16,6 +16,42 @@ async function isMyStudent(mentorId, studentId) {
   return r.rows.length > 0;
 }
 
+// "Bhakti Shastri 1 (English)" -> "Bhakti Shastri 1 - English"
+const className = name => String(name || '').replace(/\s*\((English|Hindi|Telugu)\)\s*$/, ' - $1');
+
+// The BVRV courses (classes of the current semester) each student is in, with the
+// student's attendance % in each, for the student cards and the overview header.
+async function currentCourses(studentIds) {
+  const out = {};
+  if (!studentIds.length) return out;
+  const r = await query(`
+    SELECT ce.student_id, s.id AS subject_id, s.code, s.name AS class_name, c.name AS course_name,
+      COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
+      (SELECT COUNT(DISTINCT x.session_date) FROM sessions x WHERE x.subject_id = s.id AND x.closed = true)::int AS class_days,
+      (SELECT COUNT(DISTINCT x.session_date) FROM sessions x JOIN attendance_logs a ON a.session_id = x.id
+        WHERE x.subject_id = s.id AND x.closed = true AND a.student_id = ce.student_id
+          AND a.status IN ('present','service') AND a.replayed = false)::int AS days_present
+    FROM class_enrollments ce
+    JOIN subjects s ON s.id = ce.subject_id
+    LEFT JOIN courses c ON c.id = s.course_id
+    LEFT JOIN semesters sem ON sem.id = s.semester_id
+    WHERE ce.student_id = ANY($1::uuid[]) AND (sem.id IS NULL OR sem.is_current)
+    ORDER BY c.name, s.code`, [studentIds]);
+  for (const x of r.rows) {
+    (out[x.student_id] ||= []).push({
+      subject_id: x.subject_id, code: x.code, course_name: x.course_name,
+      label: `${className(x.class_name || x.course_name || x.code)} (${x.code})`,
+      semester_label: x.semester_label, class_days: x.class_days, days_present: x.days_present,
+      percentage: x.class_days > 0 ? Math.round(x.days_present / x.class_days * 1000) / 10 : null,
+    });
+  }
+  return out;
+}
+const courseSummary = list => {
+  const days = list.reduce((n, c) => n + c.class_days, 0), present = list.reduce((n, c) => n + c.days_present, 0);
+  return { courses: list, course_attendance_percentage: days > 0 ? Math.round(present / days * 1000) / 10 : null };
+};
+
 // ── Assigned Students ────────────────────────────────────────────────────
 // Attendance % shown to the mentor is based on the mentor's OWN weekly
 // sessions (mentor_sessions / mentor_attendance), not academic sessions.
@@ -30,7 +66,7 @@ export async function getAssignedStudents(req, res) {
   const total = totalR.rows[0].n;
 
   const r = await query(`
-    SELECT u.id, u.name, u.email, u.avatar_url, u.roll_number,
+    SELECT u.id, u.name, u.email, u.phone, u.avatar_url, u.roll_number,
       STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
       (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
@@ -44,9 +80,11 @@ export async function getAssignedStudents(req, res) {
     [req.user.id]
   );
 
+  const byStudent = await currentCourses(r.rows.map(s => s.id));
   res.json(r.rows.map(s => {
     const pct = total > 0 ? Math.round(s.attended_sessions / total * 100) : 0;
-    return { ...s, total_sessions: total, attendance_percentage: pct, below_threshold: total > 0 && pct < threshold };
+    return { ...s, total_sessions: total, attendance_percentage: pct, below_threshold: total > 0 && pct < threshold,
+      ...courseSummary(byStudent[s.id] || []) };
   }));
 }
 
@@ -575,17 +613,10 @@ export async function getStudentOverview(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  const userR = await query('SELECT name, email, roll_number FROM users WHERE id=$1', [student_id]);
+  const userR = await query('SELECT name, email, phone, roll_number FROM users WHERE id=$1', [student_id]);
   if (!userR.rows.length) return res.status(404).json({ error: 'Student not found' });
   const user = userR.rows[0];
-
-  const courseR = await query(`
-    SELECT STRING_AGG(DISTINCT c.name, ', ') AS course_name
-    FROM class_enrollments ce
-    JOIN subjects s ON s.id = ce.subject_id
-    JOIN courses c ON c.id = s.course_id
-    WHERE ce.student_id = $1
-  `, [student_id]);
+  const cs = courseSummary((await currentCourses([student_id]))[student_id] || []);
 
   const attR = await query(`
     SELECT
@@ -618,8 +649,9 @@ export async function getStudentOverview(req, res) {
   if (result.gpa != null && Number(result.gpa) < gpaThreshold) alert_reasons.push(`GPA ${result.gpa} < ${gpaThreshold}`);
 
   res.json({
-    name: user.name, email: user.email, roll_number: user.roll_number,
-    course_name: courseR.rows[0]?.course_name || null,
+    name: user.name, email: user.email, phone: user.phone, roll_number: user.roll_number,
+    course_name: cs.courses.length ? cs.courses.map(c => c.label).join(', ') : null,
+    courses: cs.courses, course_attendance_percentage: cs.course_attendance_percentage,
     attendance_pct,
     latest_gpa: result.gpa ?? null,
     cgpa: result.cgpa ?? null,

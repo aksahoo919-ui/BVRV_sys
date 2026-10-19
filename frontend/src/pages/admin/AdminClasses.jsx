@@ -14,6 +14,7 @@ export default function AdminClasses() {
   const [removingTeacherId, setRemovingTeacherId] = useState(null);
   const [studentView, setStudentView] = useState('registered'); // 'registered' | 'add'
   const [busyStudent, setBusyStudent] = useState(null);
+  const [confirmAdd, setConfirmAdd] = useState(null); // { student, courses } when the student is already in another course
 
   useEffect(() => {
     api.get('/admin/subjects').then(r => setSubjects(r.data));
@@ -89,13 +90,19 @@ export default function AdminClasses() {
   // Other = active students not enrolled in this subject
   const otherStudents = allStudents.filter(s => !enrolledStudentIds.has(s.id)).filter(matchesSearch);
 
-  async function handleAddStudent(studentId) {
+  async function handleAddStudent(studentId, force = false) {
     setBusyStudent(studentId);
     try {
-      await api.post('/admin/classes/enroll-student', { subject_id: selectedSubject, student_id: studentId });
+      await api.post('/admin/classes/enroll-student', { subject_id: selectedSubject, student_id: studentId, force });
+      setConfirmAdd(null);
       await loadMembers(selectedSubject);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to add student');
+      if (err.response?.status === 409 && err.response.data?.code === 'already_in_course') {
+        // validation: already part of another BVRV course, so ask before adding
+        setConfirmAdd({ student: allStudents.find(x => x.id === studentId), courses: err.response.data.courses || [] });
+      } else {
+        alert(err.response?.data?.error || 'Failed to add student');
+      }
     } finally {
       setBusyStudent(null);
     }
@@ -247,6 +254,7 @@ export default function AdminClasses() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
                       <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                      {s.course && <p className="text-xs text-amber-700 truncate" title="Already in this course">Already in: {s.course}</p>}
                     </div>
                     <button
                       onClick={() => handleAddStudent(s.id)}
@@ -262,6 +270,23 @@ export default function AdminClasses() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmAdd && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-md">
+            <h2 className="font-bold text-gray-900 mb-1">Already in another course</h2>
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">{confirmAdd.student?.name}</span> is already in{' '}
+              <span className="font-medium">{confirmAdd.courses.join(', ')}</span>. Add them to this course as well?
+            </p>
+            <p className="text-xs text-gray-400 mt-2">To move them instead, use All Users &gt; Course.</p>
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => handleAddStudent(confirmAdd.student.id, true)} disabled={busyStudent === confirmAdd.student?.id} className="btn-primary flex-1">Add anyway</button>
+              <button onClick={() => setConfirmAdd(null)} className="btn-secondary flex-1">Cancel</button>
+            </div>
           </div>
         </div>
       )}

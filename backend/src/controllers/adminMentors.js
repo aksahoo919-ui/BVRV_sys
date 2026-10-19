@@ -109,7 +109,11 @@ async function readBody(body, kind) {
   if (!coordinator_user_id && coordinator_phone) {
     // typed coordinator: is this devotee already in the portal (and under this leader)?
     coordinator_check = await findCoordinatorAccount(coordinator_phone, user_id);
-    if (coordinator_check.status === 'linked') coordinator_user_id = coordinator_check.id;
+    if (coordinator_check.status === 'linked') {
+      // mapped to the portal account: the list then shows the account's own name and mobile, not what was typed
+      coordinator_user_id = coordinator_check.id;
+      coordinator_name = null; coordinator_phone = null;
+    }
   } else if (coordinator_user_id) {
     const c = byId[coordinator_user_id];
     if (same(coordinator_name, c.name)) coordinator_name = null;
@@ -204,7 +208,7 @@ async function setCoordinator(req, res) {
     if (!row) continue;
     if (!uid && cphone) {
       const m = await findCoordinatorAccount(cphone, row.user_id);
-      if (m.status === 'linked') { uid = m.id; checks.linked++; if (m.member_of_leader) checks.linked_members++; }
+      if (m.status === 'linked') { uid = m.id; cname = null; cphone = null; checks.linked++; if (m.member_of_leader) checks.linked_members++; }
       else checks[m.status]++;
     }
     await query(

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as mc from '../controllers/mentor.js';
+import * as records from '../controllers/studentRecords.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('mentor')];
@@ -11,6 +12,7 @@ router.get('/students/:student_id',        ...guard, mc.getStudentSummary);
 // Student detail tabs
 router.get('/students/:student_id/overview',       ...guard, mc.getStudentOverview);
 router.get('/students/:student_id/attendance',     ...guard, mc.getStudentAttendanceDetail);
+router.get('/students/:student_id/attendance-history', ...guard, records.getMentorStudentAttendanceHistorySafe);
 router.get('/students/:student_id/marks',          ...guard, mc.getStudentMarksDetail);
 router.get('/students/:student_id/counseling',     ...guard, mc.getStudentCounseling);
 router.post('/students/:student_id/counseling',    ...guard, mc.addStudentCounseling);

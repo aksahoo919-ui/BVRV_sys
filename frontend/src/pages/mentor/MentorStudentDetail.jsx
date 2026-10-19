@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import AttendanceTimeline from '../../components/AttendanceTimeline';
 
 const TABS = ['Overview', 'Attendance', 'Marks', 'Counseling', 'Contacts', 'Leave History'];
 
@@ -83,10 +84,22 @@ function OverviewTab({ studentId }) {
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
-        <p className="text-sm text-gray-500">{data.email} · {data.roll_number}</p>
-        {data.course_name && (
-          <p className="text-sm text-gray-400 mt-0.5">{data.course_name}</p>
-        )}
+        <p className="text-sm text-gray-500">{[data.email, data.phone, data.roll_number].filter(Boolean).join(' · ')}</p>
+        <div className="mt-2">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">BVRV course</p>
+          {data.courses && data.courses.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {data.courses.map((c) => (
+                <span key={c.subject_id} className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-sm font-medium px-2.5 py-1 rounded-full">
+                  {c.label}
+                  <span className="text-xs text-emerald-600 font-normal">{c.semester_label}{c.percentage != null ? ` · ${c.percentage}%` : ''}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">Not registered in any BVRV course</p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -152,15 +165,41 @@ function AttendanceTab({ studentId }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const [history, setHistory] = useState(null);
+  const [showPast, setShowPast] = useState(false);
+  useEffect(() => {
+    api.get(`/mentor/students/${studentId}/attendance-history`)
+      .then((r) => setHistory(r.data))
+      .catch(() => setHistory({ classes: [], bv_leader_classes: [], failed: true }));
+  }, [studentId]);
+
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorState message={error} onRetry={load} />;
-  if (!rows.length) return <EmptyState message="No attendance records found." />;
+  if (!rows.length && !(history && (history.classes.length || history.bv_leader_classes.length))) return <EmptyState message="No attendance records found." />;
 
   const totalAttended = rows.reduce((s, r) => s + (r.attended || 0), 0);
   const totalClasses = rows.reduce((s, r) => s + (r.total || 0), 0);
   const overallPct = totalClasses > 0 ? ((totalAttended / totalClasses) * 100).toFixed(1) : '—';
 
+  const pastCount = (history?.classes || []).filter((c) => !c.is_current || c.enrolled === false).length;
+
   return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <h3 className="font-semibold text-gray-900">Attendance over time</h3>
+          {pastCount > 0 && (
+            <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+              <button onClick={() => setShowPast(false)} className={`px-3 py-1.5 ${!showPast ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Current semester</button>
+              <button onClick={() => setShowPast(true)} className={`px-3 py-1.5 ${showPast ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>All semesters</button>
+            </div>
+          )}
+        </div>
+        {!history ? <p className="text-sm text-gray-400">Loading…</p>
+          : history.failed ? <p className="text-sm text-red-500">Could not load the attendance timeline.</p>
+          : <AttendanceTimeline data={history} showPast={showPast} />}
+      </div>
+      {rows.length > 0 && (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -207,6 +246,8 @@ function AttendanceTab({ studentId }) {
           </tr>
         </tfoot>
       </table>
+    </div>
+      )}
     </div>
   );
 }
