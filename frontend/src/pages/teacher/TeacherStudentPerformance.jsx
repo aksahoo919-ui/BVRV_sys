@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
 
 function Spinner() { return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>; }
@@ -14,12 +14,24 @@ function GradeBadge({ pct }) {
   return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">F</span>;
 }
 
+// Sortable columns: value per row (empty values always go last)
+const COLUMNS = [
+  { key: 'roll', label: 'Roll No', get: s => s.roll_number || null },
+  { key: 'name', label: 'Student', get: s => s.name || null },
+  { key: 'leader', label: 'BV Leader', get: s => s.current_mentor_name || null },
+  { key: 'att', label: 'Attendance', get: s => Number(s.attendance_pct) },
+  { key: 'marks', label: 'Marks %', get: s => (s.marks_percentage == null ? null : Number(s.marks_percentage)) },
+  { key: 'grade', label: 'Grade', get: s => (s.marks_percentage == null ? null : Number(s.marks_percentage)) },
+  { key: 'status', label: 'Status', get: s => (s.below_threshold ? 'Low Att.' : 'OK') },
+];
+
 export default function TeacherStudentPerformance() {
   const [subjects, setSubjects] = useState([]);
   const [subjectId, setSubjectId] = useState('');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
 
   useEffect(() => {
     api.get('/teacher/subjects').then(r => { setSubjects(r.data); if (r.data[0]) setSubjectId(String(r.data[0].id)); }).catch(() => {});
@@ -42,6 +54,19 @@ export default function TeacherStudentPerformance() {
   useEffect(() => { load(); }, [subjectId]);
 
   const subjectName = selectedSubject?.name || '';
+
+  const rows = useMemo(() => {
+    const get = COLUMNS.find(c => c.key === sort.key)?.get;
+    if (!get) return students;
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...students].sort((a, b) => {
+      const x = get(a), y = get(b);
+      if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1;
+      if (typeof x === 'number') return (x - y) * dir;
+      return String(x).localeCompare(String(y), 'en', { sensitivity: 'base', numeric: true }) * dir;
+    });
+  }, [students, sort]);
+  const toggleSort = key => setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
 
   return (
     <div className="space-y-6">
@@ -70,23 +95,31 @@ export default function TeacherStudentPerformance() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['Roll No','Student','Attendance','Marks %','Grade','Status'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                {COLUMNS.map(c => (
+                  <th key={c.key} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">
+                    <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 uppercase hover:text-gray-800">
+                      {c.label}
+                      <span className={`text-[10px] ${sort.key === c.key ? 'text-gray-700' : 'text-gray-300'}`}>
+                        {sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+                      </span>
+                    </button>
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {students.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">
+                <tr><td colSpan={7} className="text-center py-12 text-gray-400">
                   {subjectId ? 'No students found.' : 'Select a subject to view performance.'}
                 </td></tr>
-              ) : students.map(s => {
+              ) : rows.map(s => {
                 const attPct = Number(s.attendance_pct);
                 const marksPct = s.marks_percentage;
                 return (
                   <tr key={s.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.roll_number || '—'}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{s.current_mentor_name || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-20 bg-gray-100 rounded-full h-1.5">
