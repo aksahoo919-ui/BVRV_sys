@@ -1087,8 +1087,9 @@ export async function reportDataQuality(req, res) {
         ['Active students', summary.active_students],
         ['1. Email missing or invalid', summary.email_issues],
         ['2. Phone missing or invalid', summary.phone_issues],
-        ['3. Duplicates: email / phone / name (groups)', summary.shared_groups],
-        ['3. of which email / phone / name', `${summary.dup_email_groups} / ${summary.dup_phone_groups} / ${summary.dup_name_groups}`],
+        ['3a. Duplicate emails (groups)', summary.dup_email_groups],
+        ['3b. Duplicate phones (groups)', summary.dup_phone_groups],
+        ['3c. Duplicate names (groups)', summary.dup_name_groups],
         ['4. Active students with no BV Leader', summary.no_bv_leader],
         [],
         ['Rules'],
@@ -1099,7 +1100,7 @@ export async function reportDataQuality(req, res) {
         ['Current course', 'Classes in the current academic year (or the latest year), else any enrolled class'],
       ].forEach(r => sum.addRow(r));
       sum.getRow(1).font = { bold: true, size: 14 };
-      sum.getRow(11).font = { bold: true };
+      sum.getRow(12).font = { bold: true };
 
       const issueCols = [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Problem', 30], ['BV Leader', 30], ['Current Course', 40]];
       addSheet('1 Email missing-invalid', issueCols,

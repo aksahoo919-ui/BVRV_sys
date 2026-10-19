@@ -199,9 +199,8 @@ function DataQualityPanel() {
   const [section, setSection] = useState('email');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
-  const [dupType, setDupType] = useState('all');
   // duplicates read best grouped: sort by the Duplicate column there
-  useEffect(() => { setSort({ key: section === 'shared' ? 'problem' : null, dir: 'asc' }); }, [section]);
+  useEffect(() => { setSort({ key: DUP_TYPE[section] ? 'problem' : null, dir: 'asc' }); }, [section]);
 
   useEffect(() => {
     api.get('/admin/reports/data-quality')
@@ -225,17 +224,27 @@ function DataQualityPanel() {
   if (!report) return <Spinner />;
 
   const s = report.summary;
+  // duplicate cards always show their number, 0 included
+  const dupGroups = type => report.shared.filter(g => g.type === type);
+  const dupCard = (id, type, label) => {
+    const groups = dupGroups(type);
+    const users = groups.reduce((n, g) => n + g.count, 0);
+    return { id, label, value: groups.length, sub: groups.length ? `${groups.length} group${groups.length === 1 ? '' : 's'} · ${users} users` : 'None found' };
+  };
   const cards = [
     { id: 'email', label: 'Email missing / invalid', value: s.email_issues },
     { id: 'phone', label: 'Phone missing / invalid', value: s.phone_issues },
-    { id: 'shared', label: 'Duplicates: email / phone / name', value: s.shared_groups,
-      sub: `${s.dup_email_groups ?? 0} email · ${s.dup_phone_groups ?? 0} phone · ${s.dup_name_groups ?? 0} name` },
+    dupCard('dup_email', 'Email', 'Duplicate emails'),
+    dupCard('dup_phone', 'Phone', 'Duplicate phones'),
+    dupCard('dup_name', 'Name', 'Duplicate names'),
     { id: 'noleader', label: 'No BV Leader', value: s.no_bv_leader },
   ];
-  const all = section === 'shared'
-    ? report.shared.filter(g => dupType === 'all' || g.type === dupType)
-        .flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type}: ${g.value} (${g.count} users)${g.note ? ` · ${g.note}` : ''}` })))
+  const isDup = !!DUP_TYPE[section];
+  const all = isDup
+    ? dupGroups(DUP_TYPE[section])
+        .flatMap(g => g.users.map(u => ({ ...u, problem: `${g.value} (${g.count} users)${g.note ? ` · ${g.note}` : ''}` })))
     : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : report.no_bv_leader);
+  const emptyText = isDup ? `No duplicate ${DUP_TYPE[section].toLowerCase()}s: 0 found.` : 'Nothing to fix here: 0 found.';
   const q = search.trim().toLowerCase();
   const filtered = q
     ? all.filter(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course].some(v => v && String(v).toLowerCase().includes(q)))
@@ -254,7 +263,7 @@ function DataQualityPanel() {
         </button>
       </div>
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         {cards.map(c => (
           <button key={c.id} onClick={() => setSection(c.id)}
             className={`card text-left ${section === c.id ? 'ring-2 ring-primary-400' : ''}`}>
@@ -266,17 +275,9 @@ function DataQualityPanel() {
       </div>
       <div className="card overflow-x-auto p-0">
         <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-gray-400">
-              {q ? `${rows.length} of ${all.length}` : `All ${all.length}`} {section === 'shared' ? 'users in duplicate groups' : 'rows'}
-            </span>
-            {section === 'shared' && ['all', 'Email', 'Phone', 'Name'].map(t => (
-              <button key={t} onClick={() => setDupType(t)}
-                className={`text-xs px-2 py-0.5 rounded-full border ${dupType === t ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
-                {t === 'all' ? 'All' : `Same ${t.toLowerCase()}`}
-              </button>
-            ))}
-          </div>
+          <span className="text-xs text-gray-400">
+            {cards.find(c => c.id === section)?.label}: {q ? `${rows.length} of ${all.length}` : `${all.length}`} {isDup ? 'users in duplicate groups' : 'rows'}
+          </span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone, BV leader, course"
             className="input text-sm w-72 max-w-full" />
         </div>
@@ -286,16 +287,16 @@ function DataQualityPanel() {
             <Th k="name" label="Devotee" />
             <Th k="email" label="Email" />
             <Th k="phone" label="Phone" />
-            {section !== 'noleader' && <Th k="problem" label={section === 'shared' ? 'Duplicate' : 'Problem'} />}
+            {section !== 'noleader' && <Th k="problem" label={isDup ? `Same ${DUP_TYPE[section].toLowerCase()}` : 'Problem'} />}
             {section !== 'noleader' && <Th k="bv_leader" label="BV Leader" />}
             <Th k="course" label="Current Course" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">{q ? 'No matches.' : 'Nothing to fix here.'}</td></tr>
+              <tr><td colSpan={6} className="text-center py-10 text-gray-400">{q ? 'No matches.' : emptyText}</td></tr>
             ) : rows.map((u, i) => (
               <tr key={i} className="hover:bg-gray-50">
-                <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{section === 'shared' && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
+                <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{isDup && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.email || '—'}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.phone || '—'}</td>
                 {section !== 'noleader' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
@@ -310,6 +311,8 @@ function DataQualityPanel() {
     </div>
   );
 }
+
+const DUP_TYPE = { dup_email: 'Email', dup_phone: 'Phone', dup_name: 'Name' };
 
 // ── Column sorting (click a header: ascending, again: descending) ──────────
 const QUALITY_SORT = {
