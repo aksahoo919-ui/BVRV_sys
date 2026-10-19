@@ -6,6 +6,7 @@ import * as ops from '../controllers/adminOperations.js';
 import * as mentors from '../controllers/adminMentors.js';
 import * as studentClasses from '../controllers/adminStudentClasses.js';
 import * as records from '../controllers/studentRecords.js';
+import * as memberReq from '../controllers/memberRequests.js';
 import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
 
@@ -138,6 +139,8 @@ router.post('/enroll', ...guard, acad.enrollInCourse);
 router.get('/enrollments', ...guard, acad.getCourseEnrollments);
 
 // ── Operations ────────────────────────────────────────────────────────────
+router.get('/member-requests', ...guard, memberReq.listMemberRequestsSafe);
+router.patch('/member-requests/:id', ...guard, memberReq.reviewMemberRequestSafe);
 router.get('/profile-requests', ...guard, records.listProfileRequestsSafe);
 router.patch('/profile-requests/:id', ...guard, records.reviewProfileRequestSafe);
 router.get('/attendance-corrections', ...guard, ops.getAttendanceCorrections);

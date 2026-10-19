@@ -42,7 +42,10 @@ export default function AdminLayout() {
 
   useEffect(() => {
     api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
-    api.get('/admin/profile-requests', { params: { status: 'pending' } }).then(r => setRequestCount(r.data.counts?.pending || 0)).catch(() => {});
+    Promise.all([
+      api.get('/admin/profile-requests', { params: { status: 'pending' } }),
+      api.get('/admin/member-requests', { params: { status: 'pending' } }),
+    ]).then(([p, m]) => setRequestCount((p.data.counts?.pending || 0) + (m.data.counts?.pending || 0))).catch(() => {});
   }, []);
 
   const refreshPending = () =>

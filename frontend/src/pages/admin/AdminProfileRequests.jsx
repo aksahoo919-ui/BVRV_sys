@@ -1,6 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../utils/api';
 import { describeRequest } from '../../components/ChangeRequests';
+import { className } from '../../utils/classLabel';
+
+// Member requests (BV Leader asks to add a devotee) are listed together with the students' corrections
+const normaliseMember = m => ({
+  ...m, kind: 'add_member', student_name: m.name, student_phone: m.phone, student_email: m.email,
+  current_leader: m.existing_leaders || null,
+});
+const describe = r => (r.kind === 'add_member'
+  ? `Add member under ${r.mentor_name}${r.course_code ? ` · ${className(r.course_name)} (${r.course_code})` : ' · no course'}${r.existing_name ? ` · already in the portal as ${r.existing_name}` : ' · new devotee'}`
+  : describeRequest(r));
+const endpoint = r => (r.kind === 'add_member' ? '/admin/member-requests/' : '/admin/profile-requests/');
 
 // BV Leader / course corrections asked for by students from their profile.
 // Approve applies the change (same as All Users > Edit / Course); Reject leaves it.
@@ -26,16 +37,23 @@ export default function AdminProfileRequests() {
 
   const load = useCallback(() => {
     setData(null); setError('');
-    api.get('/admin/profile-requests', { params: { status: tab } })
-      .then(r => setData(r.data))
-      .catch(e => setError(e.response?.data?.error || 'Failed to load requests'));
+    Promise.all([
+      api.get('/admin/profile-requests', { params: { status: tab } }),
+      api.get('/admin/member-requests', { params: { status: tab } }),
+    ]).then(([p, m]) => {
+      const counts = { ...(p.data.counts || {}) };
+      for (const [k, n] of Object.entries(m.data.counts || {})) counts[k] = (counts[k] || 0) + n;
+      const requests = [...p.data.requests, ...m.data.requests.map(normaliseMember)]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      setData({ requests, counts });
+    }).catch(e => setError(e.response?.data?.error || 'Failed to load requests'));
   }, [tab]);
   useEffect(load, [load]);
 
   async function submitReview() {
     setSaving(true);
     try {
-      await api.patch(`/admin/profile-requests/${review.request.id}`, { status: review.status, admin_note: review.note });
+      await api.patch(`${endpoint(review.request)}${review.request.id}`, { status: review.status, admin_note: review.note });
       setReview(null);
       load();
     } catch (e) {
@@ -51,7 +69,7 @@ export default function AdminProfileRequests() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Profile Requests</h1>
-        <p className="text-sm text-gray-400 mt-0.5">BV Leader and course corrections asked for by students. Approve applies the change.</p>
+        <p className="text-sm text-gray-400 mt-0.5">BV Leader / course corrections asked for by students, and new members asked for by BV Leaders. Approve applies the change.</p>
       </div>
 
       <div className="flex gap-1 flex-wrap">
@@ -85,7 +103,7 @@ export default function AdminProfileRequests() {
                       <p className="font-medium text-gray-800">{r.student_name}</p>
                       <p className="text-xs text-gray-400">{[r.student_phone, r.student_email].filter(Boolean).join(' · ')}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{describeRequest(r)}</td>
+                    <td className="px-4 py-3 text-gray-700">{describe(r)}</td>
                     <td className="px-4 py-3 text-gray-600">{r.current_leader || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-gray-600 max-w-xs">{r.note || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmt(r.created_at)}</td>
@@ -115,10 +133,14 @@ export default function AdminProfileRequests() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="card w-full max-w-md">
             <h2 className="font-bold text-gray-900 mb-1">{review.status === 'approved' ? 'Approve request' : 'Reject request'}</h2>
-            <p className="text-sm text-gray-600">{review.request.student_name}: {describeRequest(review.request)}</p>
+            <p className="text-sm text-gray-600">{review.request.student_name}: {describe(review.request)}</p>
             {review.status === 'approved' && (
               <p className="text-xs text-gray-400 mt-1">
-                {review.request.kind === 'bv_leader'
+                {review.request.kind === 'add_member'
+                  ? (review.request.existing_name
+                    ? 'This devotee already has a portal account, so they are put under the BV Leader (no duplicate is created).'
+                    : 'A new student account is created and put under the BV Leader.')
+                  : review.request.kind === 'bv_leader'
                   ? 'The student goes under this BV Leader in all of their current-semester courses.'
                   : 'The student is moved to the new course; their BV Leader moves with them. Past attendance stays on the old course.'}
               </p>

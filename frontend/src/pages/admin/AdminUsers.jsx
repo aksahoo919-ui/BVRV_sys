@@ -376,7 +376,7 @@ export default function AdminUsers() {
     if (key === 'created_at') return u.created_at ? new Date(u.created_at).getTime() : null;
     if (key === 'role') return u.role ? roleLabel(u.role) : null;
     if (key === 'bv_leader') return u.role === 'student' ? (u.bv_leader || null) : null;
-    if (key === 'course') return u.role === 'student' ? (u.course || null) : null;
+    if (key === 'course') return u.course || null;
     return u[key] || null;
   };
   const rows = !sort.key ? visible : [...visible].sort((a, b) => {
@@ -388,6 +388,11 @@ export default function AdminUsers() {
     return sort.dir === 'asc' ? c : -c;
   });
   const toggleSort = (key) => setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+
+  // BV Leaders / teachers / admins have no BV Leader: hide that column when one of those roles is selected.
+  // The Course column then shows the language (BV Leaders) or the courses taught (teachers).
+  const showLeaderCol = !['mentor', 'teacher', 'admin'].includes(filterRole);
+  const courseColLabel = filterRole === 'mentor' ? 'Language' : filterRole === 'teacher' ? 'Courses taught' : 'Course';
 
   function SortTh({ k, label, className = '' }) {
     const active = sort.key === k;
@@ -733,8 +738,8 @@ export default function AdminUsers() {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <SortTh k="name" label="User" />
-                  <SortTh k="bv_leader" label="BV Leader" />
-                  <SortTh k="course" label="Course" />
+                  {showLeaderCol && <SortTh k="bv_leader" label="BV Leader" />}
+                  <SortTh k="course" label={courseColLabel} />
                   <SortTh k="gender" label="Gender" />
                   <SortTh k="role" label="Role" />
                   <SortTh k="status" label="Status" />
@@ -744,7 +749,7 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.length === 0 && (
-                  <tr><td colSpan={8} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                  <tr><td colSpan={showLeaderCol ? 8 : 7} className="text-center py-10 text-gray-400">No users found.</td></tr>
                 )}
                 {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -757,13 +762,13 @@ export default function AdminUsers() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    {showLeaderCol && <td className="px-4 py-3">
                       {u.role === 'student' && (u.bv_leader
                         ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
                         : <span className="text-gray-300">—</span>)}
-                    </td>
+                    </td>}
                     <td className="px-4 py-3 text-gray-600">
-                      {u.role === 'student' && (u.course || <span className="text-gray-300">—</span>)}
+                      {u.course || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{u.gender || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">

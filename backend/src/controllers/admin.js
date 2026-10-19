@@ -48,14 +48,35 @@ const CURRENT_LEADER_SQL = `
   LEFT JOIN semesters sem ON sem.id = s.semester_id
   GROUP BY cma.student_id`;
 
+// Course column by role (Prabhuji, 19 Oct call): students = their course, BV Leaders = the language(s)
+// they take in BV Mentors, teachers = the courses they teach (current semester).
+const BV_LANGUAGE_SQL = `
+  SELECT user_id, STRING_AGG(DISTINCT language, ', ') AS languages
+  FROM mentor_directory WHERE kind = 'bv' AND user_id IS NOT NULL AND language IS NOT NULL GROUP BY user_id`;
+const TEACHES_SQL = `
+  SELECT ce.instructor_id,
+    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_teaches,
+    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_teaches
+  FROM class_enrollments ce
+  JOIN subjects s ON s.id = ce.subject_id
+  LEFT JOIN semesters sem ON sem.id = s.semester_id
+  LEFT JOIN courses c ON c.id = s.course_id
+  WHERE ce.instructor_id IS NOT NULL
+  GROUP BY ce.instructor_id`;
+
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
       `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender,
-              COALESCE(bl.cur_leader, bl.any_leader) AS bv_leader, COALESCE(enr.cur_course, enr.any_course) AS course
+              COALESCE(bl.cur_leader, bl.any_leader) AS bv_leader,
+              CASE WHEN u.role = 'mentor' THEN bvl.languages
+                   WHEN u.role = 'teacher' THEN COALESCE(t.cur_teaches, t.any_teaches)
+                   ELSE COALESCE(enr.cur_course, enr.any_course) END AS course
        FROM users u
        LEFT JOIN (${CURRENT_LEADER_SQL}) bl ON bl.student_id = u.id
        LEFT JOIN (${CURRENT_COURSE_SQL}) enr ON enr.student_id = u.id
+       LEFT JOIN (${BV_LANGUAGE_SQL}) bvl ON bvl.user_id = u.id
+       LEFT JOIN (${TEACHES_SQL}) t ON t.instructor_id = u.id
        ORDER BY u.created_at DESC`
     );
     res.json(result.rows);

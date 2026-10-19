@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import MentorAddMember from '../../components/MentorAddMember';
 
 function AttendanceBar({ pct, label = 'Attendance' }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
@@ -189,6 +190,8 @@ export default function MentorStudents() {
           ))}
         </div>
       )}
+
+      <MentorAddMember />
     </div>
   );
 }

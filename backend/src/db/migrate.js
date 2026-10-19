@@ -34,6 +34,7 @@ const migrations = [
   '023_course_semesters.sql',
   '024_leader_without_class.sql',
   '025_profile_change_requests.sql',
+  '026_member_add_requests.sql',
 ];
 
 async function migrate() {

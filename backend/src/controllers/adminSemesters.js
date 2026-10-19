@@ -269,6 +269,35 @@ async function putStudentLeader(req, res) {
   res.json({ mentor_id: mentorId, replaced });
 }
 
+// Puts a student under a BV Leader inside an open transaction (creating the student first when
+// newUser is given). With a class: enrols there and links the leader there; without: links in the
+// student's current classes (or without a class). Used by Add BV Member and by approved member requests.
+export async function applyBVMember(client, { mentor_id, subject_id, student_id, newUser }) {
+  let sid = student_id, previous = null;
+  if (newUser) {
+    await client.query(
+      `INSERT INTO users (id, name, email, role, phone, gender, status, username)
+       VALUES ($1, $2, $3, 'student', $4, $5, 'active', $6)`,
+      [newUser.id, newUser.name, newUser.email, newUser.phone, newUser.gender, defaultUsername(newUser.email, newUser.name)]);
+    sid = newUser.id;
+  }
+  if (subject_id) {
+    await client.query(
+      `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
+       ON CONFLICT (subject_id, student_id) DO NOTHING`, [subject_id, sid]);
+    previous = (await client.query(
+      `SELECT m.name FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
+       WHERE cma.subject_id = $1 AND cma.student_id = $2 AND cma.mentor_id <> $3`, [subject_id, sid, mentor_id])).rows[0]?.name || null;
+    await client.query(
+      `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
+       ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`, [subject_id, mentor_id, sid]);
+    await client.query('DELETE FROM class_mentor_assignments WHERE student_id = $1 AND subject_id IS NULL', [sid]);
+  } else {
+    previous = (await setLeader(client, sid, mentor_id)).join(' / ') || null;
+  }
+  return { sid, previous };
+}
+
 // ── Add BV Member ─────────────────────────────────────────────────────────
 // POST /admin/bv-members/:mentor_id/members
 //   { subject_id?, student_id }                       existing student
@@ -312,27 +341,7 @@ async function addBVMember(req, res) {
   let previous = null;
   try {
     await client.query('BEGIN');
-    if (newUser) {
-      await client.query(
-        `INSERT INTO users (id, name, email, role, phone, gender, status, username)
-         VALUES ($1, $2, $3, 'student', $4, $5, 'active', $6)`,
-        [newUser.id, newUser.name, newUser.email, newUser.phone, newUser.gender, defaultUsername(newUser.email, newUser.name)]);
-      sid = newUser.id;
-    }
-    if (subject_id) {
-      await client.query(
-        `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
-         ON CONFLICT (subject_id, student_id) DO NOTHING`, [subject_id, sid]);
-      previous = (await client.query(
-        `SELECT m.name FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id
-         WHERE cma.subject_id = $1 AND cma.student_id = $2 AND cma.mentor_id <> $3`, [subject_id, sid, mentor_id])).rows[0]?.name || null;
-      await client.query(
-        `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
-         ON CONFLICT (subject_id, student_id) DO UPDATE SET mentor_id = $2, assigned_at = NOW()`, [subject_id, mentor_id, sid]);
-      await client.query('DELETE FROM class_mentor_assignments WHERE student_id = $1 AND subject_id IS NULL', [sid]);
-    } else {
-      previous = (await setLeader(client, sid, mentor_id)).join(' / ') || null;
-    }
+    ({ sid, previous } = await applyBVMember(client, { mentor_id, subject_id, student_id, newUser }));
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
