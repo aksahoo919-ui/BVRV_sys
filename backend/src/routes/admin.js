@@ -5,6 +5,7 @@ import * as acad from '../controllers/adminAcademic.js';
 import * as ops from '../controllers/adminOperations.js';
 import * as mentors from '../controllers/adminMentors.js';
 import * as studentClasses from '../controllers/adminStudentClasses.js';
+import * as records from '../controllers/studentRecords.js';
 import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
 
@@ -27,6 +28,7 @@ router.patch('/users/:id', ...guard, adminCtrl.updateUser);
 router.get('/users/:id/classes', ...guard, studentClasses.getStudentClassesSafe);
 router.post('/users/:id/classes', ...guard, studentClasses.changeStudentClassSafe);
 router.get('/users/:id/timeline', ...guard, semesters.getStudentTimelineSafe);
+router.get('/users/:id/attendance-history', ...guard, records.getUserAttendanceHistorySafe);
 router.get('/users/:id/bv-leader', ...guard, semesters.getStudentLeaderSafe);
 router.put('/users/:id/bv-leader', ...guard, semesters.putStudentLeaderSafe);
 router.post('/users/bulk-import', ...guard, upload.single('file'), adminCtrl.bulkImport);
@@ -136,6 +138,8 @@ router.post('/enroll', ...guard, acad.enrollInCourse);
 router.get('/enrollments', ...guard, acad.getCourseEnrollments);
 
 // ── Operations ────────────────────────────────────────────────────────────
+router.get('/profile-requests', ...guard, records.listProfileRequestsSafe);
+router.patch('/profile-requests/:id', ...guard, records.reviewProfileRequestSafe);
 router.get('/attendance-corrections', ...guard, ops.getAttendanceCorrections);
 router.patch('/attendance-corrections/:id', ...guard, ops.reviewAttendanceCorrection);
 router.post('/attendance/reset', ...guard, ops.resetAttendance);

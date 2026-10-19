@@ -121,14 +121,23 @@ export async function createUser(req, res) {
   }
 }
 
-// Update editable fields: email, phone, role.
+// Update editable fields: name, gender, email, phone, role.
 export async function updateUser(req, res) {
   const { id } = req.params;
-  const { email, phone, role, username, password } = req.body;
+  const { name, gender, email, phone, role, username, password } = req.body;
   const fields = [];
   const vals = [];
   let n = 1;
 
+  if (name !== undefined) {
+    const nm = String(name).replace(/\s+/g, ' ').trim();
+    if (!nm) return res.status(400).json({ error: 'Name cannot be empty' });
+    fields.push(`name = $${n++}`); vals.push(nm);
+  }
+  if (gender !== undefined) {
+    if (gender && !['Male', 'Female'].includes(gender)) return res.status(400).json({ error: 'Gender must be Male or Female' });
+    fields.push(`gender = $${n++}`); vals.push(gender || null);
+  }
   if (email !== undefined) {
     const e = String(email).trim();
     if (!/^\S+@\S+\.\S+$/.test(e)) return res.status(400).json({ error: 'Invalid email' });
@@ -160,7 +169,7 @@ export async function updateUser(req, res) {
     if (!r.rows.length) return res.status(404).json({ error: 'User not found' });
     // If the new primary role equals the secondary role, clear the duplicate
     if (role) await query('UPDATE users SET secondary_role = NULL WHERE id = $1 AND secondary_role = $2', [id, role]);
-    await logAudit(req.user.id, 'update_user', 'user', id, { email, phone, role, username, passwordChanged: !!password });
+    await logAudit(req.user.id, 'update_user', 'user', id, { name, gender, email, phone, role, username, passwordChanged: !!password });
     res.json(r.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email is already in use' });
@@ -947,7 +956,7 @@ export async function reportAttendanceSummary(req, res) {
 }
 
 // ── Data quality report ─────────────────────────────────────────────────────
-// Sections 1, 2 and 4 cover active students; section 3 (shared email/phone)
+// Sections 1, 2 and 4 cover active students; section 3 (duplicate email/phone/name)
 // covers every user so a student sharing with a teacher still shows up.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PLACEHOLDER_EMAIL = /@noemail\.bvrv$/i;
@@ -965,6 +974,15 @@ function normalizePhone(raw) {
   if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
   else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
   return d;
+}
+
+// Name key for duplicate names: case, dots and titles (HG, Prabhu, Mataji, ...) ignored,
+// word order ignored ("Kavitha Buddanolla" = "Buddanolla Kavitha").
+const NAME_TITLES = new Set(['hg', 'his', 'her', 'grace', 'prabhu', 'prabhuji', 'pr', 'mataji', 'mji', 'sri', 'shri', 'smt', 'mr', 'mrs', 'ms', 'dr']);
+function nameKey(raw) {
+  const words = String(raw || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w && !NAME_TITLES.has(w));
+  return words.length ? words.sort().join(' ') : '';
 }
 
 function phoneProblem(raw) {
@@ -1007,11 +1025,28 @@ export async function reportDataQuality(req, res) {
       if (e && !emailProblem(e)) addTo(`e:${e}`, 'Email', e, u);
       const p = normalizePhone(u.phone);
       if (!phoneProblem(u.phone)) addTo(`p:${p}`, 'Phone', p, u);
+      const n = nameKey(u.name);
+      if (n) addTo(`n:${n}`, 'Name', u.name, u);
     }
+    const TYPE_ORDER = { Email: 0, Phone: 1, Name: 2 };
     const shared = [...groups.values()]
       .filter(g => g.users.length > 1)
-      .sort((a, b) => b.users.length - a.users.length || a.value.localeCompare(b.value))
-      .map(g => ({ type: g.type, value: g.value, count: g.users.length, users: g.users }));
+      .map(g => {
+        const out = { type: g.type, value: g.value, count: g.users.length, users: g.users };
+        if (g.type === 'Name') {
+          // same name AND a shared valid email/phone = very likely one person (merge candidate)
+          const emails = new Set(), phones = new Set();
+          let contactMatch = false;
+          for (const u of g.users) {
+            const e = u.email.trim().toLowerCase(), ph = normalizePhone(u.phone);
+            if (e && !emailProblem(e)) { if (emails.has(e)) contactMatch = true; emails.add(e); }
+            if (!phoneProblem(u.phone)) { if (phones.has(ph)) contactMatch = true; phones.add(ph); }
+          }
+          out.note = contactMatch ? 'Same email/phone too: likely the same person' : 'Different contacts: check, may be different people';
+        }
+        return out;
+      })
+      .sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || b.count - a.count || a.value.localeCompare(b.value));
 
     const summary = {
       active_students: students.length,
@@ -1019,6 +1054,9 @@ export async function reportDataQuality(req, res) {
       phone_issues: phoneIssues.length,
       shared_groups: shared.length,
       shared_users: shared.reduce((n, g) => n + g.count, 0),
+      dup_email_groups: shared.filter(g => g.type === 'Email').length,
+      dup_phone_groups: shared.filter(g => g.type === 'Phone').length,
+      dup_name_groups: shared.filter(g => g.type === 'Name').length,
       no_bv_leader: noLeader.length,
     };
 
@@ -1047,13 +1085,13 @@ export async function reportDataQuality(req, res) {
         ['Active students', summary.active_students],
         ['1. Email missing or invalid', summary.email_issues],
         ['2. Phone missing or invalid', summary.phone_issues],
-        ['3. Shared email / phone (groups)', summary.shared_groups],
-        ['3. Users in shared groups', summary.shared_users],
+        ['3. Duplicates: email / phone / name (groups)', summary.shared_groups],
+        ['3. of which email / phone / name', `${summary.dup_email_groups} / ${summary.dup_phone_groups} / ${summary.dup_name_groups}`],
         ['4. Active students with no BV Leader', summary.no_bv_leader],
         [],
         ['Rules'],
         ['Sections 1, 2, 4', 'Active students only'],
-        ['Section 3', 'All users (any role / status) sharing one email or phone'],
+        ['Section 3', 'All users (any role / status) sharing one email, phone or name. Names: case, dots, titles (HG, Prabhu, Mataji…) and word order ignored'],
         ['Valid email', 'name@domain.tld; blank = Missing; @noemail.bvrv = Missing (placeholder)'],
         ['Valid phone', '10 digits starting 6-9, after removing spaces/symbols, a leading 91 or a leading 0'],
         ['Current course', 'Classes in the current academic year (or the latest year), else any enrolled class'],
@@ -1066,9 +1104,9 @@ export async function reportDataQuality(req, res) {
         emailIssues.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
       addSheet('2 Phone missing-invalid', issueCols,
         phoneIssues.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
-      addSheet('3 Shared email-phone',
-        [['Shared value', 34], ['Type', 8], ['Users sharing', 14], ['Devotee Name', 32], ['Role', 10], ['Email ID', 36], ['Phone', 16], ['BV Leader', 30], ['Current Course', 40]],
-        shared.flatMap(g => g.users.map(u => [g.value, g.type, g.count, u.name, u.role, u.email, u.phone, u.bv_leader, u.course])));
+      addSheet('3 Duplicates email-phone-name',
+        [['Duplicate value', 34], ['Type', 8], ['Users', 8], ['Note', 44], ['Devotee Name', 32], ['Role', 10], ['Email ID', 36], ['Phone', 16], ['BV Leader', 30], ['Current Course', 40]],
+        shared.flatMap(g => g.users.map(u => [g.value, g.type, g.count, g.note || '', u.name, u.role, u.email, u.phone, u.bv_leader, u.course])));
       addSheet('4 No BV Leader', [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Current Course', 40]],
         noLeader.map(u => [u.name, u.email, u.phone, u.course]));
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import ChangeRequests from '../../components/ChangeRequests';
 
 function daysAgo(dateStr) {
   if (!dateStr) return null;
@@ -240,6 +241,8 @@ export default function StudentProfile() {
           </p>
         )}
       </div>
+
+      <ChangeRequests />
 
       {toast && <Toast message={toast} onDone={() => setToast('')} />}
     </div>

@@ -176,7 +176,7 @@ export default function StudentDashboard() {
         <AlertBanner
           message={alertMsg}
           variant="danger"
-          onClick={() => navigate('/student/attendance')}
+          onClick={() => navigate('/student/my-attendance')}
         />
       )}
 
@@ -186,7 +186,7 @@ export default function StudentDashboard() {
           label="Overall Attendance"
           value={overallPct !== null ? `${overallPct}%` : '—'}
           sub={`${subjectsWithPct.length} subjects`}
-          onClick={() => navigate('/student/attendance')}
+          onClick={() => navigate('/student/my-attendance')}
           variant={
             overallPct !== null && overallPct < threshold
               ? 'danger'
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
           label="Subjects"
           value={subjectsWithPct.length}
           sub="enrolled"
-          onClick={() => navigate('/student/attendance')}
+          onClick={() => navigate('/student/my-attendance')}
         />
       </div>
 
@@ -268,7 +268,7 @@ export default function StudentDashboard() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900">Subject Attendance</h2>
           <button
-            onClick={() => navigate('/student/attendance')}
+            onClick={() => navigate('/student/my-attendance')}
             className="text-xs text-primary-600 hover:underline"
           >
             View all →
@@ -284,7 +284,7 @@ export default function StudentDashboard() {
               name={s.subject_name ?? s.name ?? ''}
               value={`${s.pct}%`}
               chip={pctChip(s.pct)}
-              onClick={() => navigate('/student/attendance')}
+              onClick={() => navigate('/student/my-attendance')}
             />
           ))
         )}

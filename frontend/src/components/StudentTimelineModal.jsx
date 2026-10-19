@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
+import AttendanceTimeline from './AttendanceTimeline';
 
 const fmt = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -8,11 +9,15 @@ const fmt = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDat
 export default function StudentTimelineModal({ student, onClose }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState(null);
 
   useEffect(() => {
     api.get(`/admin/users/${student.id}/timeline`)
       .then(r => setData(r.data))
       .catch(e => setError(e.response?.data?.error || 'Failed to load the timeline'));
+    api.get(`/admin/users/${student.id}/attendance-history`)
+      .then(r => setHistory(r.data))
+      .catch(() => setHistory({ classes: [], bv_leader_classes: [], failed: true }));
   }, [student.id]);
 
   // one block per semester (classes without a semester go in their own block)
@@ -28,7 +33,7 @@ export default function StudentTimelineModal({ student, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-bold text-gray-900">Timeline: {student.name}</h2>
@@ -80,6 +85,12 @@ export default function StudentTimelineModal({ student, onClose }) {
             </ol>
           )
         )}
+        <div className="border-t border-gray-100 pt-4">
+          <h3 className="font-semibold text-gray-800 text-sm mb-2">Attendance over time</h3>
+          {!history ? <p className="text-sm text-gray-400">Loading…</p>
+            : history.failed ? <p className="text-sm text-red-600">Could not load the attendance graph</p>
+            : <AttendanceTimeline data={history} datesOpen={false} />}
+        </div>
         <button onClick={onClose} className="btn-secondary w-full">Close</button>
       </div>
     </div>

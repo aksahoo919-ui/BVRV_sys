@@ -4,7 +4,8 @@ import TopNav from '../../components/TopNav';
 
 const navItems = [
   { to: '/student/home',       label: 'Home',       icon: HomeIcon },
-  { to: '/student/attendance', label: 'Attendance',  icon: CheckIcon },
+  { to: '/student/attendance', label: 'Mark Attendance', icon: CheckIcon },
+  { to: '/student/my-attendance', label: 'My Attendance', icon: ResultsIcon },
   { to: '/student/marks',      label: 'Marks',       icon: MarksIcon },
   { to: '/student/results',    label: 'Results',     icon: ResultsIcon },
   { to: '/student/timetable',  label: 'Timetable',   icon: CalendarIcon },

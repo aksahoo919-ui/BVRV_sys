@@ -30,6 +30,7 @@ import AdminAcademicYears from './pages/admin/AdminAcademicYears';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import AdminClassMentors from './pages/admin/AdminClassMentors';
 import AdminBVMembers from './pages/admin/AdminBVMembers';
+import AdminProfileRequests from './pages/admin/AdminProfileRequests';
 import AdminCourseSemesters from './pages/admin/AdminCourseSemesters';
 import AdminMentors from './pages/admin/AdminMentors';
 import AdminResults from './pages/admin/AdminResults';
@@ -75,6 +76,7 @@ import StudentResults from './pages/student/StudentResults';
 import StudentTimetable from './pages/student/StudentTimetable';
 import StudentProfile from './pages/student/StudentProfile';
 import StudentMentor from './pages/student/StudentMentor';
+import StudentAttendanceHistory from './pages/student/StudentAttendanceHistory';
 
 // ── Route guard ───────────────────────────────────────────────────────────
 function RequireAuth({ roles, children }) {
@@ -115,6 +117,7 @@ export default function App() {
         <Route path="home" element={<AdminDashboard />} />
         <Route path="pending" element={<AdminPendingUsers />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="profile-requests" element={<AdminProfileRequests />} />
         <Route path="mentors/bvrv" element={<AdminMentors key="bvrv" kind="bvrv" />} />
         <Route path="mentors/bv" element={<AdminMentors key="bv" kind="bv" />} />
         <Route path="courses" element={<AdminCourses />} />
@@ -172,6 +175,7 @@ export default function App() {
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<StudentDashboard />} />
         <Route path="attendance" element={<StudentMarkAttendance />} />
+        <Route path="my-attendance" element={<StudentAttendanceHistory />} />
         <Route path="marks" element={<StudentMarks />} />
         <Route path="results" element={<StudentResults />} />
         <Route path="timetable" element={<StudentTimetable />} />

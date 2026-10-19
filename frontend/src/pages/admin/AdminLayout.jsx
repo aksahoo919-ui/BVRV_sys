@@ -8,6 +8,7 @@ const NAV = [
   { section: 'Users' },
   { to: '/admin/pending', label: 'Approvals', icon: '⏳' },
   { to: '/admin/users', label: 'All Users', icon: '👥' },
+  { to: '/admin/profile-requests', label: 'Profile Requests', icon: '📨' },
   { section: 'Mentors' },
   { to: '/admin/mentors/bvrv', label: 'BVRV Mentors', icon: '🧑‍🏫' },
   { to: '/admin/mentors/bv', label: 'BV Mentors', icon: '🙏' },
@@ -37,9 +38,11 @@ const NAV = [
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
 
   useEffect(() => {
     api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
+    api.get('/admin/profile-requests', { params: { status: 'pending' } }).then(r => setRequestCount(r.data.counts?.pending || 0)).catch(() => {});
   }, []);
 
   const refreshPending = () =>
@@ -78,6 +81,9 @@ export default function AdminLayout() {
                 <span className="flex-1 truncate">{item.label}</span>
                 {item.to === '/admin/pending' && pendingCount > 0 && (
                   <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{pendingCount}</span>
+                )}
+                {item.to === '/admin/profile-requests' && requestCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{requestCount}</span>
                 )}
               </NavLink>
             )

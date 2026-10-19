@@ -22,6 +22,37 @@ async function classesOf(studentId) {
   return r.rows;
 }
 
+// Moves / adds / removes one class of a student inside an open transaction
+// (also used when an admin approves a student's course change request).
+export async function applyClassChange(client, id, from, to) {
+  if (to) {
+    await client.query(
+      `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
+       ON CONFLICT (subject_id, student_id) DO NOTHING`, [to, id]);
+    const hasLeader = (await client.query('SELECT 1 FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, to])).rows.length;
+    if (!hasLeader) {
+      if (from) {
+        await client.query('UPDATE class_mentor_assignments SET subject_id=$3, assigned_at=NOW() WHERE student_id=$1 AND subject_id=$2', [id, from, to]);
+      } else {
+        const leaders = (await client.query('SELECT DISTINCT mentor_id FROM class_mentor_assignments WHERE student_id=$1', [id])).rows;
+        if (leaders.length === 1) {
+          await client.query(
+            `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
+             ON CONFLICT (subject_id, student_id) DO NOTHING`, [to, leaders[0].mentor_id, id]);
+        }
+      }
+    }
+  }
+  // a leader link without a class is replaced once the new class has a leader
+  if (to && (await client.query('SELECT 1 FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, to])).rows.length) {
+    await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id IS NULL', [id]);
+  }
+  if (from) {
+    await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, from]);
+    await client.query('DELETE FROM class_enrollments WHERE student_id=$1 AND subject_id=$2', [id, from]);
+  }
+}
+
 // GET /admin/users/:id/classes
 async function getStudentClasses(req, res) {
   const { id } = req.params;
@@ -54,32 +85,7 @@ async function changeStudentClass(req, res) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'The student is not in that class' });
     }
-    if (to) {
-      await client.query(
-        `INSERT INTO class_enrollments (id, subject_id, student_id) VALUES (gen_random_uuid(), $1, $2)
-         ON CONFLICT (subject_id, student_id) DO NOTHING`, [to, id]);
-      const hasLeader = (await client.query('SELECT 1 FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, to])).rows.length;
-      if (!hasLeader) {
-        if (from) {
-          await client.query('UPDATE class_mentor_assignments SET subject_id=$3, assigned_at=NOW() WHERE student_id=$1 AND subject_id=$2', [id, from, to]);
-        } else {
-          const leaders = (await client.query('SELECT DISTINCT mentor_id FROM class_mentor_assignments WHERE student_id=$1', [id])).rows;
-          if (leaders.length === 1) {
-            await client.query(
-              `INSERT INTO class_mentor_assignments (id, subject_id, mentor_id, student_id) VALUES (gen_random_uuid(), $1, $2, $3)
-               ON CONFLICT (subject_id, student_id) DO NOTHING`, [to, leaders[0].mentor_id, id]);
-          }
-        }
-      }
-    }
-    // a leader link without a class is replaced once the new class has a leader
-    if (to && (await client.query('SELECT 1 FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, to])).rows.length) {
-      await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id IS NULL', [id]);
-    }
-    if (from) {
-      await client.query('DELETE FROM class_mentor_assignments WHERE student_id=$1 AND subject_id=$2', [id, from]);
-      await client.query('DELETE FROM class_enrollments WHERE student_id=$1 AND subject_id=$2', [id, from]);
-    }
+    await applyClassChange(client, id, from, to);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});

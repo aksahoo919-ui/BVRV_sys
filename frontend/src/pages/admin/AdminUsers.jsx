@@ -118,7 +118,7 @@ export default function AdminUsers() {
   // Edit email
   // Edit user (email / phone / role)
   const [editTarget, setEditTarget] = useState(null); // user object
-  const [editForm, setEditForm] = useState({ email: '', phone: '', role: '', username: '', password: '' });
+  const [editForm, setEditForm] = useState({ name: '', gender: '', email: '', phone: '', role: '', username: '', password: '' });
   const [editLeader, setEditLeader] = useState(null); // { original, value, mixed, leaders } for students
   const [leaderList, setLeaderList] = useState(null);  // BV Leaders for the Edit dropdown
   const [savingEdit, setSavingEdit] = useState(false);
@@ -251,10 +251,10 @@ export default function AdminUsers() {
     }
   }
 
-  // ── Edit user (email / phone / role / BV Leader) ───────────────────────────
+  // ── Edit user (name / gender / email / phone / role / BV Leader) ───────────────────────────
   function openEdit(u) {
     setEditTarget(u);
-    setEditForm({ email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
+    setEditForm({ name: u.name || '', gender: u.gender || '', email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
     setEditError('');
     setEditLeader(null);
     if (u.role === 'student') {
@@ -274,6 +274,8 @@ export default function AdminUsers() {
     setEditError('');
     try {
       const payload = {
+        name: editForm.name.trim(),
+        gender: editForm.gender || null,
         email: editForm.email.trim(),
         phone: editForm.phone.trim() || null,
         role: editForm.role,
@@ -561,7 +563,14 @@ export default function AdminUsers() {
               <h2 className="font-bold text-gray-900">Edit user</h2>
               <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <p className="text-sm text-gray-500 mb-3">{editTarget.name}</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input className="input mb-3" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+            <select className="input mb-3" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}>
+              <option value="">— Not set —</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
             <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input className="input mb-3" value={editForm.username} onChange={e => setEditForm(f => ({ ...f, username: e.target.value }))} placeholder="username" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
@@ -598,7 +607,7 @@ export default function AdminUsers() {
             <p className="text-xs text-gray-400 mb-3">A real email lets this person sign in with Google.</p>
             {editError && <p className="text-sm text-red-600 mb-3">{editError}</p>}
             <div className="flex gap-2">
-              <button onClick={saveEdit} disabled={savingEdit || !editForm.email.trim()} className="btn-primary flex-1">
+              <button onClick={saveEdit} disabled={savingEdit || !editForm.email.trim() || !editForm.name.trim()} className="btn-primary flex-1">
                 {savingEdit ? 'Saving…' : 'Save'}
               </button>
               <button onClick={() => setEditTarget(null)} className="btn-secondary flex-1">Cancel</button>

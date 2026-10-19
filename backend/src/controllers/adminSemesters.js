@@ -202,7 +202,7 @@ async function getClassDetails(req, res) {
 // every current-semester class they are in; with no current class it keeps a
 // single link without a class (subject_id NULL). mentorId null clears them.
 // Returns the names of the leaders that were replaced.
-async function setLeader(client, studentId, mentorId) {
+export async function setLeader(client, studentId, mentorId) {
   const classes = (await client.query(`
     SELECT ce.subject_id FROM class_enrollments ce
     JOIN subjects s ON s.id = ce.subject_id LEFT JOIN semesters sem ON sem.id = s.semester_id

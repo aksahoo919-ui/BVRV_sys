@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../../utils/api';
 
 export default function AdminReports() {
@@ -87,17 +87,20 @@ export default function AdminReports() {
 }
 
 function InstructorsTable({ data }) {
+  const { rows, Th } = useSort(data, { key: 'name', dir: 'asc' }, {
+    name: r => r.name, subjects: r => Number(r.subject_count), sessions: r => Number(r.sessions_opened), last: r => r.last_session_date,
+  });
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b"><tr>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Instructor</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Subjects</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Sessions</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Last Session</th>
+          <Th k="name" label="Instructor" />
+          <Th k="subjects" label="Subjects" />
+          <Th k="sessions" label="Sessions" />
+          <Th k="last" label="Last Session" />
         </tr></thead>
         <tbody className="divide-y divide-gray-100">
-          {data.map(r => (
+          {rows.map(r => (
             <tr key={r.id} className="hover:bg-gray-50">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -120,17 +123,20 @@ function InstructorsTable({ data }) {
 }
 
 function StudentsTable({ data }) {
+  const { rows, Th } = useSort(data, { key: 'name', dir: 'asc' }, {
+    name: r => r.name, subject: r => r.subject_code, attended: r => Number(r.attended), pct: r => Number(r.percentage),
+  });
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b"><tr>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Student</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Subject</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Attended/Total</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">%</th>
+          <Th k="name" label="Student" />
+          <Th k="subject" label="Subject" />
+          <Th k="attended" label="Attended/Total" />
+          <Th k="pct" label="%" />
         </tr></thead>
         <tbody className="divide-y divide-gray-100">
-          {data.map((r, i) => (
+          {rows.map((r, i) => (
             <tr key={i} className={`hover:bg-gray-50 ${r.below_threshold ? 'bg-amber-50' : ''}`}>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -156,18 +162,22 @@ function StudentsTable({ data }) {
 }
 
 function SubjectTable({ data }) {
+  const { rows, Th } = useSort(data, { key: 'date', dir: 'desc' }, {
+    date: r => r.opened_at, present: r => Number(r.present_count), absent: r => Number(r.absent_count),
+    flagged: r => Number(r.flagged_count), status: r => (r.closed ? 'Closed' : 'Open'),
+  });
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 border-b"><tr>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Date</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Present</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Absent</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Flagged</th>
-          <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+          <Th k="date" label="Date" />
+          <Th k="present" label="Present" />
+          <Th k="absent" label="Absent" />
+          <Th k="flagged" label="Flagged" />
+          <Th k="status" label="Status" />
         </tr></thead>
         <tbody className="divide-y divide-gray-100">
-          {data.map(r => (
+          {rows.map(r => (
             <tr key={r.id} className="hover:bg-gray-50">
               <td className="px-4 py-3 text-gray-800">{new Date(r.opened_at).toLocaleString()}</td>
               <td className="px-4 py-3 text-green-600 font-medium">{r.present_count}</td>
@@ -188,6 +198,10 @@ function DataQualityPanel() {
   const [downloading, setDownloading] = useState(false);
   const [section, setSection] = useState('email');
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState({ key: null, dir: 'asc' });
+  const [dupType, setDupType] = useState('all');
+  // duplicates read best grouped: sort by the Duplicate column there
+  useEffect(() => { setSort({ key: section === 'shared' ? 'problem' : null, dir: 'asc' }); }, [section]);
 
   useEffect(() => {
     api.get('/admin/reports/data-quality')
@@ -214,16 +228,20 @@ function DataQualityPanel() {
   const cards = [
     { id: 'email', label: 'Email missing / invalid', value: s.email_issues },
     { id: 'phone', label: 'Phone missing / invalid', value: s.phone_issues },
-    { id: 'shared', label: 'Shared email / phone', value: s.shared_groups, sub: `${s.shared_users} users` },
+    { id: 'shared', label: 'Duplicates: email / phone / name', value: s.shared_groups,
+      sub: `${s.dup_email_groups ?? 0} email · ${s.dup_phone_groups ?? 0} phone · ${s.dup_name_groups ?? 0} name` },
     { id: 'noleader', label: 'No BV Leader', value: s.no_bv_leader },
   ];
   const all = section === 'shared'
-    ? report.shared.flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type} ${g.value} (${g.count} users)` })))
+    ? report.shared.filter(g => dupType === 'all' || g.type === dupType)
+        .flatMap(g => g.users.map(u => ({ ...u, problem: `${g.type}: ${g.value} (${g.count} users)${g.note ? ` · ${g.note}` : ''}` })))
     : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : report.no_bv_leader);
   const q = search.trim().toLowerCase();
-  const rows = q
+  const filtered = q
     ? all.filter(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course].some(v => v && String(v).toLowerCase().includes(q)))
     : all;
+  const rows = sortRows(filtered, sort, QUALITY_SORT);
+  const Th = ({ k, label }) => <SortHeader k={k} label={label} sort={sort} onSort={setSort} />;
 
   return (
     <div className="space-y-4">
@@ -248,21 +266,29 @@ function DataQualityPanel() {
       </div>
       <div className="card overflow-x-auto p-0">
         <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs text-gray-400">
-            {q ? `${rows.length} of ${all.length}` : `All ${all.length}`} {section === 'shared' ? `users in ${report.shared.length} groups` : 'rows'}
-          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400">
+              {q ? `${rows.length} of ${all.length}` : `All ${all.length}`} {section === 'shared' ? 'users in duplicate groups' : 'rows'}
+            </span>
+            {section === 'shared' && ['all', 'Email', 'Phone', 'Name'].map(t => (
+              <button key={t} onClick={() => setDupType(t)}
+                className={`text-xs px-2 py-0.5 rounded-full border ${dupType === t ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                {t === 'all' ? 'All' : `Same ${t.toLowerCase()}`}
+              </button>
+            ))}
+          </div>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone, BV leader, course"
             className="input text-sm w-72 max-w-full" />
         </div>
         <div className="max-h-[70vh] overflow-y-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b sticky top-0 z-10"><tr>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium">Devotee</th>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium">Email</th>
-            <th className="text-left px-4 py-3 text-gray-500 font-medium">Phone</th>
-            {section !== 'noleader' && <th className="text-left px-4 py-3 text-gray-500 font-medium">{section === 'shared' ? 'Shared' : 'Problem'}</th>}
-            {section !== 'noleader' && <th className="text-left px-4 py-3 text-gray-500 font-medium">BV Leader</th>}
-            <th className="text-left px-4 py-3 text-gray-500 font-medium">Current Course</th>
+            <Th k="name" label="Devotee" />
+            <Th k="email" label="Email" />
+            <Th k="phone" label="Phone" />
+            {section !== 'noleader' && <Th k="problem" label={section === 'shared' ? 'Duplicate' : 'Problem'} />}
+            {section !== 'noleader' && <Th k="bv_leader" label="BV Leader" />}
+            <Th k="course" label="Current Course" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
@@ -283,6 +309,46 @@ function DataQualityPanel() {
       </div>
     </div>
   );
+}
+
+// ── Column sorting (click a header: ascending, again: descending) ──────────
+const QUALITY_SORT = {
+  name: u => u.name, email: u => u.email, phone: u => u.phone, problem: u => u.problem,
+  bv_leader: u => u.bv_leader, course: u => u.course,
+};
+
+// Empty values always go last; numbers compare as numbers, text A–Z ignoring case.
+function sortRows(rows, sort, getters) {
+  const get = getters[sort.key];
+  if (!get) return rows;
+  const dir = sort.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const x = get(a), y = get(b);
+    const xe = x == null || x === '' || Number.isNaN(x), ye = y == null || y === '' || Number.isNaN(y);
+    if (xe || ye) return xe === ye ? 0 : xe ? 1 : -1;
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * dir;
+    return String(x).localeCompare(String(y), 'en', { sensitivity: 'base', numeric: true }) * dir;
+  });
+}
+
+function SortHeader({ k, label, sort, onSort }) {
+  const active = sort.key === k;
+  return (
+    <th className="text-left px-4 py-3 text-gray-500 font-medium">
+      <button type="button" onClick={() => onSort(s => ({ key: k, dir: s.key === k && s.dir === 'asc' ? 'desc' : 'asc' }))}
+        className="inline-flex items-center gap-1 hover:text-gray-800">
+        {label}
+        <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-300'}`}>{active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </button>
+    </th>
+  );
+}
+
+function useSort(data, initial, getters) {
+  const [sort, setSort] = useState(initial);
+  const rows = useMemo(() => sortRows(data || [], sort, getters), [data, sort]); // getters are static per table
+  const Th = useCallback(({ k, label }) => <SortHeader k={k} label={label} sort={sort} onSort={setSort} />, [sort]);
+  return { rows, Th };
 }
 
 function Avatar({ user }) {

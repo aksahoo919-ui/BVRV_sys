@@ -33,6 +33,7 @@ const migrations = [
   '022_user_gender.sql',
   '023_course_semesters.sql',
   '024_leader_without_class.sql',
+  '025_profile_change_requests.sql',
 ];
 
 async function migrate() {

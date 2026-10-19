@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as sc from '../controllers/student.js';
+import * as records from '../controllers/studentRecords.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('student')];
@@ -11,6 +12,7 @@ router.get('/settings',                          ...guard, sc.getStudentSettings
 router.get('/attendance/today',                  ...guard, sc.getTodayAttendance);
 router.post('/attendance/submit',                ...guard, sc.submitAttendance);
 router.get('/attendance',                        ...guard, sc.getAttendanceSummary);
+router.get('/attendance/history',                ...guard, records.getMyAttendanceHistorySafe);
 router.get('/bv-attendance',                     ...guard, sc.getBVAttendance);
 router.get('/messages',                          ...guard, sc.getMessages);
 router.patch('/messages/:id/read',               ...guard, sc.markRead);
@@ -31,5 +33,10 @@ router.get('/marks-memo/:semester_id',           ...guard, sc.getMarksMemo);
 router.get('/profile',                           ...guard, sc.getProfile);
 router.patch('/profile',                         ...guard, sc.updateProfile);
 router.get('/mentor',                            ...guard, sc.getMyMentor);
+
+// BV Leader / course change requests (admin approves)
+router.get('/change-requests',                   ...guard, records.getMyChangeRequestsSafe);
+router.post('/change-requests',                  ...guard, records.createChangeRequestSafe);
+router.post('/change-requests/:id/cancel',       ...guard, records.cancelChangeRequestSafe);
 
 export default router;
