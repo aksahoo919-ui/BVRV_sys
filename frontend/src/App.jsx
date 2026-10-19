@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { setTokenGetter } from './utils/api';
 
 // ── Auth pages ────────────────────────────────────────────────────────────
 import LoginPage from './pages/auth/LoginPage';
@@ -87,8 +86,7 @@ function RequireAuth({ roles, children }) {
 }
 
 export default function App() {
-  const { token, logout } = useAuth();
-  useEffect(() => { setTokenGetter(() => token); }, [token]);
+  const { logout } = useAuth();
   useEffect(() => {
     const handler = () => logout();
     window.addEventListener('auth:logout', handler);
