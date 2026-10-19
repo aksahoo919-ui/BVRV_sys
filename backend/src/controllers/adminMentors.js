@@ -29,6 +29,32 @@ const SELECT = `
 
 const clean = v => (v == null ? null : String(v).trim() || null);
 
+// ── Coordinator check ──────────────────────────────────────────────────────
+// A typed coordinator (name + phone, no account picked) is looked up in the
+// portal by phone. If exactly one account has that number it is linked; when
+// several do, the one that is a BV member under this BV Leader wins. The result
+// says whether the coordinator is in the portal and in that leader's members.
+const digits10 = p => String(p || '').replace(/\D/g, '').slice(-10);
+
+async function findCoordinatorAccount(phone, leaderUserId) {
+  const p10 = digits10(phone);
+  if (p10.length !== 10) return { status: 'not_found' };
+  const r = await query(`
+    SELECT u.id, u.name, u.phone, u.role,
+      EXISTS (SELECT 1 FROM class_mentor_assignments cma WHERE cma.student_id = u.id AND cma.mentor_id = $2) AS member_of_leader
+    FROM users u
+    WHERE u.status = 'active' AND right(regexp_replace(COALESCE(u.phone, ''), '[^0-9]', '', 'g'), 10) = $1
+    ORDER BY u.name`, [p10, leaderUserId || null]);
+  if (!r.rows.length) return { status: 'not_found' };
+  let pick = r.rows.length === 1 ? r.rows[0] : null;
+  if (!pick) {
+    const members = r.rows.filter(x => x.member_of_leader);
+    if (members.length === 1) pick = members[0];
+  }
+  if (!pick) return { status: 'ambiguous', candidates: r.rows.map(x => x.name) };
+  return { status: 'linked', id: pick.id, account_name: pick.name, member_of_leader: pick.member_of_leader };
+}
+
 // GET /admin/mentor-directory?kind=bvrv|bv
 async function listMentors(req, res) {
   const { kind } = req.query;
@@ -52,7 +78,7 @@ async function mentorOptions(req, res) {
 // linked account's value are stored as NULL so they keep following the account.
 async function readBody(body, kind) {
   const user_id = clean(body.user_id);
-  const coordinator_user_id = clean(body.coordinator_user_id);
+  let coordinator_user_id = clean(body.coordinator_user_id);
   const subject_id = clean(body.subject_id);
   const language = clean(body.language);
   for (const [k, v] of Object.entries({ user_id, coordinator_user_id, subject_id }))
@@ -76,12 +102,22 @@ async function readBody(body, kind) {
     if (same(phone, u.phone)) phone = null;
     if (same(email, u.email)) email = null;
   }
-  if (coordinator_user_id) {
+  let coordinator_check = null;
+  // a linked account whose number differs from the typed one is a different person: drop the link and look again
+  if (coordinator_user_id && coordinator_phone && digits10(byId[coordinator_user_id].phone) && digits10(coordinator_phone) !== digits10(byId[coordinator_user_id].phone))
+    coordinator_user_id = null;
+  if (!coordinator_user_id && coordinator_phone) {
+    // typed coordinator: is this devotee already in the portal (and under this leader)?
+    coordinator_check = await findCoordinatorAccount(coordinator_phone, user_id);
+    if (coordinator_check.status === 'linked') coordinator_user_id = coordinator_check.id;
+  } else if (coordinator_user_id) {
     const c = byId[coordinator_user_id];
     if (same(coordinator_name, c.name)) coordinator_name = null;
     if (same(coordinator_phone, c.phone)) coordinator_phone = null;
+    const m = user_id ? (await query('SELECT 1 FROM class_mentor_assignments WHERE mentor_id = $1 AND student_id = $2 LIMIT 1', [user_id, coordinator_user_id])).rows.length : 0;
+    coordinator_check = { status: 'linked', id: coordinator_user_id, account_name: c.name, member_of_leader: !!m };
   }
-  return { row: { user_id, name, phone, email, subject_id: kind === 'bvrv' ? subject_id : null,
+  return { coordinator_check, row: { user_id, name, phone, email, subject_id: kind === 'bvrv' ? subject_id : null,
     language: kind === 'bv' ? language : null, coordinator_user_id, coordinator_name, coordinator_phone } };
 }
 
@@ -92,7 +128,7 @@ const dupError = err => (err.code === '23505'
 async function createMentor(req, res) {
   const { kind } = req.body;
   if (!KINDS.includes(kind)) return res.status(400).json({ error: 'kind must be bvrv or bv' });
-  const { row, error } = await readBody(req.body, kind);
+  const { row, error, coordinator_check } = await readBody(req.body, kind);
   if (error) return res.status(400).json({ error });
   try {
     const r = await query(
@@ -103,7 +139,7 @@ async function createMentor(req, res) {
        row.coordinator_user_id, row.coordinator_name, row.coordinator_phone]);
     await logAudit(req.user.id, 'create', 'mentor_directory', r.rows[0].id, { kind, ...row });
     const out = await query(`${SELECT} WHERE md.id = $1`, [r.rows[0].id]);
-    res.status(201).json(out.rows[0]);
+    res.status(201).json({ ...out.rows[0], coordinator_check });
   } catch (err) {
     const msg = dupError(err); if (msg) return res.status(409).json({ error: msg });
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid mentor, coordinator or course' });
@@ -118,7 +154,7 @@ async function updateMentor(req, res) {
   const cur = await query('SELECT kind FROM mentor_directory WHERE id = $1', [id]);
   if (!cur.rows[0]) return res.status(404).json({ error: 'Mentor not found' });
   const { kind } = cur.rows[0];
-  const { row, error } = await readBody(req.body, kind);
+  const { row, error, coordinator_check } = await readBody(req.body, kind);
   if (error) return res.status(400).json({ error });
   try {
     await query(
@@ -129,7 +165,7 @@ async function updateMentor(req, res) {
        row.coordinator_user_id, row.coordinator_name, row.coordinator_phone]);
     await logAudit(req.user.id, 'update', 'mentor_directory', id, { kind, ...row });
     const out = await query(`${SELECT} WHERE md.id = $1`, [id]);
-    res.json(out.rows[0]);
+    res.json({ ...out.rows[0], coordinator_check });
   } catch (err) {
     const msg = dupError(err); if (msg) return res.status(409).json({ error: msg });
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid mentor, coordinator or course' });
@@ -160,12 +196,25 @@ async function setCoordinator(req, res) {
     if ((coordinator_name || '').toLowerCase() === (c.name || '').toLowerCase()) coordinator_name = null;
     if ((coordinator_phone || '') === (c.phone || '')) coordinator_phone = null;
   }
-  const r = await query(
-    `UPDATE mentor_directory SET coordinator_user_id=$2, coordinator_name=$3, coordinator_phone=$4, updated_at=NOW()
-     WHERE id = ANY($1) RETURNING id`, [ids, coordinator_user_id, coordinator_name, coordinator_phone]);
+  const checks = { linked: 0, linked_members: 0, not_found: 0, ambiguous: 0 };
+  let updated = 0;
+  for (const id of ids) {
+    let uid = coordinator_user_id, cname = coordinator_name, cphone = coordinator_phone;
+    const row = (await query('SELECT user_id FROM mentor_directory WHERE id = $1', [id])).rows[0];
+    if (!row) continue;
+    if (!uid && cphone) {
+      const m = await findCoordinatorAccount(cphone, row.user_id);
+      if (m.status === 'linked') { uid = m.id; checks.linked++; if (m.member_of_leader) checks.linked_members++; }
+      else checks[m.status]++;
+    }
+    await query(
+      `UPDATE mentor_directory SET coordinator_user_id=$2, coordinator_name=$3, coordinator_phone=$4, updated_at=NOW() WHERE id = $1`,
+      [id, uid, cname, cphone]);
+    updated++;
+  }
   await logAudit(req.user.id, 'set_coordinator', 'mentor_directory', null,
-    { count: r.rowCount, coordinator_user_id, coordinator_name, coordinator_phone });
-  res.json({ updated: r.rowCount });
+    { count: updated, coordinator_user_id, coordinator_name, coordinator_phone, ...checks });
+  res.json({ updated, ...checks });
 }
 
 // Express 4 does not catch async errors: answer 500 instead of leaving the request hanging.

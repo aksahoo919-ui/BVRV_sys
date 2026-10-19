@@ -45,6 +45,14 @@ function PersonPicker({ people, userId, onPick, placeholder, listId }) {
   );
 }
 
+// Message after saving a row, from the server's coordinator check
+function saveNotice(c) {
+  if (!c) return 'Saved.';
+  if (c.status === 'linked') return `Saved. Coordinator found in the portal: ${c.account_name}${c.member_of_leader ? ', and is a BV member of this BV Leader' : ' (not a member of this BV Leader)'}.`;
+  if (c.status === 'ambiguous') return `Saved. Several portal accounts share the coordinator's number (${(c.candidates || []).join(', ')}), so it was not linked.`;
+  return 'Saved. This coordinator is not in the portal yet (no account has that mobile number).';
+}
+
 function MentorForm({ kind, row, people, subjects, onClose, onSaved }) {
   const [f, setF] = useState(() => ({
     user_id: row?.user_id || '', name: row?.name || '', phone: row?.phone || '', email: row?.email || '',
@@ -230,7 +238,11 @@ export default function AdminMentors({ kind }) {
 
   async function applyBulk(c) {
     const r = await api.post('/admin/mentor-directory/coordinator', { ids: [...selected], ...c });
-    setBulk(false); setSelected(new Set()); setNotice(`Coordinator updated for ${r.data.updated} mentor${r.data.updated === 1 ? '' : 's'}.`);
+    const d = r.data;
+    const found = (d.linked || 0) + (d.not_found || 0) + (d.ambiguous || 0) > 0
+      ? ` Portal check: ${d.linked || 0} found in the portal${d.linked_members ? ` (${d.linked_members} also under that BV Leader)` : ''}, ${d.not_found || 0} not in the portal${d.ambiguous ? `, ${d.ambiguous} unclear (several accounts share the number)` : ''}.`
+      : '';
+    setBulk(false); setSelected(new Set()); setNotice(`Coordinator updated for ${d.updated} mentor${d.updated === 1 ? '' : 's'}.${found}`);
     load();
   }
   async function confirmDelete() {
@@ -329,7 +341,10 @@ export default function AdminMentors({ kind }) {
                     <td className="px-4 py-2.5 text-gray-600">{r.email || <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-2.5 text-gray-600">
                       {r.coordinator_name || r.coordinator_phone
-                        ? <><span className="text-gray-800">{r.coordinator_name}</span>{r.coordinator_phone && <span className="text-gray-500"> · {r.coordinator_phone}</span>}</>
+                        ? <><span className="text-gray-800">{r.coordinator_name}</span>{r.coordinator_phone && <span className="text-gray-500"> · {r.coordinator_phone}</span>}
+                            {r.coordinator_name !== 'Self' && (r.coordinator_user_id
+                              ? <span className="ml-2 text-[11px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full" title="This coordinator has an account in the portal">✓ in portal</span>
+                              : <span className="ml-2 text-[11px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full" title="No portal account is linked to this coordinator">not in portal</span>)}</>
                         : <span className="text-gray-300">Not set</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
@@ -347,7 +362,7 @@ export default function AdminMentors({ kind }) {
       {editing && (
         <MentorForm kind={kind} row={editing.id ? editing : null} people={people} subjects={subjects}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); setNotice('Saved.'); load(); }} />
+          onSaved={d => { setEditing(null); setNotice(saveNotice(d?.coordinator_check)); load(); }} />
       )}
       {bulk && <CoordinatorBulk count={selected.size} people={people} onClose={() => setBulk(false)} onApply={applyBulk} />}
       {deleting && (
