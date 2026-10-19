@@ -93,7 +93,9 @@ export async function createUser(req, res) {
   const name = String(req.body.name || '').trim();
   const role = String(req.body.role || '').toLowerCase();
   const phone = req.body.phone || null;
+  const gender = req.body.gender || null;
   if (!name) return res.status(400).json({ error: 'Name is required' });
+  if (gender && !['Male', 'Female'].includes(gender)) return res.status(400).json({ error: 'Gender must be Male or Female' });
   if (!['student', 'teacher', 'mentor'].includes(role))
     return res.status(400).json({ error: 'Role must be student, teacher, or mentor' });
 
@@ -107,12 +109,12 @@ export async function createUser(req, res) {
 
   try {
     const r = await query(
-      `INSERT INTO users (id, name, email, role, phone, status, username)
-       VALUES ($1, $2, $3, $4, $5, 'active', $6)
-       RETURNING id, name, email, role, secondary_role, status, username, created_at`,
-      [uuidv4(), name, email, role, phone, defaultUsername(email, name)]
+      `INSERT INTO users (id, name, email, role, phone, gender, status, username)
+       VALUES ($1, $2, $3, $4, $5, $6, 'active', $7)
+       RETURNING id, name, email, role, secondary_role, status, username, gender, created_at`,
+      [uuidv4(), name, email, role, phone, gender, defaultUsername(email, name)]
     );
-    await logAudit(req.user.id, 'create_user', 'user', r.rows[0].id, { role });
+    await logAudit(req.user.id, 'create_user', 'user', r.rows[0].id, { role, gender });
     res.status(201).json(r.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'A user with that email already exists' });

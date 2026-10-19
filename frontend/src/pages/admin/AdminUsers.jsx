@@ -102,6 +102,7 @@ export default function AdminUsers() {
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting]   = useState(false);
   const [filterRole, setFilterRole] = useState('');
+  const [filterGender, setFilterGender] = useState(''); // '', 'Male', 'Female', 'none'
   const [search, setSearch]         = useState('');
   const [sort, setSort]             = useState({ key: null, dir: 'asc' }); // key null = API order (newest first)
   const [courseTarget, setCourseTarget] = useState(null); // student whose classes are being changed
@@ -126,7 +127,7 @@ export default function AdminUsers() {
 
   // Add user
   const [showAdd, setShowAdd] = useState(false);
-  const EMPTY_ADD = { name: '', role: 'student', email: '', phone: '', subject_id: '', mentor_id: '' };
+  const EMPTY_ADD = { name: '', role: 'student', gender: '', email: '', phone: '', subject_id: '', mentor_id: '' };
   const [addForm, setAddForm] = useState(EMPTY_ADD);
   const [addOptions, setAddOptions] = useState(null); // { classes, leaders } for a new student's class + BV leader
   const [addingUser, setAddingUser] = useState(false);
@@ -214,6 +215,7 @@ export default function AdminUsers() {
       const r = await api.post('/admin/users', {
         name: addForm.name.trim(),
         role: addForm.role,
+        gender: addForm.gender || null,
         email: addForm.email.trim() || null,
         phone: addForm.phone.trim() || null,
       });
@@ -360,6 +362,7 @@ export default function AdminUsers() {
   // ── Filtering ────────────────────────────────────────────────────────────
   const visible = users.filter(u => {
     if (filterRole && u.role !== filterRole && u.secondary_role !== filterRole) return false;
+    if (filterGender && (filterGender === 'none' ? !!u.gender : u.gender !== filterGender)) return false;
     if (search) {
       const q = search.toLowerCase();
       return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
@@ -421,7 +424,7 @@ export default function AdminUsers() {
           onChange={e => setSearch(e.target.value)}
         />
         <select
-          className="input text-sm"
+          className="input text-sm w-auto"
           value={filterRole}
           onChange={e => setFilterRole(e.target.value)}
         >
@@ -430,6 +433,12 @@ export default function AdminUsers() {
           <option value="teacher">Teachers</option>
           <option value="mentor">BV Leaders</option>
           <option value="admin">Admins</option>
+        </select>
+        <select className="input text-sm w-auto" value={filterGender} onChange={e => setFilterGender(e.target.value)}>
+          <option value="">All genders</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="none">Gender not set</option>
         </select>
       </div>
 
@@ -525,6 +534,12 @@ export default function AdminUsers() {
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
               <option value="mentor">BV Leader</option>
+            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+            <select className="input mb-3" value={addForm.gender} onChange={e => setAddForm(f => ({ ...f, gender: e.target.value }))}>
+              <option value="">— Not set —</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
             </select>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(optional)</span></label>
             <input type="email" className="input mb-3" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
