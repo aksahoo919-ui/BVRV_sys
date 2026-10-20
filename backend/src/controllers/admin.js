@@ -1054,6 +1054,7 @@ export async function reportDataQuality(req, res) {
     const emailIssues = students.flatMap(u => { const p = emailProblem(u.email); return p ? [{ ...u, problem: p }] : []; });
     const phoneIssues = students.flatMap(u => { const p = phoneProblem(u.phone); return p ? [{ ...u, problem: p }] : []; });
     const noLeader = students.filter(u => !u.bv_leader);
+    const noCourse = students.filter(u => !u.course);
 
     // students in more than one BVRV course at the same time (current-semester classes)
     const multi = await query(`
@@ -1113,6 +1114,7 @@ export async function reportDataQuality(req, res) {
       dup_name_groups: shared.filter(g => g.type === 'Name').length,
       dup_course_students: dupCourses.length,
       no_bv_leader: noLeader.length,
+      no_course: noCourse.length,
     };
 
     if (req.query.export === 'xlsx') {
@@ -1145,6 +1147,7 @@ export async function reportDataQuality(req, res) {
         ['3c. Duplicate names (groups)', summary.dup_name_groups],
         ['4. Active students with no BV Leader', summary.no_bv_leader],
         ['5. Students in more than one course', summary.dup_course_students],
+        ['6. Active students with no course', summary.no_course],
         [],
         ['Rules'],
         ['Sections 1, 2, 4, 5', 'Active students only (5 = in two or more courses of the current semester)'],
@@ -1154,7 +1157,7 @@ export async function reportDataQuality(req, res) {
         ['Current course', 'Classes in the current academic year (or the latest year), else any enrolled class'],
       ].forEach(r => sum.addRow(r));
       sum.getRow(1).font = { bold: true, size: 14 };
-      sum.getRow(13).font = { bold: true };
+      sum.getRow(14).font = { bold: true };
 
       const issueCols = [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['Problem', 30], ['BV Leader', 30], ['Current Course', 40]];
       addSheet('1 Email missing-invalid', issueCols,
@@ -1168,6 +1171,8 @@ export async function reportDataQuality(req, res) {
         noLeader.map(u => [u.name, u.email, u.phone, u.course]));
       addSheet('5 Duplicate courses', issueCols,
         dupCourses.map(u => [u.name, u.email, u.phone, u.problem, u.bv_leader, u.course]));
+      addSheet('6 No Course', [['Devotee Name', 32], ['Email ID', 36], ['Phone', 16], ['BV Leader', 30]],
+        noCourse.map(u => [u.name, u.email, u.phone, u.bv_leader]));
 
       const buf = await wb.xlsx.writeBuffer();
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -1175,7 +1180,7 @@ export async function reportDataQuality(req, res) {
       return res.send(Buffer.from(buf));
     }
 
-    res.json({ summary, email_issues: emailIssues, phone_issues: phoneIssues, shared, no_bv_leader: noLeader, dup_courses: dupCourses });
+    res.json({ summary, email_issues: emailIssues, phone_issues: phoneIssues, shared, no_bv_leader: noLeader, dup_courses: dupCourses, no_course: noCourse });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

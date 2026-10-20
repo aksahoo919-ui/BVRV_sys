@@ -365,7 +365,10 @@ export default function AdminUsers() {
     if (filterGender && (filterGender === 'none' ? !!u.gender : u.gender !== filterGender)) return false;
     if (search) {
       const q = search.toLowerCase();
-      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+      const qDigits = q.replace(/\D/g, '');
+      // phone: digits only, so "90104 43360" finds "+91 9010443360"
+      const phoneHit = qDigits.length >= 3 && (u.phone || '').replace(/\D/g, '').includes(qDigits);
+      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || phoneHit
         || u.bv_leader?.toLowerCase().includes(q) || u.course?.toLowerCase().includes(q);
     }
     return true;
@@ -424,7 +427,7 @@ export default function AdminUsers() {
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           className="input text-sm max-w-xs"
-          placeholder="Search name, email or BV Leader…"
+          placeholder="Search name, email, phone or BV Leader…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />

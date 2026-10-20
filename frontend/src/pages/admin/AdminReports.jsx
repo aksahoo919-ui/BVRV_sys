@@ -239,12 +239,13 @@ function DataQualityPanel() {
     dupCard('dup_name', 'Name', 'Duplicate names'),
     { id: 'dup_course', label: 'Duplicate courses', value: s.dup_course_students ?? 0, sub: s.dup_course_students ? 'students in 2+ courses' : 'None found' },
     { id: 'noleader', label: 'No BV Leader', value: s.no_bv_leader },
+    { id: 'nocourse', label: 'No Course Students', value: s.no_course ?? 0, sub: s.no_course ? 'active, not in any class' : 'None found' },
   ];
   const isDup = !!DUP_TYPE[section];
   const all = isDup
     ? dupGroups(DUP_TYPE[section])
         .flatMap(g => g.users.map(u => ({ ...u, problem: `${g.value} (${g.count} users)${g.note ? ` · ${g.note}` : ''}` })))
-    : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : section === 'dup_course' ? (report.dup_courses || []) : report.no_bv_leader);
+    : (section === 'email' ? report.email_issues : section === 'phone' ? report.phone_issues : section === 'dup_course' ? (report.dup_courses || []) : section === 'nocourse' ? (report.no_course || []) : report.no_bv_leader);
   const emptyText = isDup ? `No duplicate ${DUP_TYPE[section].toLowerCase()}s: 0 found.` : section === 'dup_course' ? 'No student is in more than one course: 0 found.' : 'Nothing to fix here: 0 found.';
   const q = search.trim().toLowerCase();
   const filtered = q
@@ -264,7 +265,7 @@ function DataQualityPanel() {
         </button>
       </div>
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
         {cards.map(c => (
           <button key={c.id} onClick={() => setSection(c.id)}
             className={`card text-left ${section === c.id ? 'ring-2 ring-primary-400' : ''}`}>
@@ -288,8 +289,8 @@ function DataQualityPanel() {
             <Th k="name" label="Devotee" />
             <Th k="email" label="Email" />
             <Th k="phone" label="Phone" />
-            {section !== 'noleader' && <Th k="problem" label={isDup ? `Same ${DUP_TYPE[section].toLowerCase()}` : section === 'dup_course' ? 'Courses' : 'Problem'} />}
-            {section !== 'noleader' && <Th k="bv_leader" label="BV Leader" />}
+            {section !== 'noleader' && section !== 'nocourse' && <Th k="problem" label={isDup ? `Same ${DUP_TYPE[section].toLowerCase()}` : section === 'dup_course' ? 'Courses' : 'Problem'} />}
+            {section !== 'noleader' && section !== 'nocourse' && <Th k="bv_leader" label="BV Leader" />}
             <Th k="course" label="Current Course" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
@@ -300,8 +301,8 @@ function DataQualityPanel() {
                 <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{isDup && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.email || '—'}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.phone || '—'}</td>
-                {section !== 'noleader' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
-                {section !== 'noleader' && <td className="px-4 py-2.5 text-gray-600">{u.bv_leader || '—'}</td>}
+                {section !== 'noleader' && section !== 'nocourse' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
+                {section !== 'noleader' && section !== 'nocourse' && <td className="px-4 py-2.5 text-gray-600">{u.bv_leader || '—'}</td>}
                 <td className="px-4 py-2.5 text-gray-600">{u.course || '—'}</td>
               </tr>
             ))}
