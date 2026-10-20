@@ -291,7 +291,7 @@ function DataQualityPanel() {
             <Th k="phone" label="Phone" />
             {section !== 'noleader' && section !== 'nocourse' && <Th k="problem" label={isDup ? `Same ${DUP_TYPE[section].toLowerCase()}` : section === 'dup_course' ? 'Courses' : 'Problem'} />}
             {section !== 'noleader' && section !== 'nocourse' && <Th k="bv_leader" label="BV Leader" />}
-            <Th k="course" label="Current Course" />
+            {section !== 'nocourse' && <Th k="course" label="Current Course" />}
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
@@ -303,7 +303,7 @@ function DataQualityPanel() {
                 <td className="px-4 py-2.5 text-gray-600">{u.phone || '—'}</td>
                 {section !== 'noleader' && section !== 'nocourse' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
                 {section !== 'noleader' && section !== 'nocourse' && <td className="px-4 py-2.5 text-gray-600">{u.bv_leader || '—'}</td>}
-                <td className="px-4 py-2.5 text-gray-600">{u.course || '—'}</td>
+                {section !== 'nocourse' && <td className="px-4 py-2.5 text-gray-600">{u.course || '—'}</td>}
               </tr>
             ))}
           </tbody>

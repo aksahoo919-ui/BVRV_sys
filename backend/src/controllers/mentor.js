@@ -66,7 +66,7 @@ export async function getAssignedStudents(req, res) {
   const total = totalR.rows[0].n;
 
   const r = await query(`
-    SELECT u.id, u.name, u.email, u.phone, u.avatar_url, u.roll_number,
+    SELECT u.id, u.name, u.initiated_name, u.email, u.phone, u.avatar_url, u.roll_number,
       STRING_AGG(DISTINCT s.code, ', ') AS subject_codes,
       (SELECT COUNT(DISTINCT ms.session_date) FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id

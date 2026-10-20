@@ -611,7 +611,7 @@ export async function getStudentPerformance(req, res) {
 
   const r = await query(`
     SELECT
-      u.id, u.name, u.email, u.roll_number,
+      u.id, u.name, u.initiated_name, u.email, u.phone, u.roll_number,
       -- Assigned BV Leader for this subject
       mu.name AS current_mentor_name,
       cma.mentor_id AS current_mentor_id,

@@ -67,7 +67,7 @@ const TEACHES_SQL = `
 export async function getAllUsers(req, res) {
   try {
     const result = await query(
-      `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender,
+      `SELECT u.id, u.name, u.email, u.role, u.secondary_role, u.status, u.avatar_url, u.phone, u.username, u.created_at, u.gender, u.initiated_name,
               COALESCE(bl.cur_leader, bl.any_leader) AS bv_leader,
               CASE WHEN u.role = 'mentor' THEN bvl.languages
                    WHEN u.role = 'teacher' THEN COALESCE(t.cur_teaches, t.any_teaches)
@@ -147,7 +147,7 @@ export async function createUser(req, res) {
 // Update editable fields: name, gender, email, phone, role.
 export async function updateUser(req, res) {
   const { id } = req.params;
-  const { name, gender, email, phone, role, username, password } = req.body;
+  const { name, gender, initiated_name, email, phone, role, username, password } = req.body;
   const fields = [];
   const vals = [];
   let n = 1;
@@ -160,6 +160,9 @@ export async function updateUser(req, res) {
   if (gender !== undefined) {
     if (gender && !['Male', 'Female'].includes(gender)) return res.status(400).json({ error: 'Gender must be Male or Female' });
     fields.push(`gender = $${n++}`); vals.push(gender || null);
+  }
+  if (initiated_name !== undefined) {
+    fields.push(`initiated_name = $${n++}`); vals.push(String(initiated_name || '').replace(/\s+/g, ' ').trim() || null);
   }
   if (email !== undefined) {
     const e = String(email).trim();

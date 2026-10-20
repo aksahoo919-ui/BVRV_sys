@@ -119,7 +119,7 @@ export default function AdminUsers() {
   // Edit email
   // Edit user (email / phone / role)
   const [editTarget, setEditTarget] = useState(null); // user object
-  const [editForm, setEditForm] = useState({ name: '', gender: '', email: '', phone: '', role: '', username: '', password: '' });
+  const [editForm, setEditForm] = useState({ name: '', initiated_name: '', gender: '', email: '', phone: '', role: '', username: '', password: '' });
   const [editLeader, setEditLeader] = useState(null); // { original, value, mixed, leaders } for students
   const [leaderList, setLeaderList] = useState(null);  // BV Leaders for the Edit dropdown
   const [savingEdit, setSavingEdit] = useState(false);
@@ -256,7 +256,7 @@ export default function AdminUsers() {
   // ── Edit user (name / gender / email / phone / role / BV Leader) ───────────────────────────
   function openEdit(u) {
     setEditTarget(u);
-    setEditForm({ name: u.name || '', gender: u.gender || '', email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
+    setEditForm({ name: u.name || '', initiated_name: u.initiated_name || '', gender: u.gender || '', email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
     setEditError('');
     setEditLeader(null);
     if (u.role === 'student') {
@@ -277,6 +277,7 @@ export default function AdminUsers() {
     try {
       const payload = {
         name: editForm.name.trim(),
+        initiated_name: editForm.initiated_name.trim() || null,
         gender: editForm.gender || null,
         email: editForm.email.trim(),
         phone: editForm.phone.trim() || null,
@@ -365,10 +366,11 @@ export default function AdminUsers() {
     if (filterGender && (filterGender === 'none' ? !!u.gender : u.gender !== filterGender)) return false;
     if (search) {
       const q = search.toLowerCase();
-      const qDigits = q.replace(/\D/g, '');
-      // phone: digits only, so "90104 43360" finds "+91 9010443360"
-      const phoneHit = qDigits.length >= 3 && (u.phone || '').replace(/\D/g, '').includes(qDigits);
-      return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || phoneHit
+      // phone: digits only and without a leading 91/0, so "90104 43360" and "+91 90104 43360" both find 9010443360
+      const tenDigits = d => { d = String(d || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('91') ? d.slice(2) : d.length === 11 && d.startsWith('0') ? d.slice(1) : d; };
+      const qDigits = tenDigits(q);
+      const phoneHit = qDigits.length >= 3 && tenDigits(u.phone).includes(qDigits);
+      return u.name?.toLowerCase().includes(q) || u.initiated_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || phoneHit
         || u.bv_leader?.toLowerCase().includes(q) || u.course?.toLowerCase().includes(q);
     }
     return true;
@@ -427,7 +429,7 @@ export default function AdminUsers() {
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           className="input text-sm max-w-xs"
-          placeholder="Search name, email, phone or BV Leader…"
+          placeholder="Search name, initiated name, email, phone or BV Leader…"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -588,6 +590,8 @@ export default function AdminUsers() {
             </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input className="input mb-3" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Initiated name <span className="text-gray-400 font-normal">(if initiated)</span></label>
+            <input className="input mb-3" value={editForm.initiated_name} onChange={e => setEditForm(f => ({ ...f, initiated_name: e.target.value }))} placeholder="e.g. Amiyalila Gaura Das" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
             <select className="input mb-3" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}>
               <option value="">— Not set —</option>
@@ -741,6 +745,7 @@ export default function AdminUsers() {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <SortTh k="name" label="User" />
+                  <SortTh k="initiated_name" label="Initiated name" />
                   {showLeaderCol && <SortTh k="bv_leader" label="BV Leader" />}
                   <SortTh k="course" label={courseColLabel} />
                   <SortTh k="gender" label="Gender" />
@@ -752,7 +757,7 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.length === 0 && (
-                  <tr><td colSpan={showLeaderCol ? 8 : 7} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                  <tr><td colSpan={showLeaderCol ? 9 : 8} className="text-center py-10 text-gray-400">No users found.</td></tr>
                 )}
                 {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -765,6 +770,7 @@ export default function AdminUsers() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-gray-700">{u.initiated_name || <span className="text-gray-300">—</span>}</td>
                     {showLeaderCol && <td className="px-4 py-3">
                       {u.role === 'student' && (u.bv_leader
                         ? <span className="font-medium text-teal-700">{u.bv_leader}</span>

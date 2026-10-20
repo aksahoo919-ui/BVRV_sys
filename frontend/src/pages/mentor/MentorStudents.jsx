@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
-import MentorAddMember from '../../components/MentorAddMember';
+import { useMemberRequests } from '../../components/MentorAddMember';
 
 function AttendanceBar({ pct, label = 'Attendance' }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
@@ -72,6 +72,7 @@ function StudentCard({ student }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900 truncate">{student.name}</p>
+          {student.initiated_name && <p className="text-xs text-emerald-700 truncate">{student.initiated_name}</p>}
           <p className="text-xs text-gray-500 truncate">{student.roll_number}</p>
           <p className="text-xs text-gray-400 truncate">{student.email}</p>
           <p className="text-xs text-gray-600 truncate">{student.phone ? `📞 ${student.phone}` : <span className="text-gray-300">No phone number</span>}</p>
@@ -114,6 +115,7 @@ function StudentCard({ student }) {
 }
 
 export default function MentorStudents() {
+  const addMember = useMemberRequests();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -139,6 +141,7 @@ export default function MentorStudents() {
     const q = search.toLowerCase();
     return (
       (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.initiated_name && s.initiated_name.toLowerCase().includes(q)) ||
       (s.roll_number && s.roll_number.toLowerCase().includes(q)) ||
       (s.phone && String(s.phone).includes(search.trim()))
     );
@@ -153,6 +156,7 @@ export default function MentorStudents() {
             <p className="text-sm text-gray-400 mt-0.5">{students.length} student(s) assigned</p>
           )}
         </div>
+        <div className="flex items-center gap-2 flex-wrap sm:justify-end">
         <input
           type="text"
           placeholder="Search by name, phone or roll number…"
@@ -160,7 +164,10 @@ export default function MentorStudents() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
         />
+        {addMember.button}
+        </div>
       </div>
+      {addMember.notices}
 
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -191,7 +198,8 @@ export default function MentorStudents() {
         </div>
       )}
 
-      <MentorAddMember />
+      {addMember.list}
+      {addMember.modal}
     </div>
   );
 }
