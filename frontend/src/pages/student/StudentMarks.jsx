@@ -135,7 +135,7 @@ export default function StudentMarks() {
               {displaySemesters.map((sem) => {
                 const semResult = getResultForSemester(sem.semester_id);
                 return (
-                  <div key={sem.key} className="card overflow-hidden p-0">
+                  <div key={sem.key} className="card overflow-x-auto p-0">
                     {/* Semester header */}
                     <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                       <p className="font-semibold text-gray-800 text-sm">

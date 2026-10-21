@@ -92,7 +92,7 @@ export default function TeacherReports() {
             </div>
           )}
 
-          <div className="card overflow-hidden p-0">
+          <div className="card overflow-x-auto p-0">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
               <p className="text-sm font-semibold text-gray-700">
                 {report.length} student{report.length !== 1 ? 's' : ''}

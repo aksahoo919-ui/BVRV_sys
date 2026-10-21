@@ -283,7 +283,7 @@ export default function AdminMentors({ kind }) {
       {notice && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3">{notice}</div>}
 
       {!rows ? <Spinner /> : (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
             <span className="text-xs text-gray-400">{search ? `${shown.length} of ${rows.length}` : `${rows.length}`} mentors</span>
             <input value={search} onChange={e => setSearch(e.target.value)} className="input text-sm w-72 max-w-full"

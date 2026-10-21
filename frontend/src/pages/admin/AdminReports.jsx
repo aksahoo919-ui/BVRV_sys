@@ -76,7 +76,7 @@ export default function AdminReports() {
       )}
 
       {tab === 'quality' ? <DataQualityPanel /> : loading ? <Spinner /> : (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           {tab === 'instructors' && <InstructorsTable data={data} />}
           {tab === 'students' && <StudentsTable data={data} />}
           {tab === 'subject' && selectedSubject && <SubjectTable data={data} />}

@@ -21,7 +21,7 @@ export default function StudentHome() {
           {subjects.map(s => (
             <div key={s.id} className={`card ${s.warning ? 'border-amber-300 bg-amber-50' : ''}`}>
               <div className="flex items-start justify-between mb-3">
-                <span className="font-mono text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded">{s.code}</span>
+                <span className="font-mono text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded whitespace-nowrap">{s.code}</span>
                 {s.warning && <span className="text-amber-500 text-sm" title="Below attendance threshold">⚠ Low attendance</span>}
               </div>
               <h3 className="font-semibold text-gray-900 mb-4">{s.name}</h3>

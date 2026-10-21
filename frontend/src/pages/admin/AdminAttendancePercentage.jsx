@@ -150,7 +150,7 @@ function PercentageReport({ subjects }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {loading && !data ? <Spinner /> : data && (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b"><tr>

@@ -145,7 +145,7 @@ export default function AdminAuditLogs() {
         <Spinner />
       ) : (
         <>
-          <div className="card overflow-hidden p-0">
+          <div className="card overflow-x-auto p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">

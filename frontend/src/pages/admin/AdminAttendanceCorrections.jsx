@@ -109,7 +109,7 @@ export default function AdminAttendanceCorrections() {
       ) : rows.length === 0 ? (
         <div className="card text-center text-gray-400 py-12">No correction requests found.</div>
       ) : (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">

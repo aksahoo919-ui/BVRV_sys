@@ -127,7 +127,7 @@ export default function TopNav({ title }) {
             {user?.name?.[0]?.toUpperCase()}
           </div>
         )}
-        <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1" title="Sign out">
+        <button onClick={handleLogout} className="p-2 -m-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Sign out" aria-label="Sign out">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>

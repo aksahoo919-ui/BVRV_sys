@@ -181,7 +181,7 @@ export default function StudentTimetable() {
               const daySlots = byDay[dayIdx];
               if (daySlots.length === 0) return null;
               return (
-                <div key={dayIdx} className="card overflow-hidden p-0">
+                <div key={dayIdx} className="card overflow-x-auto p-0">
                   <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-700">{DAYS[dayIdx]}</p>
                   </div>

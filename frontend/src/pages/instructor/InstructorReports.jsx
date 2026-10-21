@@ -39,7 +39,7 @@ export default function InstructorReports() {
       </div>
 
       {loading ? <Spinner /> : selected && (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
@@ -81,6 +81,7 @@ function StudentRow({ index, student, mentors, subjectId, onMentorAssigned }) {
 
 // Full-width student list of the class the teacher picked (the cards above are too narrow for a table).
 function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
+  const panelRef = useRef(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,20 +104,25 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
     s.current_mentor_name?.toLowerCase().includes(q) ||
     (qDigits.length >= 3 && String(s.phone || '').replace(/\D/g, '').includes(qDigits)));
 
+  // Bring the panel into view when it opens (on phones it sits below the class cards)
+  useEffect(() => {
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   return (
-    <div className="card mt-6">
+    <div ref={panelRef} className="card mt-6 scroll-mt-4">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div>
           <h2 className="font-semibold text-gray-900">{subject.name} <span className="font-mono text-xs text-blue-600 ml-1">{subject.code}</span></h2>
           <p className="text-xs text-gray-400">{students.length} students{q ? ` · ${shown.length} match` : ''}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, initiated name, phone or BV Leader…"
-            className="w-72 max-w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full sm:w-72 max-w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button onClick={onClose} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Close</button>
         </div>
