@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
+import MobileLogout from '../../components/MobileLogout';
 import api from '../../utils/api';
 
 const NAV = [
@@ -102,6 +103,7 @@ export default function AdminLayout() {
             </svg>
           </button>
           <span className="font-semibold text-gray-800 text-sm">Admin Dashboard</span>
+          <MobileLogout />
         </div>
         <div className="hidden lg:block">
           <TopNav title="Admin Dashboard" />

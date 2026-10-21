@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
+import MobileLogout from '../../components/MobileLogout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -101,6 +102,7 @@ export default function TeacherLayout() {
             </svg>
           </button>
           <span className="font-semibold text-gray-800 text-sm">Teacher Dashboard</span>
+          <MobileLogout />
         </div>
         <div className="hidden lg:block">
           <TopNav title="Teacher Dashboard" />
