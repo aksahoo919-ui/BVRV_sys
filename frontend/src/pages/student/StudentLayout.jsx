@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
+import MobileLogout from '../../components/MobileLogout';
 
 const navItems = [
   { to: '/student/home',       label: 'Home',       icon: HomeIcon },
@@ -63,6 +64,7 @@ export default function StudentLayout() {
             </svg>
           </button>
           <span className="font-semibold text-gray-800 text-sm">Student Portal</span>
+          <MobileLogout />
         </div>
         <div className="hidden sm:block">
           <TopNav title="Student Portal" />

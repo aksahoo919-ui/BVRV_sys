@@ -187,7 +187,7 @@ export default function AdminSubjects() {
       ) : subjects.length === 0 ? (
         <div className="card text-center text-gray-500 py-12">No subjects yet.</div>
       ) : (
-        <div className="card overflow-hidden p-0">
+        <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
