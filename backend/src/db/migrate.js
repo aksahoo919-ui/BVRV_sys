@@ -35,6 +35,7 @@ const migrations = [
   '024_leader_without_class.sql',
   '025_profile_change_requests.sql',
   '026_member_add_requests.sql',
+  '027_initiated_name.sql',
 ];
 
 async function migrate() {
