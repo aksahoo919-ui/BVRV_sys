@@ -245,7 +245,7 @@ export default function AdminBVMembers() {
                   <td className="px-4 py-2.5 text-gray-600">{m.email || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{m.phone || '—'}</td>
                   <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{m.classes || <span className="font-sans text-gray-400">No course yet</span>}</td>
-                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-400">{m.classes ? 'past only' : '—'}</span>}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-400">{m.classes && !m.has_current ? 'past only' : '—'}</span>}</td>
                 </tr>
               ))}
             </tbody>

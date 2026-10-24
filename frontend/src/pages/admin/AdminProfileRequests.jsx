@@ -9,7 +9,7 @@ const normaliseMember = m => ({
   current_leader: m.existing_leaders || null,
 });
 const describe = r => (r.kind === 'add_member'
-  ? `Add member under ${r.mentor_name}${r.course_code ? ` · ${className(r.course_name)} (${r.course_code})` : ' · no course'}${r.existing_name ? ` · already in the portal as ${r.existing_name}` : ' · new devotee'}`
+  ? `Add member under ${r.mentor_name}${r.course_code ? ` · ${className(r.course_name)} (${r.course_code})${r.semester_label ? ` · ${r.semester_label}` : ''}` : ' · no course'}${r.existing_name ? ` · already in the portal as ${r.existing_name}` : ' · new devotee'}`
   : describeRequest(r));
 const endpoint = r => (r.kind === 'add_member' ? '/admin/member-requests/' : '/admin/profile-requests/');
 

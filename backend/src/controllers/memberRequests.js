@@ -34,7 +34,8 @@ async function findExisting({ phone, email }) {
 
 const SELECT = `
   SELECT r.id, r.mentor_id, mu.name AS mentor_name, r.student_id, r.name, r.phone, r.email, r.gender, r.subject_id,
-    s.code AS course_code, c.name AS course_name, r.note, r.status, r.admin_note, r.created_at, r.reviewed_at, rv.name AS reviewed_by_name,
+    s.code AS course_code, c.name AS course_name,
+    CASE WHEN COALESCE(c.code, '') <> 'BV' THEN COALESCE(rsem.label, 'Sem ' || rsem.number) END AS semester_label, r.note, r.status, r.admin_note, r.created_at, r.reviewed_at, rv.name AS reviewed_by_name,
     eu.name AS existing_name, eu.phone AS existing_phone,
     (SELECT STRING_AGG(DISTINCT m.name, ' / ') FROM class_mentor_assignments cma JOIN users m ON m.id = cma.mentor_id WHERE cma.student_id = r.student_id) AS existing_leaders
   FROM member_add_requests r
@@ -42,6 +43,7 @@ const SELECT = `
   LEFT JOIN users eu ON eu.id = r.student_id
   LEFT JOIN users rv ON rv.id = r.reviewed_by
   LEFT JOIN subjects s ON s.id = r.subject_id
+  LEFT JOIN semesters rsem ON rsem.id = s.semester_id
   LEFT JOIN courses c ON c.id = s.course_id`;
 
 // ── BV Leader side ────────────────────────────────────────────────────────
@@ -50,7 +52,8 @@ const SELECT = `
 async function myMemberRequests(req, res) {
   const [requests, classes] = await Promise.all([
     query(`${SELECT} WHERE r.mentor_id = $1 ORDER BY r.created_at DESC LIMIT 200`, [req.user.id]),
-    query(`SELECT s.id AS subject_id, s.code, c.name AS course_name, s.name AS class_name
+    query(`SELECT s.id AS subject_id, s.code, c.name AS course_name, s.name AS class_name,
+             CASE WHEN COALESCE(c.code, '') <> 'BV' THEN COALESCE(sem.label, 'Sem ' || sem.number) END AS semester_label
            FROM subjects s LEFT JOIN courses c ON c.id = s.course_id LEFT JOIN semesters sem ON sem.id = s.semester_id
            WHERE (sem.id IS NULL OR sem.is_current) AND s.code <> 'TEST' ORDER BY c.name, s.code`),
   ]);

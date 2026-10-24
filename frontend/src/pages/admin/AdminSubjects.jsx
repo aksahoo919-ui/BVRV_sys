@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import { semText, semesterChoices, inSemester } from '../../utils/classLabel';
+import SemesterSelect from '../../components/SemesterSelect';
 
 const EMPTY_FORM = { code: '', name: '', topic: '', course_id: '', academic_year_id: '', credits: 3 };
 
@@ -13,6 +15,7 @@ export default function AdminSubjects() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [sem, setSem] = useState('current');
 
   async function load() {
     setLoading(true);
@@ -99,9 +102,12 @@ export default function AdminSubjects() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
         <h1 className="text-xl font-bold text-gray-900">Subjects</h1>
-        <button onClick={openAdd} className="btn-primary text-sm">+ Add Subject</button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <SemesterSelect value={sem} onChange={setSem} options={semesterChoices(subjects)} />
+          <button onClick={openAdd} className="btn-primary text-sm">+ Add Subject</button>
+        </div>
       </div>
 
       {modal && (
@@ -212,12 +218,12 @@ export default function AdminSubjects() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {subjects.map(s => (
+              {subjects.filter(s => inSemester(s, sem)).map(s => (
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium text-primary-700">{s.code}</td>
                   <td className="px-4 py-3 text-gray-800">{s.name}</td>
                   <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                    {s.semester_id ? `${s.semester_label}${s.semester_is_current ? '' : ' (past)'}` : '—'}
+                    {semText(s) || '—'}
                     {s.topic && <span className="text-gray-900 font-medium"> · {s.topic}</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">

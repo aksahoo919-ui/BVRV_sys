@@ -11,6 +11,7 @@ export async function getSubjects(req, res) {
     const result = await query(`
       SELECT
         s.id, s.code, s.name,
+        CASE WHEN COALESCE(c.code, '') <> 'BV' THEN COALESCE(sem.label, 'Sem ' || sem.number) END AS semester_label,
         COUNT(DISTINCT sess.session_date) AS total_sessions,
         COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
         CASE WHEN COUNT(DISTINCT sess.session_date) > 0
@@ -25,8 +26,9 @@ export async function getSubjects(req, res) {
       LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
       LEFT JOIN semesters sem ON sem.id = s.semester_id
+      LEFT JOIN courses c ON c.id = s.course_id
       WHERE sem.id IS NULL OR sem.is_current
-      GROUP BY s.id
+      GROUP BY s.id, sem.id, c.code
       ORDER BY s.name
     `, [req.user.id]);
 
@@ -132,6 +134,7 @@ export async function getAttendanceSummary(req, res) {
     const result = await query(`
       SELECT
         s.id AS subject_id, s.code, s.name,
+        CASE WHEN COALESCE(c.code, '') <> 'BV' THEN COALESCE(sem.label, 'Sem ' || sem.number) END AS semester_label,
         COUNT(DISTINCT sess.session_date) AS total_sessions,
         COUNT(DISTINCT sess.session_date) FILTER (WHERE al.status IN ('present','service') AND al.replayed=false) AS attended,
         CASE WHEN COUNT(DISTINCT sess.session_date) > 0
@@ -146,8 +149,9 @@ export async function getAttendanceSummary(req, res) {
       LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
       LEFT JOIN semesters sem ON sem.id = s.semester_id
+      LEFT JOIN courses c ON c.id = s.course_id
       WHERE sem.id IS NULL OR sem.is_current
-      GROUP BY s.id
+      GROUP BY s.id, sem.id, c.code
       ORDER BY s.name
     `, [req.user.id]);
 

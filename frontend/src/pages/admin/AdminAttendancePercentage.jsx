@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../utils/api';
+import { hasSemesters, semText } from '../../utils/classLabel';
 
 // BVRV (class/subject) attendance % for every student, plus the upload for
 // past attendance registers. BV Leader attendance is not part of this page.
@@ -50,7 +51,7 @@ function PercentageReport({ subjects }) {
   const [sort, setSort] = useState({ key: 'name', dir: 1 });
 
   const semesters = useMemo(() => uniqueBy(
-    subjects.filter(s => s.semester_id).map(s => ({ ...s, sem_label: `${s.course_name || '—'} · ${s.semester_label}${s.semester_is_current ? ' (current)' : ''}` })),
+    subjects.filter(s => hasSemesters(s)).map(s => ({ ...s, sem_label: `${s.course_name || '—'} · ${s.semester_label}${s.semester_is_current ? ' (current)' : ''}` })),
     'semester_id', 'sem_label'), [subjects]);
   const courses = useMemo(() => uniqueBy(subjects, 'course_id', 'course_name'), [subjects]);
   const classes = subjects.filter(s =>
@@ -113,7 +114,7 @@ function PercentageReport({ subjects }) {
         <Select label="Course" value={filters.course_id} onChange={v => setFilter('course_id', v)}
           options={courses} allLabel="All courses" />
         <Select label="Class" value={filters.subject_id} onChange={v => setFilter('subject_id', v)}
-          options={classes.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${c.semester_id ? ` · ${c.semester_label}` : ''}` }))} allLabel="All classes" />
+          options={classes.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${semText(c) ? ` · ${semText(c)}` : ''}` }))} allLabel="All classes" />
         <label className="text-xs text-gray-500">From
           <input type="date" className="input mt-1" value={filters.from} onChange={e => setFilter('from', e.target.value)} />
         </label>
@@ -250,7 +251,7 @@ function PastAttendanceImport({ subjects }) {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Select label="Class" value={subjectId} onChange={setSubjectId}
-            options={subjects.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${c.semester_id ? ` · ${c.course_name} ${c.semester_label}${c.semester_is_current ? '' : ' (past)'}` : ''}` }))}
+            options={subjects.map(c => ({ id: c.id, label: `${c.code} — ${c.name}${semText(c) ? ` · ${semText(c)}` : ''}` }))}
             allLabel="— Select a class —" className="md:col-span-2" />
           <label className="text-xs text-gray-500">Dates in the sheet are
             <select className="input mt-1" value={dateOrder} onChange={e => setDateOrder(e.target.value)}>

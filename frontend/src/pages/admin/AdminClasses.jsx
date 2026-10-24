@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
-import { classLabel } from '../../utils/classLabel';
+import { classLabel, semesterChoices, inSemester } from '../../utils/classLabel';
+import SemesterSelect from '../../components/SemesterSelect';
 
 export default function AdminClasses() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [showPast, setShowPast] = useState(false);
+  const [sem, setSem] = useState('current');
   const [members, setMembers] = useState({ instructors: [], students: [] });
   const [allTeachers, setAllTeachers] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
@@ -18,17 +19,17 @@ export default function AdminClasses() {
   const [busyStudent, setBusyStudent] = useState(null);
   const [confirmAdd, setConfirmAdd] = useState(null); // { student, courses } when the student is already in another course
 
-  // Grouped by course for the dropdown; current semester by default (same as Course Enrollments).
+  // Grouped by course for the dropdown, for the picked semester (current by default)
   const groups = useMemo(() => {
     const m = new Map();
     for (const s of subjects) {
-      if (!showPast && !s.semester_is_current && String(s.id) !== selectedSubject) continue;
+      if (!inSemester(s, sem) && String(s.id) !== selectedSubject) continue;
       const k = s.course_name || 'Other';
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(s);
     }
     return [...m.entries()];
-  }, [subjects, showPast, selectedSubject]);
+  }, [subjects, sem, selectedSubject]);
 
   useEffect(() => {
     api.get('/admin/subjects').then(r => setSubjects(r.data));
@@ -151,10 +152,7 @@ export default function AdminClasses() {
               </optgroup>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
-            Show past semesters
-          </label>
+          <SemesterSelect value={sem} onChange={setSem} options={semesterChoices(subjects)} />
         </div>
       </div>
 

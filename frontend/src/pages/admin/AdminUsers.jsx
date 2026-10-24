@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../utils/api';
+import { semText } from '../../utils/classLabel';
 import StudentTimelineModal from '../../components/StudentTimelineModal';
 
 const STATUS_COLORS = {
@@ -70,7 +71,7 @@ function CourseModal({ user, onClose, onChanged }) {
                 <div className="flex gap-2">
                   <select className="input text-sm" value={pick[c.subject_id] || ''} onChange={e => setPick(p => ({ ...p, [c.subject_id]: e.target.value }))}>
                     <option value="">Change to…</option>
-                    {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}` : ''}</option>)}
+                    {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{semText(s) ? ` · ${semText(s)}` : ''}</option>)}
                   </select>
                   <button disabled={busy || !pick[c.subject_id]} className="btn-primary text-sm whitespace-nowrap"
                     onClick={() => send({ from_subject_id: c.subject_id, to_subject_id: pick[c.subject_id] }, `Changed ${c.code} to ${label(pick[c.subject_id])}.`)}>
@@ -82,7 +83,7 @@ function CourseModal({ user, onClose, onChanged }) {
             <div className="flex gap-2 pt-1">
               <select className="input text-sm" value={addId} onChange={e => setAddId(e.target.value)}>
                 <option value="">Add another class…</option>
-                {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}` : ''}</option>)}
+                {subjects.filter(s => !mine.has(s.id)).map(s => <option key={s.id} value={s.id}>{s.code} — {s.name}{semText(s) ? ` · ${semText(s)}` : ''}</option>)}
               </select>
               <button disabled={busy || !addId} className="btn-secondary text-sm whitespace-nowrap"
                 onClick={() => send({ to_subject_id: addId }, `Added ${label(addId)}.`)}>Add</button>
@@ -560,7 +561,7 @@ export default function AdminUsers() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-gray-400 font-normal">(optional, current semester)</span></label>
                 <select className="input mb-3" value={addForm.subject_id} onChange={e => setAddForm(f => ({ ...f, subject_id: e.target.value }))}>
                   <option value="">— No class yet —</option>
-                  {(addOptions?.classes || []).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}{c.semester_id ? ` · ${c.semester_label}` : ''}</option>)}
+                  {(addOptions?.classes || []).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}{semText(c) ? ` · ${semText(c)}` : ''}</option>)}
                 </select>
                 <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader <span className="text-gray-400 font-normal">(optional)</span></label>
                 <select className="input mb-3" value={addForm.mentor_id} onChange={e => setAddForm(f => ({ ...f, mentor_id: e.target.value }))}>

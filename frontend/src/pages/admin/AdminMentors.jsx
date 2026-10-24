@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
-import { className, classLabel } from '../../utils/classLabel';
+import { className, classLabel, semText as semLabel, semesterChoices, inSemester } from '../../utils/classLabel';
+import SemesterSelect from '../../components/SemesterSelect';
 
 // Mentors > BVRV Mentors (kind="bvrv": Course ID) and BV Mentors (kind="bv": Language).
 // Mentor and coordinator are picked from portal users or typed in.
@@ -182,6 +183,7 @@ export default function AdminMentors({ kind }) {
   const [subjects, setSubjects] = useState([]);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
+  const [sem, setSem] = useState('current');
   const [selected, setSelected] = useState(new Set());
   const [editing, setEditing] = useState(null);      // row, or {} for a new one
   const [bulk, setBulk] = useState(false);
@@ -206,11 +208,12 @@ export default function AdminMentors({ kind }) {
     { key: 'name', label: 'Name' }, { key: 'phone', label: 'Phone Number' },
     { key: 'email', label: 'Email ID' }, { key: 'coordinator', label: 'Coordinator (Name & Mobile)' }];
   const val = (r, k) => (k === 'coordinator' ? coordText(r) : r[k]) || null;
-  const semText = r => (r.semester_id ? `${r.semester_label}${r.semester_is_current ? '' : ' (past)'}` : '');
+  const semText = semLabel;
+  const semOptions = useMemo(() => semesterChoices(rows), [rows]);
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
-    let list = (rows || []).filter(r => !q || [r.course_code, r.course_name, className(r.course_name), r.semester_label, r.language, r.name, r.phone, r.email, r.coordinator_name, r.coordinator_phone]
+    let list = (rows || []).filter(r => kind !== 'bvrv' || inSemester(r, sem)).filter(r => !q || [r.course_code, r.course_name, className(r.course_name), r.semester_label, r.language, r.name, r.phone, r.email, r.coordinator_name, r.coordinator_phone]
       .some(v => v && String(v).toLowerCase().includes(q)));
     if (sort.key) {
       list = [...list].sort((a, b) => {
@@ -223,7 +226,7 @@ export default function AdminMentors({ kind }) {
       });
     }
     return list;
-  }, [rows, search, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rows, search, sort, sem]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleSort = key => setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   const allShownSelected = shown.length > 0 && shown.every(r => selected.has(r.id));
@@ -285,7 +288,8 @@ export default function AdminMentors({ kind }) {
       {!rows ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
           <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-xs text-gray-400">{search ? `${shown.length} of ${rows.length}` : `${rows.length}`} mentors</span>
+            <span className="text-xs text-gray-400">{shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} mentors</span>
+            {kind === 'bvrv' && <SemesterSelect value={sem} onChange={setSem} options={semOptions} />}
             <input value={search} onChange={e => setSearch(e.target.value)} className="input text-sm w-72 max-w-full"
               placeholder={`Search ${kind === 'bvrv' ? 'course' : 'language'}, name, phone, email, coordinator`} />
           </div>
@@ -323,7 +327,7 @@ export default function AdminMentors({ kind }) {
                     </td>
                     {kind === 'bvrv' && (
                       <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
-                        {r.semester_id ? (
+                        {semLabel(r) ? (
                           <>
                             {r.semester_label}
                             {r.semester_is_current

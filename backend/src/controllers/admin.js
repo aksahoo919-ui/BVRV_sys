@@ -24,14 +24,18 @@ export async function getPendingUsers(req, res) {
   }
 }
 
+// " · Sem 2" after a class of a semester-wise (BVRV) course; Bhakti Vaibhav has no semesters.
+const SEM_SUFFIX = `CASE WHEN sem.id IS NOT NULL AND COALESCE(c.code, '') <> 'BV' THEN ' · ' || COALESCE(sem.label, 'Sem ' || sem.number) ELSE '' END`;
+const CLASS_TEXT = `COALESCE(c.name || ' (' || s.code || ')', s.code) || ${SEM_SUFFIX}`;
+
 // "Current" = classes of the current semester of their course (classes with no
 // semester count as current); falls back to every class when none is current.
 // Shared by All Users and the Data quality report.
 const CURRENT_COURSE_SQL = `
   SELECT ce.student_id,
-    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ')
+    STRING_AGG(DISTINCT ${CLASS_TEXT}, ', ')
       FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_course,
-    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_course
+    STRING_AGG(DISTINCT ${CLASS_TEXT}, ', ') AS any_course
   FROM class_enrollments ce
   JOIN subjects s ON s.id = ce.subject_id
   LEFT JOIN semesters sem ON sem.id = s.semester_id
@@ -55,8 +59,8 @@ const BV_LANGUAGE_SQL = `
   FROM mentor_directory WHERE kind = 'bv' AND user_id IS NOT NULL AND language IS NOT NULL GROUP BY user_id`;
 const TEACHES_SQL = `
   SELECT ce.instructor_id,
-    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_teaches,
-    STRING_AGG(DISTINCT COALESCE(c.name || ' (' || s.code || ')', s.code), ', ') AS any_teaches
+    STRING_AGG(DISTINCT ${CLASS_TEXT}, ', ') FILTER (WHERE sem.id IS NULL OR sem.is_current) AS cur_teaches,
+    STRING_AGG(DISTINCT ${CLASS_TEXT}, ', ') AS any_teaches
   FROM class_enrollments ce
   JOIN subjects s ON s.id = ce.subject_id
   LEFT JOIN semesters sem ON sem.id = s.semester_id

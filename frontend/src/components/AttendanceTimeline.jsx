@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { hasSemesters } from '../utils/classLabel';
 
 // Attendance over time for one class: a line of the running attendance % (how
 // it stood after each class day) with one marker per class day, coloured and
@@ -200,8 +201,8 @@ export default function AttendanceTimeline({ data, showPast = true, datesOpen = 
     <div className="space-y-3">
       {classes.map(c => (
         <AttendanceCard key={c.subject_id}
-          title={`${c.course_name ? `${c.course_name} · ` : ''}${c.code}`}
-          subtitle={[c.semester_label, c.start_date && `${fmtRange(c.start_date)} – ${fmtRange(c.end_date)}`, c.teachers && `Teacher: ${c.teachers}`].filter(Boolean).join(' · ')}
+          title={`${c.course_name ? `${c.course_name} · ` : ''}${c.code}${hasSemesters(c) ? ` · ${c.semester_label}` : ''}`}
+          subtitle={[c.start_date && `${fmtRange(c.start_date)} – ${fmtRange(c.end_date)}`, c.teachers && `Teacher: ${c.teachers}`].filter(Boolean).join(' · ')}
           badge={<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${c.enrolled === false ? 'bg-amber-50 text-amber-700' : c.is_current ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.enrolled === false ? 'Left' : c.is_current ? 'Current' : 'Past'}</span>}
           days={c.days} threshold={threshold} start={c.start_date} end={c.end_date}
           percentage={c.percentage} attended={c.attended} total={c.total_days} defaultOpen={datesOpen} />

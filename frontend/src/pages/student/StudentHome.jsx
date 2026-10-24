@@ -24,7 +24,7 @@ export default function StudentHome() {
                 <span className="font-mono text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded whitespace-nowrap">{s.code}</span>
                 {s.warning && <span className="text-amber-500 text-sm" title="Below attendance threshold">⚠ Low attendance</span>}
               </div>
-              <h3 className="font-semibold text-gray-900 mb-4">{s.name}</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{s.name}{s.semester_label && <span className="font-normal text-gray-500"> · {s.semester_label}</span>}</h3>
               <div className="flex items-center gap-4">
                 <CircularProgress percentage={Number(s.percentage)} warning={s.warning} />
                 <div>

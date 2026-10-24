@@ -281,7 +281,7 @@ export default function StudentDashboard() {
             <SubjectRow
               key={s.subject_id ?? s.id}
               code={s.subject_code ?? s.code ?? ''}
-              name={s.subject_name ?? s.name ?? ''}
+              name={`${s.subject_name ?? s.name ?? ''}${s.semester_label ? ` · ${s.semester_label}` : ''}`}
               value={`${s.pct}%`}
               chip={pctChip(s.pct)}
               onClick={() => navigate('/student/my-attendance')}

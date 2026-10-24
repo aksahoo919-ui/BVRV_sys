@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
 import AttendanceTimeline from './AttendanceTimeline';
+import { hasSemesters } from '../utils/classLabel';
 
 const fmt = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -20,12 +21,14 @@ export default function StudentTimelineModal({ student, onClose }) {
       .catch(() => setHistory({ classes: [], bv_leader_classes: [], failed: true }));
   }, [student.id]);
 
-  // one block per semester (classes without a semester go in their own block)
+  // one block per course semester ("Bhakti Shastri · Sem 2"); a course without semesters (Bhakti Vaibhav) gets one block
   const groups = useMemo(() => {
     const m = new Map();
     for (const r of data?.timeline || []) {
-      const key = r.semester_id || 'none';
-      if (!m.has(key)) m.set(key, { key, label: r.semester_id ? r.semester_label : 'No semester', start: r.start_date, end: r.end_date, current: r.is_current && !!r.semester_id, rows: [] });
+      const sem = hasSemesters(r);
+      const key = sem ? r.semester_id : `course:${r.course_name || 'none'}`;
+      const label = sem ? `${r.course_name ? `${r.course_name} · ` : ''}${r.semester_label}` : (r.course_name || 'No semester');
+      if (!m.has(key)) m.set(key, { key, label, start: sem ? r.start_date : null, end: sem ? r.end_date : null, current: !!r.is_current, rows: [] });
       m.get(key).rows.push(r);
     }
     return [...m.values()];

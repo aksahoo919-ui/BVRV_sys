@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../utils/api';
+import { hasSemesters } from '../utils/classLabel';
 
 // Student profile: current BV Leader and courses, and requests to change them.
 // Nothing changes until an admin approves the request.
@@ -11,7 +12,7 @@ const STATUS_CHIP = {
   cancelled: 'bg-gray-100 text-gray-500',
 };
 const STATUS_LABEL = { pending: 'Waiting for admin', approved: 'Approved', rejected: 'Rejected', cancelled: 'Cancelled' };
-const classLabel = c => `${c.course_name || c.code} (${c.code})${c.semester_label ? ` · ${c.semester_label}` : ''}`;
+const classLabel = c => `${c.course_name || c.code} (${c.code})${hasSemesters(c) ? ` · ${c.semester_label}` : ''}`;
 const fmt = d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function describeRequest(r) {

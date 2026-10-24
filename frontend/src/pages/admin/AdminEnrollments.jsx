@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
-import { classLabel } from '../../utils/classLabel';
+import { classLabel, semesterChoices, inSemester } from '../../utils/classLabel';
+import SemesterSelect from '../../components/SemesterSelect';
 
 function Spinner() {
   return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -12,7 +13,7 @@ export default function AdminEnrollments() {
   const [students, setStudents] = useState([]);
   const [rows, setRows] = useState([]);
   const [subjectId, setSubjectId] = useState('');
-  const [showPast, setShowPast] = useState(false);
+  const [sem, setSem] = useState('current');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -49,13 +50,13 @@ export default function AdminEnrollments() {
   const groups = useMemo(() => {
     const m = new Map();
     for (const s of classes) {
-      if (!showPast && !s.semester_is_current && String(s.id) !== subjectId) continue;
+      if (!inSemester(s, sem) && String(s.id) !== subjectId) continue;
       const k = s.course_name || 'Other';
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(s);
     }
     return [...m.entries()];
-  }, [classes, showPast, subjectId]);
+  }, [classes, sem, subjectId]);
   const current = classes.find(s => String(s.id) === subjectId);
 
   async function handleEnroll(e) {
@@ -91,7 +92,7 @@ export default function AdminEnrollments() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Course Enrollments</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Students in each class, e.g. Bhakti Shastri 1 - English. Current semester unless you tick past semesters.</p>
+          <p className="text-sm text-gray-400 mt-0.5">Students in each class, e.g. Bhakti Shastri 1 - English · Sem 2. Pick Sem 1 or Sem 2 to see that semester's classes.</p>
         </div>
         <button className="btn-primary" onClick={() => { setModal(true); setEnrollError(''); setSelectedStudent(''); setQ(''); }} disabled={!subjectId}>
           + Enroll Student
@@ -112,10 +113,7 @@ export default function AdminEnrollments() {
               </optgroup>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
-            Show past semesters
-          </label>
+          <SemesterSelect value={sem} onChange={setSem} options={semesterChoices(classes)} />
         </div>
       </div>
 

@@ -429,7 +429,9 @@ export async function getBVMembers(req, res) {
         STRING_AGG(DISTINCT s.code, ', ') FILTER (WHERE s.id IS NOT NULL AND (sem.id IS NULL OR sem.is_current)),
         STRING_AGG(DISTINCT s.code, ', ')
       ) AS classes,
-      STRING_AGG(DISTINCT COALESCE(sem.label, 'Sem ' || sem.number), ', ') FILTER (WHERE sem.is_current) AS semester
+      -- Bhakti Vaibhav classes have no semesters
+      STRING_AGG(DISTINCT COALESCE(sem.label, 'Sem ' || sem.number), ', ') FILTER (WHERE sem.is_current AND s.code !~* '^BV[0-9]') AS semester,
+      BOOL_OR(s.id IS NOT NULL AND (sem.id IS NULL OR sem.is_current)) AS has_current
     FROM class_mentor_assignments cma
     JOIN users u    ON u.id = cma.student_id
     LEFT JOIN subjects s ON s.id = cma.subject_id   -- NULL class = added without a class

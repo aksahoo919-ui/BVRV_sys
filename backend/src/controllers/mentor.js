@@ -21,12 +21,15 @@ const className = name => String(name || '').replace(/\s*\((English|Hindi|Telugu
 
 // The BVRV courses (classes of the current semester) each student is in, with the
 // student's attendance % in each, for the student cards and the overview header.
+// A class of a semester that has just started has no sessions yet, so the % then
+// comes from the newest past semester of the same class, marked with its label.
 async function currentCourses(studentIds) {
   const out = {};
   if (!studentIds.length) return out;
   const r = await query(`
     SELECT ce.student_id, s.id AS subject_id, s.code, s.name AS class_name, c.name AS course_name,
       COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
+      (sem.id IS NULL OR sem.is_current) AS is_current, sem.start_date,
       (SELECT COUNT(DISTINCT x.session_date) FROM sessions x WHERE x.subject_id = s.id AND x.closed = true)::int AS class_days,
       (SELECT COUNT(DISTINCT x.session_date) FROM sessions x JOIN attendance_logs a ON a.session_id = x.id
         WHERE x.subject_id = s.id AND x.closed = true AND a.student_id = ce.student_id
@@ -35,15 +38,28 @@ async function currentCourses(studentIds) {
     JOIN subjects s ON s.id = ce.subject_id
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN semesters sem ON sem.id = s.semester_id
-    WHERE ce.student_id = ANY($1::uuid[]) AND (sem.id IS NULL OR sem.is_current)
-    ORDER BY c.name, s.code`, [studentIds]);
+    WHERE ce.student_id = ANY($1::uuid[])
+    ORDER BY c.name, s.code, sem.start_date DESC NULLS LAST`, [studentIds]);
+  const pct = x => (x.class_days > 0 ? Math.round(x.days_present / x.class_days * 1000) / 10 : null);
   for (const x of r.rows) {
-    (out[x.student_id] ||= []).push({
-      subject_id: x.subject_id, code: x.code, course_name: x.course_name,
-      label: `${className(x.class_name || x.course_name || x.code)} (${x.code})`,
-      semester_label: x.semester_label, class_days: x.class_days, days_present: x.days_present,
-      percentage: x.class_days > 0 ? Math.round(x.days_present / x.class_days * 1000) / 10 : null,
-    });
+    const list = (out[x.student_id] ||= []);
+    const sem = /^BV\d/i.test(x.code) ? null : x.semester_label;   // Bhakti Vaibhav has no semesters
+    if (x.is_current) {
+      list.push({
+        subject_id: x.subject_id, code: x.code, course_name: x.course_name,
+        label: `${className(x.class_name || x.course_name || x.code)} (${x.code})${sem ? ` · ${sem}` : ''}`,
+        semester_label: sem, class_days: x.class_days, days_present: x.days_present, percentage: pct(x),
+      });
+      continue;
+    }
+    // past semester: fills in the % until the new semester has its first class
+    const cur = list.find(c => c.code === x.code && c.class_days === 0 && !c.past_semester_label);
+    if (cur && x.class_days > 0) {
+      cur.class_days = x.class_days;
+      cur.days_present = x.days_present;
+      cur.percentage = pct(x);
+      cur.past_semester_label = sem;   // the % above is from this semester
+    }
   }
   return out;
 }

@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../utils/api';
+import { classLabel, semesterChoices, inSemester, hasSemesters } from '../../utils/classLabel';
+import SemesterSelect from '../../components/SemesterSelect';
 
 const fmt = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 
@@ -16,7 +18,7 @@ function ClassDetails({ subjectId }) {
     <div className="card grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Semester</p>
-        {d.semester_id ? (
+        {hasSemesters(d) ? (
           <>
             <p className="font-medium text-gray-800">
               {d.course_name ? `${d.course_name} · ` : ''}{d.semester_label}
@@ -27,7 +29,7 @@ function ClassDetails({ subjectId }) {
             <p className="text-xs text-gray-400">{fmt(d.start_date)} – {fmt(d.end_date)}</p>
             {d.topic && <p className="text-sm text-gray-700 mt-1">Subject: <span className="font-medium">{d.topic}</span></p>}
           </>
-        ) : <p className="text-sm text-gray-400">Not in a semester</p>}
+        ) : <p className="text-sm text-gray-600">{d.course_name || 'Not in a semester'}{d.semester_id ? <span className="text-gray-400"> · no semesters</span> : null}</p>}
         <p className="text-xs text-gray-400 mt-1">{d.class_days} class day{d.class_days === 1 ? '' : 's'} held{d.last_class ? ` · last ${fmt(d.last_class)}` : ''}</p>
       </div>
       <div className="md:col-span-2">
@@ -58,7 +60,7 @@ export default function AdminClassMentors() {
   const [subjects, setSubjects] = useState([]);
   const [mentors, setMentors] = useState([]);
   const [subjectId, setSubjectId] = useState('');
-  const [showPast, setShowPast] = useState(false);
+  const [sem, setSem] = useState('current');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -136,7 +138,7 @@ export default function AdminClassMentors() {
   }
 
   const subject = subjects.find(s => String(s.id) === subjectId);
-  const listed = subjects.filter(s => showPast || s.semester_is_current || String(s.id) === subjectId);
+  const listed = subjects.filter(s => inSemester(s, sem) || String(s.id) === subjectId);
   const assignedCount = rows.filter(r => r.mentor_id).length;
 
   return (
@@ -162,15 +164,10 @@ export default function AdminClassMentors() {
           <select className="input max-w-md" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
             <option value="">— Select subject —</option>
             {listed.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.code} — {s.name}{s.semester_id ? ` · ${s.semester_label}${s.semester_is_current ? '' : ' (past)'}` : ''}
-              </option>
+              <option key={s.id} value={s.id}>{classLabel(s)}</option>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
-            Show past semesters
-          </label>
+          <SemesterSelect value={sem} onChange={setSem} options={semesterChoices(subjects)} />
         </div>
       </div>
 

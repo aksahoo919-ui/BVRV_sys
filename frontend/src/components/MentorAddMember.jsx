@@ -65,7 +65,7 @@ export function useMemberRequests() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-800">{r.name}{r.phone ? <span className="text-gray-400 font-normal"> · {r.phone}</span> : null}</p>
                 <p className="text-xs text-gray-400">
-                  {fmt(r.created_at)} · {r.course_code ? `${className(r.course_name)} (${r.course_code})` : 'No course'}
+                  {fmt(r.created_at)} · {r.course_code ? `${className(r.course_name)} (${r.course_code})${r.semester_label ? ` · ${r.semester_label}` : ''}` : 'No course'}
                   {r.existing_name ? ` · already in portal as ${r.existing_name}` : ''}
                 </p>
                 {r.admin_note && <p className="text-xs text-gray-600 mt-0.5">Admin: {r.admin_note}</p>}
@@ -102,7 +102,7 @@ export function useMemberRequests() {
         <label className="block text-sm"><span className="text-gray-600">Course <span className="text-gray-400">(optional)</span></span>
           <select className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" value={f.subject_id} onChange={e => setF(s => ({ ...s, subject_id: e.target.value }))}>
             <option value="">— No course yet —</option>
-            {(data?.classes || []).map(c => <option key={c.subject_id} value={c.subject_id}>{className(c.class_name || c.course_name)} ({c.code})</option>)}
+            {(data?.classes || []).map(c => <option key={c.subject_id} value={c.subject_id}>{className(c.class_name || c.course_name)} ({c.code}){c.semester_label ? ` · ${c.semester_label}` : ''}</option>)}
           </select></label>
         <label className="block text-sm"><span className="text-gray-600">Note for the admin <span className="text-gray-400">(optional)</span></span>
           <textarea className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" rows={2} maxLength={500} value={f.note} onChange={e => setF(s => ({ ...s, note: e.target.value }))} /></label>
