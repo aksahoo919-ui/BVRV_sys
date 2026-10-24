@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import { classYear } from '../../utils/classLabel';
+
+const fmtMonth = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '');
 
 function Spinner({ small }) {
   return (
@@ -114,6 +117,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div>
           <h2 className="font-semibold text-gray-900">{subject.name} <span className="font-mono text-xs text-blue-600 ml-1">{subject.code}</span></h2>
+          <p className="text-xs text-gray-500">{[subject.semester_label, subject.topic].filter(Boolean).join(' · ')}</p>
           <p className="text-xs text-gray-400">{students.length} students{q ? ` · ${shown.length} match` : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
@@ -171,7 +175,18 @@ function SubjectCard({ subject, openingId, selected, onStartSession, onToggleStu
         </span>
         <span className="text-xs text-gray-400">{subject.student_count} students</span>
       </div>
-      <h3 className="font-semibold text-gray-900 mb-1">{subject.name}</h3>
+      <h3 className="font-semibold text-gray-900 mb-2">{subject.name}</h3>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs mb-3">
+        <dt className="text-gray-400">Year</dt>
+        <dd className="text-gray-700">{subject.course_name || subject.course_code || '—'}{classYear(subject.code) ? ` · Year ${classYear(subject.code)}` : ''}</dd>
+        <dt className="text-gray-400">Semester</dt>
+        <dd className="text-gray-700">
+          {subject.semester_label || '—'}
+          {subject.semester_start && <span className="text-gray-400"> ({fmtMonth(subject.semester_start)} – {fmtMonth(subject.semester_end)})</span>}
+        </dd>
+        <dt className="text-gray-400">Subject</dt>
+        <dd className={subject.topic ? 'text-gray-900 font-medium' : 'text-gray-400'}>{subject.topic || 'To be announced'}</dd>
+      </dl>
       <p className="text-xs text-gray-400 mb-4">
         Last session:{' '}
         {subject.last_session_date

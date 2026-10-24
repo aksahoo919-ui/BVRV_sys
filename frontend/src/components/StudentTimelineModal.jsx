@@ -63,7 +63,7 @@ export default function StudentTimelineModal({ student, onClose }) {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-sm font-medium text-gray-800">{r.course_name ? `${r.course_name} · ` : ''}{r.code}</p>
-                            <p className="text-xs text-gray-400">{r.class_name}</p>
+                            <p className="text-xs text-gray-400">{r.class_name}{r.topic ? ` · ${r.topic}` : ''}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-semibold ${r.percentage == null ? 'text-gray-400' : r.percentage < 75 ? 'text-amber-600' : 'text-green-600'}`}>

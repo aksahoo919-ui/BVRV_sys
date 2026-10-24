@@ -634,17 +634,17 @@ export async function getSubjects(req, res) {
 }
 
 export async function createSubject(req, res) {
-  const { code, name, course_id, academic_year_id, credits, semester_id } = req.body;
+  const { code, name, course_id, academic_year_id, credits, semester_id, topic } = req.body;
   if (!code || !name) return res.status(400).json({ error: 'code and name required' });
   try {
     // A new class goes into the given semester, else the current semester of its course.
     const result = await query(
-      `INSERT INTO subjects (id, code, name, created_by, course_id, academic_year_id, credits, semester_id)
+      `INSERT INTO subjects (id, code, name, created_by, course_id, academic_year_id, credits, semester_id, topic)
        VALUES ($1, $2, $3, $4, $5, $6, $7,
-         COALESCE($8::uuid, (SELECT id FROM semesters WHERE course_id = $5 AND is_current ORDER BY number DESC LIMIT 1)))
+         COALESCE($8::uuid, (SELECT id FROM semesters WHERE course_id = $5 AND is_current ORDER BY number DESC LIMIT 1)), $9)
        RETURNING *`,
       [uuidv4(), code.toUpperCase(), name, req.user.id,
-       course_id || null, academic_year_id || null, credits ?? 3, semester_id || null]
+       course_id || null, academic_year_id || null, credits ?? 3, semester_id || null, String(topic ?? '').trim() || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -655,17 +655,20 @@ export async function createSubject(req, res) {
 }
 
 export async function updateSubject(req, res) {
-  const { code, name, course_id, academic_year_id, credits } = req.body;
+  const { code, name, course_id, academic_year_id, credits, topic } = req.body;
   try {
+    // topic: undefined = keep, '' = clear
     const result = await query(
       `UPDATE subjects
        SET code             = COALESCE($1, code),
            name             = COALESCE($2, name),
            course_id        = COALESCE($3, course_id),
            academic_year_id = COALESCE($4, academic_year_id),
-           credits          = COALESCE($5, credits)
+           credits          = COALESCE($5, credits),
+           topic            = CASE WHEN $7::boolean THEN NULLIF($8, '') ELSE topic END
        WHERE id = $6 RETURNING *`,
-      [code?.toUpperCase(), name, course_id, academic_year_id, credits, req.params.id]
+      [code?.toUpperCase(), name, course_id, academic_year_id, credits, req.params.id,
+       topic !== undefined, String(topic ?? '').trim()]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Subject not found' });
     res.json(result.rows[0]);

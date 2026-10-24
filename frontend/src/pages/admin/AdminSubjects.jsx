@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 
-const EMPTY_FORM = { code: '', name: '', course_id: '', academic_year_id: '', credits: 3 };
+const EMPTY_FORM = { code: '', name: '', topic: '', course_id: '', academic_year_id: '', credits: 3 };
 
 export default function AdminSubjects() {
   const [subjects, setSubjects] = useState([]);
@@ -46,6 +46,7 @@ export default function AdminSubjects() {
     setForm({
       code: s.code,
       name: s.name,
+      topic: s.topic ?? '',
       course_id: s.course_id ?? '',
       academic_year_id: s.academic_year_id ?? '',
       credits: s.credits ?? 3,
@@ -66,6 +67,7 @@ export default function AdminSubjects() {
     const payload = {
       code: form.code.trim().toUpperCase(),
       name: form.name.trim(),
+      topic: form.topic.trim(),
       course_id: form.course_id,
       academic_year_id: form.academic_year_id,
       credits: Number(form.credits),
@@ -123,6 +125,14 @@ export default function AdminSubjects() {
               value={form.name}
               onChange={e => setField('name', e.target.value)}
               placeholder="e.g. Introduction to Computer Science"
+            />
+
+            <label className="block text-sm text-gray-600 mb-1">Subject taught this semester</label>
+            <input
+              className="input mb-3"
+              value={form.topic}
+              onChange={e => setField('topic', e.target.value)}
+              placeholder="e.g. ISO, NOI, BG 1 to 6 (teachers see this)"
             />
 
             <label className="block text-sm text-gray-600 mb-1">Course</label>
@@ -193,6 +203,7 @@ export default function AdminSubjects() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Code</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500">Semester · Subject</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Course</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden lg:table-cell">Academic Year</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Credits</th>
@@ -205,6 +216,10 @@ export default function AdminSubjects() {
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium text-primary-700">{s.code}</td>
                   <td className="px-4 py-3 text-gray-800">{s.name}</td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {s.semester_id ? `${s.semester_label}${s.semester_is_current ? '' : ' (past)'}` : '—'}
+                    {s.topic && <span className="text-gray-900 font-medium"> · {s.topic}</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
                     {s.course_code ? `${s.course_code} — ${s.course_name}` : <span className="text-gray-400">—</span>}
                   </td>

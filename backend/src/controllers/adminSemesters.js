@@ -142,7 +142,7 @@ async function getStudentTimeline(req, res) {
   const u = (await query('SELECT id, name, email, phone, role, status, created_at FROM users WHERE id = $1', [id])).rows[0];
   if (!u) return res.status(404).json({ error: 'User not found' });
   const r = await query(`
-    SELECT s.id AS subject_id, s.code, s.name AS class_name, c.name AS course_name,
+    SELECT s.id AS subject_id, s.code, s.name AS class_name, s.topic, c.name AS course_name,
       sem.id AS semester_id, COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label, sem.number AS semester_number,
       to_char(sem.start_date, 'YYYY-MM-DD') AS start_date, to_char(sem.end_date, 'YYYY-MM-DD') AS end_date,
       (sem.id IS NULL OR sem.is_current) AS is_current,
@@ -175,7 +175,7 @@ async function getClassDetails(req, res) {
   const { id } = req.params;
   if (!UUID_RE.test(id)) return res.status(400).json({ error: 'Invalid id' });
   const s = (await query(`
-    SELECT s.id, s.code, s.name, c.name AS course_name,
+    SELECT s.id, s.code, s.name, s.topic, c.name AS course_name,
       sem.id AS semester_id, COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
       to_char(sem.start_date, 'YYYY-MM-DD') AS start_date, to_char(sem.end_date, 'YYYY-MM-DD') AS end_date,
       (sem.id IS NULL OR sem.is_current) AS is_current,

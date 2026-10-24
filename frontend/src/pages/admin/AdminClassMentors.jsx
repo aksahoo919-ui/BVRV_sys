@@ -25,6 +25,7 @@ function ClassDetails({ subjectId }) {
                 : <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Past</span>}
             </p>
             <p className="text-xs text-gray-400">{fmt(d.start_date)} – {fmt(d.end_date)}</p>
+            {d.topic && <p className="text-sm text-gray-700 mt-1">Subject: <span className="font-medium">{d.topic}</span></p>}
           </>
         ) : <p className="text-sm text-gray-400">Not in a semester</p>}
         <p className="text-xs text-gray-400 mt-1">{d.class_days} class day{d.class_days === 1 ? '' : 's'} held{d.last_class ? ` · last ${fmt(d.last_class)}` : ''}</p>
