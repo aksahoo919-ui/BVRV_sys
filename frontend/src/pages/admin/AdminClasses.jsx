@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import api from '../../utils/api';
+import { classLabel } from '../../utils/classLabel';
 
 export default function AdminClasses() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [showPast, setShowPast] = useState(false);
   const [members, setMembers] = useState({ instructors: [], students: [] });
   const [allTeachers, setAllTeachers] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
@@ -15,6 +17,18 @@ export default function AdminClasses() {
   const [studentView, setStudentView] = useState('registered'); // 'registered' | 'add'
   const [busyStudent, setBusyStudent] = useState(null);
   const [confirmAdd, setConfirmAdd] = useState(null); // { student, courses } when the student is already in another course
+
+  // Grouped by course for the dropdown; current semester by default (same as Course Enrollments).
+  const groups = useMemo(() => {
+    const m = new Map();
+    for (const s of subjects) {
+      if (!showPast && !s.semester_is_current && String(s.id) !== selectedSubject) continue;
+      const k = s.course_name || 'Other';
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(s);
+    }
+    return [...m.entries()];
+  }, [subjects, showPast, selectedSubject]);
 
   useEffect(() => {
     api.get('/admin/subjects').then(r => setSubjects(r.data));
@@ -128,12 +142,20 @@ export default function AdminClasses() {
 
       <div className="card mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
-        <select className="input max-w-sm" value={selectedSubject} onChange={handleSubjectChange}>
-          <option value="">— Choose a subject —</option>
-          {subjects.map(s => (
-            <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-4 flex-wrap">
+          <select className="input max-w-sm" value={selectedSubject} onChange={handleSubjectChange}>
+            <option value="">— Choose a subject —</option>
+            {groups.map(([course, list]) => (
+              <optgroup key={course} label={course}>
+                {list.map(s => <option key={s.id} value={s.id}>{classLabel(s)}</option>)}
+              </optgroup>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" checked={showPast} onChange={e => setShowPast(e.target.checked)} />
+            Show past semesters
+          </label>
+        </div>
       </div>
 
       {selectedSubject && !loading && (
