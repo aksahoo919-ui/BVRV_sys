@@ -97,12 +97,12 @@ export default function AdminLayout() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <div className="lg:hidden flex items-center bg-white border-b border-gray-200 px-3 py-2">
-          <button onClick={() => setSidebarOpen(true)} className="mr-3 text-gray-500">
+          <button onClick={() => setSidebarOpen(true)} className="mr-3 p-1 -m-1 text-gray-500" aria-label="Open menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-gray-800 text-sm">Admin Dashboard</span>
+          <h1 className="font-semibold text-gray-800 text-sm">Admin Dashboard</h1>
           <MobileLogout />
         </div>
         <div className="hidden lg:block">

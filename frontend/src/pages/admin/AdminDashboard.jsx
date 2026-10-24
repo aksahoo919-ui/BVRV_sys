@@ -280,7 +280,7 @@ export default function AdminDashboard() {
               })}
               <button
                 onClick={() => navigate('/admin/reports')}
-                className="mt-3 text-xs text-blue-600 hover:underline font-medium"
+                className="mt-3 py-1 min-h-[24px] text-xs text-blue-600 hover:underline font-medium"
               >
                 View all &rarr;
               </button>
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
               })}
               <button
                 onClick={() => navigate('/admin/audit')}
-                className="mt-3 text-xs text-blue-600 hover:underline font-medium"
+                className="mt-3 py-1 min-h-[24px] text-xs text-blue-600 hover:underline font-medium"
               >
                 View full audit log &rarr;
               </button>

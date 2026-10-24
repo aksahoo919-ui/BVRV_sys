@@ -404,7 +404,7 @@ export default function AdminUsers() {
     const active = sort.key === k;
     return (
       <th className={`text-left px-4 py-3 font-medium text-gray-500 ${className}`}>
-        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-gray-800">
+        <button type="button" onClick={() => toggleSort(k)} aria-label={`Sort by ${label}`} className="inline-flex items-center gap-1 py-1 -my-1 min-h-[24px] hover:text-gray-800">
           {label}
           <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-300'}`}>
             {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
@@ -436,6 +436,7 @@ export default function AdminUsers() {
         />
         <select
           className="input text-sm w-auto"
+          aria-label="Filter by role"
           value={filterRole}
           onChange={e => setFilterRole(e.target.value)}
         >
@@ -445,7 +446,7 @@ export default function AdminUsers() {
           <option value="mentor">BV Leaders</option>
           <option value="admin">Admins</option>
         </select>
-        <select className="input text-sm w-auto" value={filterGender} onChange={e => setFilterGender(e.target.value)}>
+        <select className="input text-sm w-auto" aria-label="Filter by gender" value={filterGender} onChange={e => setFilterGender(e.target.value)}>
           <option value="">All genders</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>

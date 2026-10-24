@@ -61,7 +61,7 @@ export default function TopNav({ title }) {
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between relative z-20">
-      <h2 className="font-semibold text-gray-800 text-sm sm:text-base">{title}</h2>
+      <h1 className="font-semibold text-gray-800 text-sm sm:text-base">{title}</h1>
       <div className="flex items-center gap-3">
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>

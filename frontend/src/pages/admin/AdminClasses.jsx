@@ -142,9 +142,9 @@ export default function AdminClasses() {
       <h1 className="text-xl font-bold text-gray-900 mb-6">Class Management</h1>
 
       <div className="card mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
+        <label htmlFor="class-subject" className="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
         <div className="flex items-center gap-4 flex-wrap">
-          <select className="input max-w-sm" value={selectedSubject} onChange={handleSubjectChange}>
+          <select id="class-subject" className="input max-w-sm" aria-label="Select subject" value={selectedSubject} onChange={handleSubjectChange}>
             <option value="">— Choose a subject —</option>
             {groups.map(([course, list]) => (
               <optgroup key={course} label={course}>
