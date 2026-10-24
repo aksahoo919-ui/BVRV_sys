@@ -40,32 +40,57 @@ async function currentCourses(studentIds) {
     LEFT JOIN semesters sem ON sem.id = s.semester_id
     WHERE ce.student_id = ANY($1::uuid[])
     ORDER BY c.name, s.code, sem.start_date DESC NULLS LAST`, [studentIds]);
-  const pct = x => (x.class_days > 0 ? Math.round(x.days_present / x.class_days * 1000) / 10 : null);
+  const pct = (present, days) => (days > 0 ? Math.round(present / days * 1000) / 10 : null);
   for (const x of r.rows) {
     const list = (out[x.student_id] ||= []);
     const sem = /^BV\d/i.test(x.code) ? null : x.semester_label;   // Bhakti Vaibhav has no semesters
-    if (x.is_current) {
-      list.push({
+    let c = list.find(e => e.code === x.code);
+    if (!c) {
+      c = {
         subject_id: x.subject_id, code: x.code, course_name: x.course_name,
-        label: `${className(x.class_name || x.course_name || x.code)} (${x.code})${sem ? ` · ${sem}` : ''}`,
-        semester_label: sem, class_days: x.class_days, days_present: x.days_present, percentage: pct(x),
-      });
-      continue;
+        label: `${className(x.class_name || x.course_name || x.code)} (${x.code})`,
+        semester_label: null, class_days: 0, days_present: 0, percentage: null, semesters: [],
+      };
+      list.push(c);
     }
-    // past semester: fills in the % until the new semester has its first class
-    const cur = list.find(c => c.code === x.code && c.class_days === 0 && !c.past_semester_label);
-    if (cur && x.class_days > 0) {
-      cur.class_days = x.class_days;
-      cur.days_present = x.days_present;
-      cur.percentage = pct(x);
-      cur.past_semester_label = sem;   // the % above is from this semester
+    if (sem) c.semesters.push({ label: sem, class_days: x.class_days, days_present: x.days_present,
+                                percentage: pct(x.days_present, x.class_days), is_current: x.is_current });
+    if (x.is_current) {   // the class the student is in now
+      c.subject_id = x.subject_id;
+      c.semester_label = sem;
+      c.label = `${className(x.class_name || x.course_name || x.code)} (${x.code})${sem ? ` · ${sem}` : ''}`;
     }
+    // overall % across the semesters, so a new semester with no classes yet does not read as 0%
+    c.class_days += x.class_days;
+    c.days_present += x.days_present;
+    c.percentage = pct(c.days_present, c.class_days);
+  }
+  for (const list of Object.values(out)) {
+    for (const c of list) c.semesters.sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }));
   }
   return out;
 }
+// Overall %, plus one entry per semester (Sem 1, Sem 2 ...) across all the student's classes.
 const courseSummary = list => {
   const days = list.reduce((n, c) => n + c.class_days, 0), present = list.reduce((n, c) => n + c.days_present, 0);
-  return { courses: list, course_attendance_percentage: days > 0 ? Math.round(present / days * 1000) / 10 : null };
+  const bySem = new Map();
+  for (const c of list) {
+    for (const s of c.semesters || []) {
+      const e = bySem.get(s.label) || { label: s.label, class_days: 0, days_present: 0, is_current: s.is_current };
+      e.class_days += s.class_days;
+      e.days_present += s.days_present;
+      e.is_current = e.is_current || s.is_current;
+      bySem.set(s.label, e);
+    }
+  }
+  const semesters = [...bySem.values()]
+    .sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }))
+    .map(e => ({ ...e, percentage: e.class_days > 0 ? Math.round(e.days_present / e.class_days * 1000) / 10 : null }));
+  return {
+    courses: list,
+    course_attendance_percentage: days > 0 ? Math.round(present / days * 1000) / 10 : null,
+    course_attendance_semesters: semesters,
+  };
 };
 
 // ── Assigned Students ────────────────────────────────────────────────────
@@ -668,6 +693,7 @@ export async function getStudentOverview(req, res) {
     name: user.name, email: user.email, phone: user.phone, roll_number: user.roll_number,
     course_name: cs.courses.length ? cs.courses.map(c => c.label).join(', ') : null,
     courses: cs.courses, course_attendance_percentage: cs.course_attendance_percentage,
+    course_attendance_semesters: cs.course_attendance_semesters,
     attendance_pct,
     latest_gpa: result.gpa ?? null,
     cgpa: result.cgpa ?? null,

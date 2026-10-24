@@ -3,12 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useMemberRequests } from '../../components/MentorAddMember';
 
-// " (Sem 1)" when the % is still from the previous semester, because the new one has no classes yet
-const courseSemText = courses => {
-  const past = [...new Set((courses || []).map(c => c.past_semester_label).filter(Boolean))];
-  return past.length === 1 ? ` (${past[0]})` : '';
-};
-
 function AttendanceBar({ pct, label = 'Attendance' }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
   const color =
@@ -103,12 +97,16 @@ function StudentCard({ student }) {
         )}
       </div>
 
-      {student.course_attendance_percentage != null ? (
-        <AttendanceBar pct={student.course_attendance_percentage}
-          label={`BVRV course attendance${courseSemText(student.courses)}`} />
-      ) : (
-        <p className="text-xs text-gray-400">BVRV course attendance — no classes held yet</p>
-      )}
+      {/* one line per semester (Sem 1, Sem 2 …); courses without semesters get a single line */}
+      {(student.course_attendance_semesters || []).length > 0
+        ? student.course_attendance_semesters.map(s => (
+            s.percentage != null
+              ? <AttendanceBar key={s.label} pct={s.percentage} label={`BVRV course attendance · ${s.label}`} />
+              : <p key={s.label} className="text-xs text-gray-400">BVRV course attendance · {s.label} — no classes held yet</p>
+          ))
+        : student.course_attendance_percentage != null
+          ? <AttendanceBar pct={student.course_attendance_percentage} label="BVRV course attendance" />
+          : <p className="text-xs text-gray-400">BVRV course attendance — no classes held yet</p>}
       <AttendanceBar pct={student.attendance_percentage} label="BV Leader class attendance" />
 
       <GpaBadge gpa={student.latest_gpa} />

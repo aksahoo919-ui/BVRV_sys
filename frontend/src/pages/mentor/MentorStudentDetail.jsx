@@ -92,9 +92,13 @@ function OverviewTab({ studentId }) {
               {data.courses.map((c) => (
                 <span key={c.subject_id} className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-sm font-medium px-2.5 py-1 rounded-full">
                   {c.label}
-                  {c.percentage != null
-                    ? <span className="text-xs text-emerald-600 font-normal">{c.percentage}%{c.past_semester_label ? ` · ${c.past_semester_label}` : ''}</span>
-                    : <span className="text-xs text-emerald-600/70 font-normal">no classes yet</span>}
+                  {(c.semesters || []).length > 0
+                    ? <span className="text-xs text-emerald-600 font-normal">
+                        {c.semesters.map(s => `${s.label} ${s.percentage != null ? `${s.percentage}%` : '—'}`).join(' · ')}
+                      </span>
+                    : c.percentage != null
+                      ? <span className="text-xs text-emerald-600 font-normal">{c.percentage}%</span>
+                      : <span className="text-xs text-emerald-600/70 font-normal">no classes yet</span>}
                 </span>
               ))}
             </div>
