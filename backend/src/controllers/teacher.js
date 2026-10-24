@@ -436,13 +436,27 @@ async function ownsSubject(subjectId, userId) {
   return r.rows.length > 0;
 }
 
+// A back-dated day before the class's semester began belongs to the same class
+// (same code + course) of the semester that covers that day, e.g. a Sem 1 day
+// marked from the Sem 2 class in the first week of Sem 2.
+async function classForDate(subjectId, date) {
+  const r = await query(`
+    SELECT o.id FROM subjects s
+    JOIN semesters sem ON sem.id = s.semester_id
+    JOIN subjects o ON o.code = s.code AND o.course_id IS NOT DISTINCT FROM s.course_id AND o.id <> s.id
+    JOIN semesters osem ON osem.id = o.semester_id
+    WHERE s.id = $1 AND $2::date < sem.start_date AND $2::date BETWEEN osem.start_date AND osem.end_date
+    ORDER BY osem.start_date DESC LIMIT 1`, [subjectId, date]);
+  return r.rows[0]?.id || subjectId;
+}
+
 // GET /teacher/attendance/day?subject_id=&date=YYYY-MM-DD
 export async function getAttendanceDay(req, res) {
-  const { subject_id } = req.query;
   const date = req.query.date || istDateString();
-  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+  if (!req.query.subject_id) return res.status(400).json({ error: 'subject_id required' });
   if (!isValidYmd(date)) return res.status(400).json({ error: 'Invalid date' });
-  if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
+  if (!(await ownsSubject(req.query.subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
+  const subject_id = await classForDate(req.query.subject_id, date);
 
   const sessR = await query(
     `SELECT id, opened_at, manual FROM sessions
@@ -493,11 +507,15 @@ export async function getAttendanceDays(req, res) {
          WHERE ce.subject_id = $1 AND ce.student_id IS NOT NULL)::int AS total_students
     FROM sessions sess
     LEFT JOIN attendance_logs al ON al.session_id = sess.id
-    WHERE sess.subject_id = $1 AND sess.closed = true
+    WHERE sess.closed = true AND (sess.subject_id = $1 OR (sess.session_date > $2::date AND sess.subject_id IN (
+      SELECT o.id FROM subjects s JOIN semesters sem ON sem.id = s.semester_id
+      JOIN subjects o ON o.code = s.code AND o.course_id IS NOT DISTINCT FROM s.course_id AND o.id <> s.id
+      JOIN semesters osem ON osem.id = o.semester_id
+      WHERE s.id = $1 AND osem.start_date < sem.start_date)))
     GROUP BY sess.session_date
     ORDER BY sess.session_date DESC
     LIMIT 60`,
-    [subject_id]
+    [subject_id, lockCutoffDate()]
   );
   const cutoff = lockCutoffDate();
   res.json(r.rows.map(d => ({ ...d, locked: d.session_date <= cutoff })));
@@ -507,7 +525,8 @@ export async function getAttendanceDays(req, res) {
 // Body: { subject_id, session_date?, entries: [{ student_id, status }] }
 // status: 'present' | 'absent' | 'service' | 'late' | 'flagged'
 export async function markAttendanceManual(req, res) {
-  const { subject_id, entries } = req.body;
+  const { entries } = req.body;
+  let { subject_id } = req.body;
   const date = req.body.session_date || istDateString();
   if (!subject_id || !Array.isArray(entries))
     return res.status(400).json({ error: 'subject_id and entries are required' });
@@ -515,6 +534,7 @@ export async function markAttendanceManual(req, res) {
   if (date > istDateString()) return res.status(400).json({ error: 'Attendance cannot be recorded for a future date' });
   if (isDateLocked(date)) return res.status(423).json({ error: LOCK_MSG(date) });
   if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
+  subject_id = await classForDate(subject_id, date);
 
   const enrolled = await query(
     'SELECT DISTINCT student_id FROM class_enrollments WHERE subject_id=$1 AND student_id IS NOT NULL',

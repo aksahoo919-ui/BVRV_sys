@@ -24,6 +24,8 @@ export async function getSubjects(req, res) {
       JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.student_id = $1
       LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
+      WHERE sem.id IS NULL OR sem.is_current
       GROUP BY s.id
       ORDER BY s.name
     `, [req.user.id]);
@@ -143,6 +145,8 @@ export async function getAttendanceSummary(req, res) {
       JOIN class_enrollments ce ON ce.subject_id = s.id AND ce.student_id = $1
       LEFT JOIN sessions sess ON sess.subject_id = s.id AND sess.closed = true
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
+      WHERE sem.id IS NULL OR sem.is_current
       GROUP BY s.id
       ORDER BY s.name
     `, [req.user.id]);
@@ -344,9 +348,10 @@ export async function getTimetable(req, res) {
       FROM timetable_slots ts
       JOIN subjects s ON s.id = ts.subject_id
       JOIN users u ON u.id = ts.teacher_id
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
       WHERE ts.subject_id IN (
         SELECT subject_id FROM class_enrollments WHERE student_id = $1
-      )
+      ) AND (sem.id IS NULL OR sem.is_current)
       ORDER BY ts.day_of_week, ts.start_time
     `, [req.user.id]);
     res.json(r.rows);
@@ -531,7 +536,8 @@ export async function getTodayAttendance(req, res) {
       SELECT s.id AS subject_id, s.name AS subject_name, s.code AS subject_code
       FROM class_enrollments ce
       JOIN subjects s ON s.id = ce.subject_id
-      WHERE ce.student_id = $1
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
+      WHERE ce.student_id = $1 AND (sem.id IS NULL OR sem.is_current)
     `, [studentId]);
 
 
