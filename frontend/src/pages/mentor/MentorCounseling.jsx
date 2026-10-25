@@ -7,7 +7,7 @@ function Modal({ title, onClose, children }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -134,7 +134,7 @@ export default function MentorCounseling() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Counseling Notes</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{notes.length} note(s)</p>
+          <p className="text-sm text-gray-500 mt-0.5">{notes.length} note(s)</p>
         </div>
         <button onClick={openAdd} className="btn-primary self-start sm:self-auto">
           + Add Note
@@ -159,12 +159,12 @@ export default function MentorCounseling() {
       {/* Notes list */}
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-emerald-600" />
+          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-temple-700" />
         </div>
       ) : error ? (
         <p className="text-red-500 text-sm">{error}</p>
       ) : sortedNotes.length === 0 ? (
-        <div className="card text-center py-10 text-gray-400">No counseling notes found.</div>
+        <div className="card text-center py-10 text-gray-500">No counseling notes found.</div>
       ) : (
         <div className="space-y-3">
           {sortedNotes.map((note) => (
@@ -173,7 +173,7 @@ export default function MentorCounseling() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-900 text-sm">{note.student_name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-500">
                       {note.meeting_date ? new Date(note.meeting_date).toLocaleDateString() : '—'}
                     </span>
                   </div>

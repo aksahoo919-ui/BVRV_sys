@@ -6,7 +6,7 @@ const STATUS_TABS = ['all', 'pending', 'completed', 'cancelled'];
 const STATUS_META = {
   pending:   { label: 'Pending',   color: 'bg-blue-100 text-blue-700' },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' },
+  cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-600' },
 };
 
 function Modal({ title, onClose, children }) {
@@ -15,7 +15,7 @@ function Modal({ title, onClose, children }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -171,7 +171,7 @@ export default function MentorMeetings() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Meetings</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{meetings.length} meeting(s)</p>
+          <p className="text-sm text-gray-500 mt-0.5">{meetings.length} meeting(s)</p>
         </div>
         <button onClick={openSchedule} className="btn-primary self-start sm:self-auto">
           + Schedule Meeting
@@ -198,7 +198,7 @@ export default function MentorMeetings() {
                 onClick={() => handleTabChange(tab)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
                   activeTab === tab
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-temple-700 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -212,12 +212,12 @@ export default function MentorMeetings() {
       {/* Meetings list */}
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-emerald-600" />
+          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-temple-700" />
         </div>
       ) : error ? (
         <p className="text-red-500 text-sm">{error}</p>
       ) : sortedMeetings.length === 0 ? (
-        <div className="card text-center py-10 text-gray-400">No meetings found.</div>
+        <div className="card text-center py-10 text-gray-500">No meetings found.</div>
       ) : (
         <div className="space-y-3">
           {sortedMeetings.map((m) => {
@@ -232,7 +232,7 @@ export default function MentorMeetings() {
                         {meta.label}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">📅 {formatDateTime(m.scheduled_at)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">📅 {formatDateTime(m.scheduled_at)}</p>
                     {m.agenda && (
                       <p className="text-sm text-gray-700 mt-1">{m.agenda}</p>
                     )}
@@ -327,7 +327,7 @@ export default function MentorMeetings() {
             {statusModal.targetStatus === 'completed' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes <span className="text-gray-400 font-normal">(optional)</span>
+                  Notes <span className="text-gray-500 font-normal">(optional)</span>
                 </label>
                 <textarea
                   rows={3}

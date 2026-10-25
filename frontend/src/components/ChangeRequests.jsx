@@ -9,7 +9,7 @@ const STATUS_CHIP = {
   pending:   'bg-amber-50 text-amber-700',
   approved:  'bg-green-50 text-green-700',
   rejected:  'bg-red-50 text-red-700',
-  cancelled: 'bg-gray-100 text-gray-500',
+  cancelled: 'bg-gray-100 text-gray-600',
 };
 const STATUS_LABEL = { pending: 'Waiting for admin', approved: 'Approved', rejected: 'Rejected', cancelled: 'Cancelled' };
 const classLabel = c => `${c.course_name || c.code} (${c.code})${hasSemesters(c) ? ` · ${c.semester_label}` : ''}`;
@@ -57,7 +57,7 @@ export default function ChangeRequests() {
     catch (e) { setError(e.response?.data?.error || 'Failed to cancel'); }
   }
 
-  if (!data) return <div className="card mt-4">{error ? <p className="text-sm text-red-600">{error}</p> : <p className="text-sm text-gray-400">Loading…</p>}</div>;
+  if (!data) return <div className="card mt-4">{error ? <p className="text-sm text-red-600">{error}</p> : <p className="text-sm text-gray-500">Loading…</p>}</div>;
 
   const myIds = new Set(data.my_classes.map(c => c.subject_id));
   const myLeaderIds = new Set(data.my_leaders.map(l => l.mentor_id));
@@ -65,28 +65,28 @@ export default function ChangeRequests() {
   return (
     <div className="card mt-4">
       <h2 className="font-semibold text-gray-900">BV Leader &amp; Course</h2>
-      <p className="text-xs text-gray-400 mb-4">Something wrong? Ask for a correction. The admin approves it before anything changes.</p>
+      <p className="text-xs text-gray-500 mb-4">Something wrong? Ask for a correction. The admin approves it before anything changes.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">My BV Leader</p>
-          <p className="text-sm text-gray-800">{data.my_leaders.length ? data.my_leaders.map(l => l.name).join(' / ') : <span className="text-gray-400 italic">Not set</span>}</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">My BV Leader</p>
+          <p className="text-sm text-gray-800">{data.my_leaders.length ? data.my_leaders.map(l => l.name).join(' / ') : <span className="text-gray-500 italic">Not set</span>}</p>
           {pending('bv_leader') ? (
             <p className="text-xs text-amber-700 mt-1">Change requested — waiting for admin</p>
           ) : (
             <button onClick={() => { setForm({ kind: 'bv_leader', mentor_id: '', note: '' }); setMsg(''); setError(''); }}
-              className="text-xs text-primary-600 hover:underline mt-1">Request a BV Leader change</button>
+              className="text-xs text-primary-600 hover:underline mt-1 inline-flex items-center min-h-[24px]">Request a BV Leader change</button>
           )}
         </div>
         <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">My course (current semester)</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">My course (current semester)</p>
           {data.my_classes.length ? data.my_classes.map(c => <p key={c.subject_id} className="text-sm text-gray-800">{classLabel(c)}</p>)
-            : <p className="text-sm text-gray-400 italic">Not in a course</p>}
+            : <p className="text-sm text-gray-500 italic">Not in a course</p>}
           {pending('course') ? (
             <p className="text-xs text-amber-700 mt-1">Change requested — waiting for admin</p>
           ) : (
             <button onClick={() => { setForm({ kind: 'course', from_subject_id: data.my_classes[0]?.subject_id || '', to_subject_id: '', note: '' }); setMsg(''); setError(''); }}
-              className="text-xs text-primary-600 hover:underline mt-1">Request a course change</button>
+              className="text-xs text-primary-600 hover:underline mt-1 inline-flex items-center min-h-[24px]">Request a course change</button>
           )}
         </div>
       </div>
@@ -115,7 +115,7 @@ export default function ChangeRequests() {
               </select>
             </>
           )}
-          <label className="block text-sm font-medium text-gray-700">Note for the admin <span className="text-gray-400 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-gray-700">Note for the admin <span className="text-gray-500 font-normal">(optional)</span></label>
           <textarea className="input w-full" rows={2} maxLength={500} value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
             placeholder="e.g. I attend the Telugu batch, not English" />
           <div className="flex gap-2">
@@ -132,18 +132,18 @@ export default function ChangeRequests() {
 
       {data.requests.length > 0 && (
         <div className="mt-5">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">My requests</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">My requests</p>
           <div className="space-y-2">
             {data.requests.map(r => (
               <div key={r.id} className="flex items-start justify-between gap-3 border border-gray-100 rounded-lg px-3 py-2">
                 <div className="min-w-0">
                   <p className="text-sm text-gray-800">{describeRequest(r)}</p>
-                  <p className="text-xs text-gray-400">{fmt(r.created_at)}{r.note ? ` · “${r.note}”` : ''}</p>
+                  <p className="text-xs text-gray-500">{fmt(r.created_at)}{r.note ? ` · “${r.note}”` : ''}</p>
                   {r.admin_note && <p className="text-xs text-gray-600 mt-0.5">Admin: {r.admin_note}</p>}
                 </div>
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_CHIP[r.status]}`}>{STATUS_LABEL[r.status]}</span>
-                  {r.status === 'pending' && <button onClick={() => cancel(r.id)} className="text-xs text-gray-500 hover:underline">Cancel request</button>}
+                  {r.status === 'pending' && <button onClick={() => cancel(r.id)} className="text-xs text-gray-500 hover:underline inline-flex items-center min-h-[24px]">Cancel request</button>}
                 </div>
               </div>
             ))}

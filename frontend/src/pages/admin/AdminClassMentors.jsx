@@ -13,7 +13,7 @@ function ClassDetails({ subjectId }) {
     if (subjectId) api.get(`/admin/subjects/${subjectId}/details`).then(r => setD(r.data)).catch(() => setD(false));
   }, [subjectId]);
   if (!subjectId || d === null) return null;
-  if (d === false) return <div className="card text-sm text-gray-400">Could not load the class details.</div>;
+  if (d === false) return <div className="card text-sm text-gray-500">Could not load the class details.</div>;
   return (
     <div className="card grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
@@ -26,15 +26,15 @@ function ClassDetails({ subjectId }) {
                 ? <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>
                 : <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Past</span>}
             </p>
-            <p className="text-xs text-gray-400">{fmt(d.start_date)} – {fmt(d.end_date)}</p>
+            <p className="text-xs text-gray-500">{fmt(d.start_date)} – {fmt(d.end_date)}</p>
             {d.topic && <p className="text-sm text-gray-700 mt-1">Subject: <span className="font-medium">{d.topic}</span></p>}
           </>
-        ) : <p className="text-sm text-gray-600">{d.course_name || 'Not in a semester'}{d.semester_id ? <span className="text-gray-400"> · no semesters</span> : null}</p>}
-        <p className="text-xs text-gray-400 mt-1">{d.class_days} class day{d.class_days === 1 ? '' : 's'} held{d.last_class ? ` · last ${fmt(d.last_class)}` : ''}</p>
+        ) : <p className="text-sm text-gray-600">{d.course_name || 'Not in a semester'}{d.semester_id ? <span className="text-gray-500"> · no semesters</span> : null}</p>}
+        <p className="text-xs text-gray-500 mt-1">{d.class_days} class day{d.class_days === 1 ? '' : 's'} held{d.last_class ? ` · last ${fmt(d.last_class)}` : ''}</p>
       </div>
       <div className="md:col-span-2">
         <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Teacher{d.teachers.length === 1 ? '' : 's'}</p>
-        {d.teachers.length === 0 ? <p className="text-sm text-gray-400">No teacher assigned (Class Management).</p> : (
+        {d.teachers.length === 0 ? <p className="text-sm text-gray-500">No teacher assigned (Class Management).</p> : (
           <div className="space-y-2">
             {d.teachers.map(t => (
               <div key={t.id}>
@@ -146,7 +146,7 @@ export default function AdminClassMentors() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Class BV Leaders</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders. Each semester has its own classes.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders. Each semester has its own classes.</p>
         </div>
         <button
           onClick={() => { setShowImport(true); setImportResult(null); }}
@@ -175,7 +175,7 @@ export default function AdminClassMentors() {
 
       {loading ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
-          <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
+          <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-500">
             {rows.length} students · {assignedCount} with a BV Leader
           </div>
           <table className="w-full text-sm">
@@ -189,13 +189,13 @@ export default function AdminClassMentors() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {rows.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-10 text-gray-400">No students enrolled in this class.</td></tr>
+                <tr><td colSpan={4} className="text-center py-10 text-gray-500">No students enrolled in this class.</td></tr>
               ) : rows.map(r => (
                 <tr key={r.student_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2.5 text-gray-400 font-mono text-xs">{r.roll_number || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-500 font-mono text-xs">{r.roll_number || '—'}</td>
                   <td className="px-4 py-2.5">
                     <p className="font-medium text-gray-800">{r.student_name}</p>
-                    <p className="text-xs text-gray-400">{r.student_email}</p>
+                    <p className="text-xs text-gray-500">{r.student_email}</p>
                   </td>
                   <td className="px-4 py-2.5">
                     <select
@@ -209,8 +209,8 @@ export default function AdminClassMentors() {
                     </select>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    {savingId === r.student_id ? <span className="text-xs text-gray-400">Saving…</span>
-                      : savedId === r.student_id ? <span className="text-xs text-emerald-600 font-semibold">✓ Saved</span>
+                    {savingId === r.student_id ? <span className="text-xs text-gray-500">Saving…</span>
+                      : savedId === r.student_id ? <span className="text-xs text-temple-700 font-semibold inline-flex items-center min-h-[24px]">✓ Saved</span>
                       : null}
                   </td>
                 </tr>
@@ -226,20 +226,20 @@ export default function AdminClassMentors() {
           <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Bulk map students to BV Leaders</h2>
-              <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => setShowImport(false)} className="text-gray-500 hover:text-gray-600">✕</button>
             </div>
             <ol className="text-sm text-gray-600 space-y-3 mb-4 list-decimal list-inside">
               <li>
                 Download the BV Leader names (spell them exactly like this).
-                <button onClick={() => download('/admin/class-mentors/leaders.csv', 'bv_leaders.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5">⬇ BV Leader list (CSV)</button>
+                <button onClick={() => download('/admin/class-mentors/leaders.csv', 'bv_leaders.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5 inline-flex items-center min-h-[24px]">⬇ BV Leader list (CSV)</button>
               </li>
               <li>
                 Download the student list, then type each student's BV Leader in column 2 (<code className="bg-gray-100 px-1 rounded text-xs">bv leader name</code>). Leave it blank to skip a student.
-                <button onClick={() => download('/admin/class-mentors/template.csv', 'student_bv_leader_mapping.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5">⬇ Student list with BV Leader column (CSV)</button>
+                <button onClick={() => download('/admin/class-mentors/template.csv', 'student_bv_leader_mapping.csv')} className="block text-xs text-primary-600 hover:underline mt-1 ml-5 inline-flex items-center min-h-[24px]">⬇ Student list with BV Leader column (CSV)</button>
               </li>
-              <li>Upload the filled file. <span className="text-gray-400">Check it first — nothing is saved until you click Import.</span></li>
+              <li>Upload the filled file. <span className="text-gray-500">Check it first — nothing is saved until you click Import.</span></li>
             </ol>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-xs text-gray-500 mb-3">
               Column 1 = student name (or roll number / email), column 2 = BV Leader name (or email). Names are matched ignoring case and extra spaces.
               Each student is mapped to the BV Leader in every class they're enrolled in; an existing mapping is replaced.
             </p>
@@ -276,7 +276,7 @@ export default function AdminClassMentors() {
               <button onClick={() => handleImport(true)} disabled={importing} className="btn-secondary flex-1">{importing ? 'Checking…' : 'Check file'}</button>
               <button onClick={() => handleImport(false)} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing…' : 'Import'}</button>
             </div>
-            <button onClick={() => setShowImport(false)} className="text-xs text-gray-400 hover:text-gray-600 mt-3 w-full">Close</button>
+            <button onClick={() => setShowImport(false)} className="text-xs text-gray-500 hover:text-gray-600 mt-3 w-full inline-flex items-center min-h-[24px]">Close</button>
           </div>
         </div>
       )}

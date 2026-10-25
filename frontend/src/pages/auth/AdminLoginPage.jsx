@@ -23,7 +23,7 @@ export default function AdminLoginPage() {
           Sign in as Admin with Google
         </a>
 
-        <p className="mt-6 text-xs text-gray-400">
+        <p className="mt-6 text-xs text-gray-500">
           <Link to="/login" className="text-primary-600 hover:underline">
             ← Back to regular login
           </Link>

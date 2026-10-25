@@ -109,7 +109,7 @@ export default function AdminBackups() {
       {loading ? (
         <Spinner />
       ) : backups.length === 0 ? (
-        <div className="card text-center text-gray-400 py-12">
+        <div className="card text-center text-gray-500 py-12">
           No backups yet. Click "Create Backup" to generate one.
         </div>
       ) : (

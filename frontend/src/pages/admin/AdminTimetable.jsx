@@ -108,7 +108,7 @@ export default function AdminTimetable() {
           <tbody>
             {HOURS.map(h => (
               <tr key={h} className="border-t border-gray-100">
-                <td className="py-1 px-3 text-gray-400 font-mono text-xs align-top">{timeLabel(h)}</td>
+                <td className="py-1 px-3 text-gray-500 font-mono text-xs align-top">{timeLabel(h)}</td>
                 {DAYS.map((_, d) => {
                   const cellSlots = grid[d]?.[h] || [];
                   return (
@@ -119,14 +119,14 @@ export default function AdminTimetable() {
                           onClick={() => openEdit(s)}>
                           <p className="font-semibold text-primary-700 truncate">{s.subject_code}</p>
                           <p className="text-gray-500 truncate">{s.teacher_name}</p>
-                          {s.room && <p className="text-gray-400">{s.room}</p>}
+                          {s.room && <p className="text-gray-500">{s.room}</p>}
                           <button
                             className="text-red-400 hover:text-red-600 text-xs hidden group-hover:inline"
                             onClick={e => { e.stopPropagation(); handleDelete(s.id); }}>✕ remove</button>
                         </div>
                       ))}
                       <button
-                        className="w-full text-gray-300 hover:text-primary-500 hover:bg-primary-50 rounded py-0.5 transition-colors text-lg leading-none"
+                        className="w-full min-h-[24px] text-gray-500 hover:text-primary-500 hover:bg-primary-50 rounded py-1 transition-colors text-lg leading-none"
                         onClick={() => openNew(d, h)}>+</button>
                     </td>
                   );

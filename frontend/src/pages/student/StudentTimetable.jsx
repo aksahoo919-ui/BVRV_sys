@@ -122,14 +122,14 @@ export default function StudentTimetable() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My Timetable</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Weekly class schedule</p>
+        <p className="text-sm text-gray-500 mt-0.5">Weekly class schedule</p>
       </div>
 
       {!hasSlots ? (
         <div className="card text-center py-16">
           <div className="text-4xl mb-3">📅</div>
-          <p className="text-gray-400 font-medium">No timetable slots found.</p>
-          <p className="text-gray-300 text-sm mt-1">Your schedule will appear here once it's set up.</p>
+          <p className="text-gray-500 font-medium">No timetable slots found.</p>
+          <p className="text-gray-500 text-sm mt-1">Your schedule will appear here once it's set up.</p>
         </div>
       ) : (
         <>
@@ -155,7 +155,7 @@ export default function StudentTimetable() {
                 <tbody>
                   {HOURS.map((hour) => (
                     <tr key={hour} className="border-b border-gray-50 last:border-b-0">
-                      <td className="px-2 py-1 bg-gray-50 border-r border-gray-100 text-gray-400 text-center font-mono align-top whitespace-nowrap">
+                      <td className="px-2 py-1 bg-gray-50 border-r border-gray-100 text-gray-500 text-center font-mono align-top whitespace-nowrap">
                         {String(hour).padStart(2, '0')}:00
                       </td>
                       {Array.from({ length: 7 }, (_, dayIdx) => (
@@ -190,10 +190,10 @@ export default function StudentTimetable() {
                       const color = subjectColor(slot.subject_code);
                       return (
                         <div key={si} className="flex gap-3 px-4 py-3">
-                          <div className="text-xs text-gray-400 font-mono whitespace-nowrap pt-0.5 w-20 flex-shrink-0">
+                          <div className="text-xs text-gray-500 font-mono whitespace-nowrap pt-0.5 w-20 flex-shrink-0">
                             {formatTime(slot.start_time)}
                             <br />
-                            <span className="text-gray-300">{formatTime(slot.end_time)}</span>
+                            <span className="text-gray-500">{formatTime(slot.end_time)}</span>
                           </div>
                           <div className={`flex-1 rounded border px-3 py-2 ${color}`}>
                             <p className="font-bold text-xs leading-tight">{slot.subject_code}</p>

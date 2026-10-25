@@ -79,7 +79,7 @@ export default function TeacherManualAttendance() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Manual Attendance</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <p className="text-sm text-gray-500 mt-0.5">
           Mark or edit a class's attendance for a day. All sessions of a class on the same day are merged into one record.
           Records can be changed for 7 days after the class; older days are locked.
         </p>
@@ -115,7 +115,7 @@ export default function TeacherManualAttendance() {
                 Editable until {fmtDateIST(editableUntil(date))}.
               </p>
             ) : (
-              <p className="mt-2 text-xs text-gray-400">No attendance recorded for this day yet. Editable until {fmtDateIST(editableUntil(date))}.</p>
+              <p className="mt-2 text-xs text-gray-500">No attendance recorded for this day yet. Editable until {fmtDateIST(editableUntil(date))}.</p>
             )}
           </div>
 
@@ -132,7 +132,7 @@ export default function TeacherManualAttendance() {
               <button onClick={save} disabled={saving} className="btn-primary">
                 {saving ? 'Saving…' : day.has_record ? 'Update Attendance' : 'Save Attendance'}
               </button>
-              {savedMsg && <span className="text-emerald-600 text-sm font-semibold">✓ {savedMsg}</span>}
+              {savedMsg && <span className="text-temple-700 text-sm font-semibold inline-flex items-center min-h-[24px]">✓ {savedMsg}</span>}
             </div>
           )}
         </div>
@@ -142,7 +142,7 @@ export default function TeacherManualAttendance() {
         <div className="card p-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100"><h2 className="font-semibold text-gray-800 text-sm">Attendance records</h2></div>
           {days.length === 0 ? (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">No attendance recorded for this subject yet.</p>
+            <p className="px-4 py-8 text-center text-gray-500 text-sm">No attendance recorded for this subject yet.</p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {days.map(d => (
@@ -153,7 +153,7 @@ export default function TeacherManualAttendance() {
                 >
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{fmtDayIST(d.session_date)}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-500">
                       Recorded {fmtDateTimeIST(d.recorded_at)}{d.session_count > 1 ? ` · ${d.session_count} sessions merged` : ''}
                     </p>
                   </div>
@@ -162,7 +162,7 @@ export default function TeacherManualAttendance() {
                       {d.present_count}/{d.total_students} present{d.service_count ? ` · ${d.service_count} service` : ''}
                     </p>
                     {d.locked
-                      ? <span className="text-xs text-gray-400">🔒 Locked</span>
+                      ? <span className="text-xs text-gray-500">🔒 Locked</span>
                       : <span className="text-xs text-blue-600">Edit →</span>}
                   </div>
                 </li>

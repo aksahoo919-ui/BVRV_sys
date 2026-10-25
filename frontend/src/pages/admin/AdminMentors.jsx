@@ -39,7 +39,7 @@ function PersonPicker({ people, userId, onPick, placeholder, listId }) {
       <datalist id={listId}>
         {people.map(p => <option key={p.id} value={personLabel(p)} />)}
       </datalist>
-      <p className="text-xs mt-1 text-gray-400">
+      <p className="text-xs mt-1 text-gray-500">
         {userId ? <span className="text-teal-700">Linked to portal account</span> : 'Not linked: type the name below, or pick from the list'}
       </p>
     </>
@@ -90,7 +90,7 @@ function MentorForm({ kind, row, people, subjects, onClose, onSaved }) {
       <form onSubmit={save} className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">{row ? 'Edit' : 'Add'} {TITLES[kind].title.replace(/s$/, '')}</h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-600">✕</button>
         </div>
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
 
@@ -120,7 +120,7 @@ function MentorForm({ kind, row, people, subjects, onClose, onSaved }) {
             <input className="input" placeholder="Phone" value={f.phone} onChange={e => set('phone', e.target.value)} />
             <input className="input" placeholder="Email" value={f.email} onChange={e => set('email', e.target.value)} />
           </div>
-          {f.user_id && <p className="text-xs text-gray-400">Changing these here only changes this list, not the user's login.</p>}
+          {f.user_id && <p className="text-xs text-gray-500">Changing these here only changes this list, not the user's login.</p>}
         </fieldset>
 
         <fieldset className="space-y-2">
@@ -158,7 +158,7 @@ function CoordinatorBulk({ count, people, onClose, onApply }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Set coordinator for {count} mentor{count === 1 ? '' : 's'}</h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-600">✕</button>
         </div>
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
         <PersonPicker people={people} userId={c.coordinator_user_id} onPick={pick} listId="bulk-coord-people" placeholder="Search a user, or type a name" />
@@ -166,7 +166,7 @@ function CoordinatorBulk({ count, people, onClose, onApply }) {
           <input className="input" placeholder="Coordinator name" value={c.coordinator_name} onChange={e => setC(s => ({ ...s, coordinator_name: e.target.value }))} />
           <input className="input" placeholder="Coordinator mobile" value={c.coordinator_phone} onChange={e => setC(s => ({ ...s, coordinator_phone: e.target.value }))} />
         </div>
-        <p className="text-xs text-gray-400">Leave both empty and apply to clear the coordinator.</p>
+        <p className="text-xs text-gray-500">Leave both empty and apply to clear the coordinator.</p>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary text-sm">Cancel</button>
           <button type="button" onClick={apply} disabled={saving} className="btn-primary text-sm">{saving ? 'Saving…' : 'Apply'}</button>
@@ -271,7 +271,7 @@ export default function AdminMentors({ kind }) {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{meta.title}</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{meta.hint}</p>
+          <p className="text-sm text-gray-500 mt-0.5">{meta.hint}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {selected.size > 0 && (
@@ -288,7 +288,7 @@ export default function AdminMentors({ kind }) {
       {!rows ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
           <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-xs text-gray-400">{shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} mentors</span>
+            <span className="text-xs text-gray-500">{shown.length === rows.length ? rows.length : `${shown.length} of ${rows.length}`} mentors</span>
             {kind === 'bvrv' && <SemesterSelect value={sem} onChange={setSem} options={semOptions} />}
             <input value={search} onChange={e => setSearch(e.target.value)} className="input text-sm w-72 max-w-full"
               placeholder={`Search ${kind === 'bvrv' ? 'course' : 'language'}, name, phone, email, coordinator`} />
@@ -297,12 +297,12 @@ export default function AdminMentors({ kind }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 w-8"><input type="checkbox" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" /></th>
+                  <th className="px-4 py-3 w-8"><input type="checkbox" checked={allShownSelected} onChange={toggleAll} aria-label="Select all" className="w-4 h-4 m-1" /></th>
                   {cols.map(c => (
                     <th key={c.key} className="text-left px-4 py-3 font-medium text-gray-500">
-                      <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 hover:text-gray-800">
+                      <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 py-1 -my-1 min-h-[24px] hover:text-gray-800">
                         {c.label}
-                        <span className={`text-[10px] ${sort.key === c.key ? 'text-gray-700' : 'text-gray-300'}`}>
+                        <span className={`text-[10px] ${sort.key === c.key ? 'text-gray-700' : 'text-gray-500'}`}>
                           {sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
                         </span>
                       </button>
@@ -313,7 +313,7 @@ export default function AdminMentors({ kind }) {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {shown.length === 0 && (
-                  <tr><td colSpan={cols.length + 2} className="text-center py-10 text-gray-400">{search ? 'No matches.' : 'No mentors yet.'}</td></tr>
+                  <tr><td colSpan={cols.length + 2} className="text-center py-10 text-gray-500">{search ? 'No matches.' : 'No mentors yet.'}</td></tr>
                 )}
                 {shown.map(r => (
                   <tr key={r.id} className="hover:bg-gray-50">
@@ -321,9 +321,9 @@ export default function AdminMentors({ kind }) {
                     <td className="px-4 py-2.5 font-medium text-gray-800">
                       {kind === 'bvrv'
                         ? (r.course_code
-                          ? <>{className(r.course_name)} <span className="text-xs font-mono text-gray-400">{r.course_code}</span></>
-                          : <span className="text-gray-300">—</span>)
-                        : (r.language || <span className="text-gray-300">—</span>)}
+                          ? <>{className(r.course_name)} <span className="text-xs font-mono text-gray-500">{r.course_code}</span></>
+                          : <span className="text-gray-500">—</span>)
+                        : (r.language || <span className="text-gray-500">—</span>)}
                     </td>
                     {kind === 'bvrv' && (
                       <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
@@ -334,26 +334,26 @@ export default function AdminMentors({ kind }) {
                               ? <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>
                               : <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Past</span>}
                           </>
-                        ) : <span className="text-gray-300">—</span>}
+                        ) : <span className="text-gray-500">—</span>}
                       </td>
                     )}
                     <td className="px-4 py-2.5 text-gray-800">
                       {r.name}
-                      {!r.user_id && <span className="ml-1 text-xs text-gray-400">(no account)</span>}
+                      {!r.user_id && <span className="ml-1 text-xs text-gray-500">(no account)</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600">{r.phone || <span className="text-gray-300">—</span>}</td>
-                    <td className="px-4 py-2.5 text-gray-600">{r.email || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{r.phone || <span className="text-gray-500">—</span>}</td>
+                    <td className="px-4 py-2.5 text-gray-600">{r.email || <span className="text-gray-500">—</span>}</td>
                     <td className="px-4 py-2.5 text-gray-600">
                       {r.coordinator_name || r.coordinator_phone
                         ? <><span className="text-gray-800">{r.coordinator_name}</span>{r.coordinator_phone && <span className="text-gray-500"> · {r.coordinator_phone}</span>}
                             {r.coordinator_name !== 'Self' && (r.coordinator_user_id
                               ? <span className="ml-2 text-[11px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full" title="This coordinator has an account in the portal">✓ in portal</span>
                               : <span className="ml-2 text-[11px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full" title="No portal account is linked to this coordinator">not in portal</span>)}</>
-                        : <span className="text-gray-300">Not set</span>}
+                        : <span className="text-gray-500">Not set</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                      <button onClick={() => setEditing(r)} className="text-primary-600 hover:underline text-xs mr-3">Edit</button>
-                      <button onClick={() => setDeleting(r)} className="text-red-600 hover:underline text-xs">Remove</button>
+                      <button onClick={() => setEditing(r)} className="text-primary-600 hover:underline text-xs mr-3 inline-flex items-center min-h-[24px]">Edit</button>
+                      <button onClick={() => setDeleting(r)} className="text-red-600 hover:underline text-xs inline-flex items-center min-h-[24px]">Remove</button>
                     </td>
                   </tr>
                 ))}
@@ -373,7 +373,7 @@ export default function AdminMentors({ kind }) {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <p className="text-sm text-gray-800">Remove <b>{deleting.name}</b>{kind === 'bvrv' && deleting.course_code ? ` (${deleting.course_code})` : ''} from {meta.title}?</p>
-            <p className="text-xs text-gray-400">Only the listing is removed. The user account stays.</p>
+            <p className="text-xs text-gray-500">Only the listing is removed. The user account stays.</p>
             <div className="flex justify-end gap-2">
               <button onClick={() => setDeleting(null)} className="btn-secondary text-sm">Cancel</button>
               <button onClick={confirmDelete} className="btn-danger text-sm">Remove</button>

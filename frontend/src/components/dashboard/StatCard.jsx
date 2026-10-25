@@ -15,7 +15,7 @@ export default function StatCard({ label, value, sub, onClick, variant = 'defaul
     >
       <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</span>
       <span className="text-2xl font-bold text-gray-900 leading-tight">{value ?? '—'}</span>
-      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+      {sub && <span className="text-xs text-gray-500">{sub}</span>}
     </div>
   );
 }

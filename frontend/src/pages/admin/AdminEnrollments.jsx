@@ -92,7 +92,7 @@ export default function AdminEnrollments() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Course Enrollments</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Students in each class, e.g. Bhakti Shastri 1 - English · Sem 2. Pick Sem 1 or Sem 2 to see that semester's classes.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Students in each class, e.g. Bhakti Shastri 1 - English · Sem 2. Pick Sem 1 or Sem 2 to see that semester's classes.</p>
         </div>
         <button className="btn-primary" onClick={() => { setModal(true); setEnrollError(''); setSelectedStudent(''); setQ(''); }} disabled={!subjectId}>
           + Enroll Student
@@ -119,7 +119,7 @@ export default function AdminEnrollments() {
 
       {loading ? <Spinner /> : (
         <div className="card overflow-x-auto p-0">
-          <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
+          <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-500">
             {current ? `${classLabel(current)} · ` : ''}{rows.length} student{rows.length === 1 ? '' : 's'}
           </div>
           <table className="w-full text-sm">
@@ -132,13 +132,13 @@ export default function AdminEnrollments() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {rows.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-10 text-gray-400">No students enrolled{!subjectId ? ' — select a course' : ''}.</td></tr>
+                <tr><td colSpan={4} className="text-center py-10 text-gray-500">No students enrolled{!subjectId ? ' — select a course' : ''}.</td></tr>
               ) : rows.map((r, i) => (
                 <tr key={r.student_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{i + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">{r.student_name}</td>
                   <td className="px-4 py-3 text-gray-500">{r.student_email}</td>
-                  <td className="px-4 py-3 text-gray-600">{r.mentor_name || <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.mentor_name || <span className="text-gray-500">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -150,7 +150,7 @@ export default function AdminEnrollments() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md shadow-xl">
             <h2 className="font-semibold text-gray-800 mb-1">Enroll Student</h2>
-            <p className="text-xs text-gray-400 mb-4">{current ? classLabel(current) : ''}</p>
+            <p className="text-xs text-gray-500 mb-4">{current ? classLabel(current) : ''}</p>
             <form onSubmit={handleEnroll} className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
@@ -158,20 +158,20 @@ export default function AdminEnrollments() {
                   <div className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2">
                     <div>
                       <p className="text-sm font-medium text-gray-800">{picked.name}</p>
-                      <p className="text-xs text-gray-400">{picked.phone || picked.email} · {picked.course || 'no class'}</p>
+                      <p className="text-xs text-gray-500">{picked.phone || picked.email} · {picked.course || 'no class'}</p>
                     </div>
-                    <button type="button" onClick={() => setSelectedStudent('')} className="text-xs text-primary-600 hover:underline">Change</button>
+                    <button type="button" onClick={() => setSelectedStudent('')} className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]">Change</button>
                   </div>
                 ) : (
                   <>
                     <input className="input mb-1" placeholder="Type a name, phone or email…" value={q} onChange={e => setQ(e.target.value)} autoFocus />
                     <div className="border border-gray-100 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-50">
-                      {q.trim().length < 2 ? <p className="text-xs text-gray-400 px-3 py-2">Type at least 2 letters.</p>
-                        : matches.length === 0 ? <p className="text-xs text-gray-400 px-3 py-2">No student found (or already in this class).</p>
+                      {q.trim().length < 2 ? <p className="text-xs text-gray-500 px-3 py-2">Type at least 2 letters.</p>
+                        : matches.length === 0 ? <p className="text-xs text-gray-500 px-3 py-2">No student found (or already in this class).</p>
                         : matches.map(s => (
                           <button type="button" key={s.id} onClick={() => setSelectedStudent(s.id)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
                             <p className="text-sm text-gray-800">{s.name}</p>
-                            <p className="text-xs text-gray-400">{s.phone || s.email} · {s.course || 'no class'}</p>
+                            <p className="text-xs text-gray-500">{s.phone || s.email} · {s.course || 'no class'}</p>
                           </button>
                         ))}
                     </div>

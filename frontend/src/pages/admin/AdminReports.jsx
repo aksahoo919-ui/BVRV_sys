@@ -107,13 +107,13 @@ function InstructorsTable({ data }) {
                   <Avatar user={r} />
                   <div>
                     <p className="font-medium text-gray-900">{r.name}</p>
-                    <p className="text-xs text-gray-400">{r.email}</p>
+                    <p className="text-xs text-gray-500">{r.email}</p>
                   </div>
                 </div>
               </td>
               <td className="px-4 py-3 text-gray-600">{r.subject_count} ({(r.subjects || []).join(', ')})</td>
               <td className="px-4 py-3 text-gray-600">{r.sessions_opened}</td>
-              <td className="px-4 py-3 text-gray-400">{r.last_session_date ? new Date(r.last_session_date).toLocaleDateString() : '—'}</td>
+              <td className="px-4 py-3 text-gray-500">{r.last_session_date ? new Date(r.last_session_date).toLocaleDateString() : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -143,7 +143,7 @@ function StudentsTable({ data }) {
                   <Avatar user={r} />
                   <div>
                     <p className="font-medium text-gray-900">{r.name}</p>
-                    <p className="text-xs text-gray-400">{r.email}</p>
+                    <p className="text-xs text-gray-500">{r.email}</p>
                   </div>
                 </div>
               </td>
@@ -151,7 +151,7 @@ function StudentsTable({ data }) {
               <td className="px-4 py-3 text-gray-600">{r.attended}/{r.total_sessions}</td>
               <td className="px-4 py-3">
                 <span className={`font-semibold ${r.below_threshold ? 'text-amber-600' : 'text-green-600'}`}>{r.percentage}%</span>
-                {r.below_threshold && <span className="ml-1 text-amber-500">⚠</span>}
+                {r.below_threshold && <span className="ml-1 text-amber-700">⚠</span>}
               </td>
             </tr>
           ))}
@@ -182,7 +182,7 @@ function SubjectTable({ data }) {
               <td className="px-4 py-3 text-gray-800">{new Date(r.opened_at).toLocaleString()}</td>
               <td className="px-4 py-3 text-green-600 font-medium">{r.present_count}</td>
               <td className="px-4 py-3 text-red-500 font-medium">{r.absent_count}</td>
-              <td className="px-4 py-3 text-amber-500 font-medium">{r.flagged_count}</td>
+              <td className="px-4 py-3 text-amber-700 font-medium">{r.flagged_count}</td>
               <td className="px-4 py-3"><span className={`badge ${r.closed ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'}`}>{r.closed ? 'Closed' : 'Open'}</span></td>
             </tr>
           ))}
@@ -271,13 +271,13 @@ function DataQualityPanel() {
             className={`card text-left ${section === c.id ? 'ring-2 ring-primary-400' : ''}`}>
             <p className="text-xs text-gray-500">{c.label}</p>
             <p className={`text-2xl font-bold ${c.value ? 'text-amber-600' : 'text-gray-900'}`}>{c.value}</p>
-            {c.sub && <p className="text-xs text-gray-400">{c.sub}</p>}
+            {c.sub && <p className="text-xs text-gray-500">{c.sub}</p>}
           </button>
         ))}
       </div>
       <div className="card overflow-x-auto p-0">
         <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500">
             {cards.find(c => c.id === section)?.label}: {q ? `${rows.length} of ${all.length}` : `${all.length}`} {isDup ? 'users in duplicate groups' : 'rows'}
           </span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, phone, BV leader, course"
@@ -295,10 +295,10 @@ function DataQualityPanel() {
           </tr></thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">{q ? 'No matches.' : emptyText}</td></tr>
+              <tr><td colSpan={6} className="text-center py-10 text-gray-500">{q ? 'No matches.' : emptyText}</td></tr>
             ) : rows.map((u, i) => (
               <tr key={i} className="hover:bg-gray-50">
-                <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{isDup && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-400">({u.role})</span> : null}</td>
+                <td className="px-4 py-2.5 font-medium text-gray-800">{u.name}{isDup && u.role !== 'student' ? <span className="ml-1 text-xs text-gray-500">({u.role})</span> : null}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.email || '—'}</td>
                 <td className="px-4 py-2.5 text-gray-600">{u.phone || '—'}</td>
                 {section !== 'noleader' && section !== 'nocourse' && <td className="px-4 py-2.5 text-amber-700 text-xs">{u.problem}</td>}
@@ -341,9 +341,9 @@ function SortHeader({ k, label, sort, onSort }) {
   return (
     <th className="text-left px-4 py-3 text-gray-500 font-medium">
       <button type="button" onClick={() => onSort(s => ({ key: k, dir: s.key === k && s.dir === 'asc' ? 'desc' : 'asc' }))}
-        className="inline-flex items-center gap-1 hover:text-gray-800">
+        className="inline-flex items-center gap-1 py-1 -my-1 min-h-[24px] hover:text-gray-800">
         {label}
-        <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-300'}`}>{active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+        <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-500'}`}>{active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
       </button>
     </th>
   );

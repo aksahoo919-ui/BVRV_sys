@@ -22,7 +22,7 @@ export default function StudentAttendanceHistory() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">My Attendance</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Your attendance % and every class date. Tap a point on the graph to see that day.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Your attendance % and every class date. Tap a point on the graph to see that day.</p>
         </div>
         {pastCount > 0 && (
           <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
@@ -32,7 +32,7 @@ export default function StudentAttendanceHistory() {
         )}
       </div>
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
-      {!data && !error ? <p className="text-sm text-gray-400">Loading…</p> : data && <AttendanceTimeline data={data} showPast={showPast} />}
+      {!data && !error ? <p className="text-sm text-gray-500">Loading…</p> : data && <AttendanceTimeline data={data} showPast={showPast} />}
     </div>
   );
 }

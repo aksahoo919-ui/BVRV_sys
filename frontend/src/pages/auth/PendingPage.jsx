@@ -14,7 +14,7 @@ export default function PendingPage() {
         <p className="text-gray-600 text-sm">
           Your account is pending approval by the administrator. You'll be able to log in once approved.
         </p>
-        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline">
+        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
           ← Back to login
         </Link>
       </div>

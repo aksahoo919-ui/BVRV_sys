@@ -4,9 +4,9 @@ import api from '../../utils/api';
 function Spinner() { return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>; }
 
 function GradeBadge({ pct }) {
-  if (pct == null) return <span className="text-gray-400">—</span>;
+  if (pct == null) return <span className="text-gray-500">—</span>;
   const p = Number(pct);
-  if (p >= 90) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">S</span>;
+  if (p >= 90) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-temple-800">S</span>;
   if (p >= 80) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">A</span>;
   if (p >= 70) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">B</span>;
   if (p >= 60) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">C</span>;
@@ -99,7 +99,7 @@ export default function TeacherStudentPerformance() {
                   <th key={c.key} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">
                     <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 uppercase hover:text-gray-800">
                       {c.label}
-                      <span className={`text-[10px] ${sort.key === c.key ? 'text-gray-700' : 'text-gray-300'}`}>
+                      <span className={`text-[10px] ${sort.key === c.key ? 'text-gray-700' : 'text-gray-500'}`}>
                         {sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
                       </span>
                     </button>
@@ -109,7 +109,7 @@ export default function TeacherStudentPerformance() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {students.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">
+                <tr><td colSpan={7} className="text-center py-12 text-gray-500">
                   {subjectId ? 'No students found.' : 'Select a subject to view performance.'}
                 </td></tr>
               ) : rows.map(s => {
@@ -117,16 +117,16 @@ export default function TeacherStudentPerformance() {
                 const marksPct = s.marks_percentage;
                 return (
                   <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.roll_number || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{s.roll_number || '—'}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{s.current_mentor_name || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-600">{s.current_mentor_name || <span className="text-gray-500">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-20 bg-gray-100 rounded-full h-1.5">
-                          <div className={`h-1.5 rounded-full ${attPct>=75?'bg-emerald-500':attPct>=50?'bg-amber-400':'bg-red-400'}`}
+                          <div className={`h-1.5 rounded-full ${attPct>=75?'bg-temple-600':attPct>=50?'bg-amber-400':'bg-red-400'}`}
                                style={{width:`${Math.min(attPct,100)}%`}} />
                         </div>
-                        <span className={`text-xs font-semibold ${attPct>=75?'text-emerald-600':attPct>=50?'text-amber-600':'text-red-600'}`}>
+                        <span className={`text-xs font-semibold ${attPct>=75?'text-temple-700':attPct>=50?'text-amber-600':'text-red-600'}`}>
                           {attPct}%
                         </span>
                       </div>
@@ -136,7 +136,7 @@ export default function TeacherStudentPerformance() {
                     <td className="px-4 py-3">
                       {s.below_threshold
                         ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">⚠ Low Att.</span>
-                        : <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 font-medium">OK</span>}
+                        : <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-temple-800 font-medium">OK</span>}
                     </td>
                   </tr>
                 );

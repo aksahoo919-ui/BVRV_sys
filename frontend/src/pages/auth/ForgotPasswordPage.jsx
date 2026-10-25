@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
             <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3">
               If an eligible account with that email exists, a reset link has been sent. Please check your inbox (and spam).
             </div>
-            <Link to="/login" className="text-primary-600 hover:underline text-sm">← Back to login</Link>
+            <Link to="/login" className="text-primary-600 hover:underline text-sm inline-flex items-center min-h-[24px]">← Back to login</Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
             <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? 'Sending…' : 'Send reset link'}
             </button>
-            <Link to="/login" className="text-primary-600 hover:underline text-sm block text-center">← Back to login</Link>
+            <Link to="/login" className="text-primary-600 hover:underline text-sm block text-center inline-flex items-center min-h-[24px]">← Back to login</Link>
           </form>
         )}
       </div>

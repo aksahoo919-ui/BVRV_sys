@@ -10,7 +10,7 @@ import { hasSemesters } from '../utils/classLabel';
 const STATUS = {
   present: { label: 'Present', color: '#16a34a', chip: 'bg-green-50 text-green-700 border-green-200', mark: '✓' },
   service: { label: 'Service', color: '#4f46e5', chip: 'bg-indigo-50 text-indigo-700 border-indigo-200', mark: '★' },
-  absent:  { label: 'Absent',  color: '#dc2626', chip: 'bg-red-50 text-red-600 border-red-200', mark: '✕' },
+  absent:  { label: 'Absent',  color: '#dc2626', chip: 'bg-red-50 text-red-700 border-red-200', mark: '✕' },
 };
 
 const DAY = 86400000;
@@ -20,7 +20,7 @@ const fmtShort = d => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { da
 const fmtRange = d => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
 
 export function pctTone(pct, threshold) {
-  if (pct == null) return 'bg-gray-100 text-gray-500';
+  if (pct == null) return 'bg-gray-100 text-gray-600';
   if (pct >= threshold) return 'bg-green-50 text-green-700';
   if (pct >= threshold - 15) return 'bg-amber-50 text-amber-700';
   return 'bg-red-50 text-red-700';
@@ -139,7 +139,7 @@ export function DateList({ days }) {
         const att = mo.days.filter(d => d.status !== 'absent').length;
         return (
           <div key={mo.key}>
-            <p className="text-xs font-medium text-gray-500 mb-1">{mo.label} <span className="text-gray-400 font-normal">· {att} of {mo.days.length} attended</span></p>
+            <p className="text-xs font-medium text-gray-500 mb-1">{mo.label} <span className="text-gray-500 font-normal">· {att} of {mo.days.length} attended</span></p>
             <div className="flex flex-wrap gap-1.5">
               {mo.days.map(d => (
                 <span key={d.date} title={`${fmtDay(d.date)} · ${STATUS[d.status].label}`}
@@ -166,13 +166,13 @@ export function AttendanceCard({ title, subtitle, badge, days, threshold, start,
             <p className="text-sm font-semibold text-gray-800">{title}</p>
             {badge}
           </div>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
         <div className="text-right flex-shrink-0">
           <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${pctTone(percentage, threshold)}`}>
             {percentage == null ? 'No classes yet' : `${percentage}%`}
           </span>
-          {total > 0 && <p className="text-xs text-gray-400 mt-1">{attended} of {total} day{total === 1 ? '' : 's'} attended</p>}
+          {total > 0 && <p className="text-xs text-gray-500 mt-1">{attended} of {total} day{total === 1 ? '' : 's'} attended</p>}
         </div>
       </div>
       {days.length > 0 && (
@@ -180,7 +180,7 @@ export function AttendanceCard({ title, subtitle, badge, days, threshold, start,
           <div className="mt-3"><AttendanceChart days={days} threshold={threshold} start={start} end={end} /></div>
           <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
             <Legend />
-            <button onClick={() => setShowDates(s => !s)} className="text-xs text-primary-600 hover:underline">
+            <button onClick={() => setShowDates(s => !s)} className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
               {showDates ? 'Hide dates' : `Show all ${days.length} dates`}
             </button>
           </div>
@@ -196,14 +196,14 @@ export default function AttendanceTimeline({ data, showPast = true, datesOpen = 
   const classes = (data?.classes || []).filter(c => showPast || (c.is_current && c.enrolled !== false));
   const leaders = data?.bv_leader_classes || [];
   const threshold = data?.threshold ?? 75;
-  if (!classes.length && !leaders.length) return <p className="text-sm text-gray-400">No attendance yet.</p>;
+  if (!classes.length && !leaders.length) return <p className="text-sm text-gray-500">No attendance yet.</p>;
   return (
     <div className="space-y-3">
       {classes.map(c => (
         <AttendanceCard key={c.subject_id}
           title={`${c.course_name ? `${c.course_name} · ` : ''}${c.code}${hasSemesters(c) ? ` · ${c.semester_label}` : ''}`}
           subtitle={[c.start_date && `${fmtRange(c.start_date)} – ${fmtRange(c.end_date)}`, c.teachers && `Teacher: ${c.teachers}`].filter(Boolean).join(' · ')}
-          badge={<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${c.enrolled === false ? 'bg-amber-50 text-amber-700' : c.is_current ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.enrolled === false ? 'Left' : c.is_current ? 'Current' : 'Past'}</span>}
+          badge={<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${c.enrolled === false ? 'bg-amber-50 text-amber-700' : c.is_current ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{c.enrolled === false ? 'Left' : c.is_current ? 'Current' : 'Past'}</span>}
           days={c.days} threshold={threshold} start={c.start_date} end={c.end_date}
           percentage={c.percentage} attended={c.attended} total={c.total_days} defaultOpen={datesOpen} />
       ))}

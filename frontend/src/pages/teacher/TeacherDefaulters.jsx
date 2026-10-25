@@ -40,7 +40,7 @@ export default function TeacherDefaulters() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Defaulter Report</h1>
-          {data && <p className="text-sm text-gray-400 mt-0.5">Students below {data.threshold}% attendance threshold</p>}
+          {data && <p className="text-sm text-gray-500 mt-0.5">Students below {data.threshold}% attendance threshold</p>}
         </div>
         {data?.defaulters?.length > 0 && (
           <button className="btn-secondary text-sm" onClick={downloadExcel}>↓ Export CSV</button>
@@ -62,7 +62,7 @@ export default function TeacherDefaulters() {
           <div className="card text-center py-12">
             <div className="text-4xl mb-2">✅</div>
             <p className="text-gray-500 font-medium">No defaulters!</p>
-            <p className="text-gray-400 text-sm mt-1">All students are above {data.threshold}% attendance.</p>
+            <p className="text-gray-500 text-sm mt-1">All students are above {data.threshold}% attendance.</p>
           </div>
         ) : (
           <div className="card overflow-x-auto p-0">
@@ -80,7 +80,7 @@ export default function TeacherDefaulters() {
               <tbody className="divide-y divide-gray-50">
                 {data.defaulters.map(s => (
                   <tr key={s.id} className="hover:bg-red-50">
-                    <td className="px-4 py-3 text-gray-400 font-mono text-xs">{s.roll_number||'—'}</td>
+                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">{s.roll_number||'—'}</td>
                     <td className="px-4 py-3 font-medium text-gray-800">{s.name}</td>
                     <td className="px-4 py-3 text-gray-600">{s.attended}</td>
                     <td className="px-4 py-3 text-gray-600">{s.total_sessions}</td>

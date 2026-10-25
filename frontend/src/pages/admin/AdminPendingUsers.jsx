@@ -34,7 +34,7 @@ export default function AdminPendingUsers() {
     <div>
       <h1 className="text-xl font-bold text-gray-900 mb-6">Pending Approvals</h1>
       {users.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
+        <div className="card text-center py-12 text-gray-500">
           <p className="text-lg">No pending approvals</p>
         </div>
       ) : (
@@ -56,7 +56,7 @@ export default function AdminPendingUsers() {
                       <Avatar user={u} size={8} />
                       <div>
                         <p className="font-medium text-gray-900">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <p className="text-xs text-gray-500">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -65,7 +65,7 @@ export default function AdminPendingUsers() {
                       {u.role || 'unknown'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 hidden sm:table-cell">
+                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-right">

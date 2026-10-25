@@ -53,7 +53,7 @@ export default function MentorAlerts() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Student Alerts</h1>
           {!loading && !error && (
-            <p className="text-sm text-gray-400 mt-0.5">{alerts.length} student(s) with active alerts</p>
+            <p className="text-sm text-gray-500 mt-0.5">{alerts.length} student(s) with active alerts</p>
           )}
         </div>
         <div className="flex items-center gap-3">
@@ -81,14 +81,14 @@ export default function MentorAlerts() {
 
       {loading && (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-temple-700" />
         </div>
       )}
 
       {error && (
         <div className="text-center py-12">
           <p className="text-red-500 text-sm">{error}</p>
-          <button onClick={load} className="mt-3 text-sm text-emerald-600 hover:underline">
+          <button onClick={load} className="mt-3 text-sm text-temple-700 hover:underline inline-flex items-center min-h-[24px]">
             Try again
           </button>
         </div>
@@ -102,7 +102,7 @@ export default function MentorAlerts() {
             </svg>
           </div>
           <p className="text-lg font-semibold text-gray-700">All students are on track</p>
-          <p className="text-sm text-gray-400 mt-1">No alerts at this time.</p>
+          <p className="text-sm text-gray-500 mt-1">No alerts at this time.</p>
         </div>
       )}
 
@@ -134,7 +134,7 @@ export default function MentorAlerts() {
 
               <div className="flex items-center gap-4 flex-shrink-0">
                 <div className="text-right">
-                  <p className="text-xs text-gray-400">Attendance</p>
+                  <p className="text-xs text-gray-500">Attendance</p>
                   <p className={`text-sm font-semibold ${
                     (s.attendance_percentage || 0) >= 75 ? 'text-green-600' :
                     (s.attendance_percentage || 0) >= 60 ? 'text-amber-600' : 'text-red-500'
@@ -143,7 +143,7 @@ export default function MentorAlerts() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-400">GPA</p>
+                  <p className="text-xs text-gray-500">GPA</p>
                   <p className={`text-sm font-semibold ${
                     (s.latest_gpa || 0) >= 8 ? 'text-green-600' :
                     (s.latest_gpa || 0) >= 6 ? 'text-amber-600' : 'text-red-500'
@@ -153,7 +153,7 @@ export default function MentorAlerts() {
                 </div>
                 <button
                   onClick={() => navigate(`/mentor/students/${s.student_id}`)}
-                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors whitespace-nowrap"
+                  className="px-4 py-2 rounded-lg bg-temple-700 hover:bg-temple-800 text-white text-sm font-medium transition-colors whitespace-nowrap"
                 >
                   View Student
                 </button>

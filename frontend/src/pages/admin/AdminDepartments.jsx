@@ -96,7 +96,7 @@ export default function AdminDepartments() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="py-6 text-center text-gray-400">No departments yet</td></tr>
+                <tr><td colSpan={4} className="py-6 text-center text-gray-500">No departments yet</td></tr>
               )}
             </tbody>
           </table>

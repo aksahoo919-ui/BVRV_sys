@@ -30,17 +30,17 @@ export default function InstructorClasses() {
     <div>
       <h1 className="text-xl font-bold text-gray-900 mb-6">My Classes</h1>
       {subjects.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">No subjects assigned yet.</div>
+        <div className="card text-center py-12 text-gray-500">No subjects assigned yet.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {subjects.map(s => (
             <div key={s.id} className="card hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <span className="font-mono text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded">{s.code}</span>
-                <span className="text-xs text-gray-400">{s.student_count} students</span>
+                <span className="text-xs text-gray-500">{s.student_count} students</span>
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">{s.name}</h3>
-              <p className="text-xs text-gray-400 mb-4">
+              <p className="text-xs text-gray-500 mb-4">
                 Last session: {s.last_session_date ? new Date(s.last_session_date).toLocaleDateString() : 'Never'}
               </p>
               <button

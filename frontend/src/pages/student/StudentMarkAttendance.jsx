@@ -130,7 +130,7 @@ export default function StudentMarkAttendance() {
 
     return {
       base: 'w-12 h-14 flex items-center justify-center rounded-xl text-xl font-mono font-bold border-2 transition-all',
-      state: 'border-gray-200 bg-gray-50 text-gray-300',
+      state: 'border-gray-200 bg-gray-50 text-gray-500',
     };
   }
 

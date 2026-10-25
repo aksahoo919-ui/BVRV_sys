@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
+import { TempleLockup } from '../../components/TempleMark';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -37,7 +38,7 @@ export default function TeacherLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-ivory-100">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-20 lg:hidden"
@@ -46,13 +47,13 @@ export default function TeacherLayout() {
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-blue-800 text-white flex flex-col transform transition-transform duration-200
+        className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-temple-800 text-white flex flex-col transform transition-transform duration-200
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className="px-4 py-5 border-b border-blue-700 flex-shrink-0">
-          <p className="text-xs text-blue-300 uppercase tracking-wider">Teacher Portal</p>
-          <p className="font-bold text-white mt-0.5">BVRV Attendance</p>
+        <div className="px-3 py-4 border-b border-temple-700 flex-shrink-0">
+          <TempleLockup ground="dark" subtitle="Teacher Portal" />
         </div>
+        <div className="toran flex-shrink-0" aria-hidden="true" />
 
         <nav className="flex-1 py-3 overflow-y-auto space-y-0.5">
           {NAV.map(({ to, label, icon: Icon }) => (
@@ -61,10 +62,10 @@ export default function TeacherLayout() {
               to={to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors border-l-[3px] ${
                   isActive
-                    ? 'bg-blue-700 text-white'
-                    : 'text-blue-200 hover:bg-blue-700/50'
+                    ? 'bg-temple-700 text-white border-gold-400 font-medium'
+                    : 'text-temple-100 hover:bg-temple-700/60 border-transparent'
                 }`
               }
             >
@@ -75,11 +76,11 @@ export default function TeacherLayout() {
         </nav>
 
         {user?.secondary_role === 'mentor' && (
-          <div className="px-3 py-3 border-t border-blue-700 flex-shrink-0">
+          <div className="px-3 py-3 border-t border-temple-700 flex-shrink-0">
             <button
               onClick={switchToMentor}
               disabled={switching}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-blue-200 hover:bg-blue-700/50 transition-colors disabled:opacity-60"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-temple-100 hover:bg-temple-700/60 transition-colors disabled:opacity-60"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />

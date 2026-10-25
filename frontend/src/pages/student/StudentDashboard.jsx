@@ -146,6 +146,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <h1 className="sr-only">Student dashboard</h1>
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -269,13 +270,13 @@ export default function StudentDashboard() {
           <h2 className="font-semibold text-gray-900">Subject Attendance</h2>
           <button
             onClick={() => navigate('/student/my-attendance')}
-            className="text-xs text-primary-600 hover:underline"
+            className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]"
           >
             View all →
           </button>
         </div>
         {sortedByPct.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">No data yet.</p>
+          <p className="text-sm text-gray-500 py-4 text-center">No data yet.</p>
         ) : (
           sortedByPct.map((s) => (
             <SubjectRow
@@ -294,7 +295,7 @@ export default function StudentDashboard() {
       {bvLeaders.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-gray-900 mb-1">BV Leader Class Attendance</h2>
-          <p className="text-xs text-gray-400 mb-3">Your weekly class with your BV Leader.</p>
+          <p className="text-xs text-gray-500 mb-3">Your weekly class with your BV Leader.</p>
           <div className="space-y-4">
             {bvLeaders.map((l) => {
               const pct = Number(l.percentage ?? 0);
@@ -307,9 +308,9 @@ export default function StudentDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-800">{l.mentor_name}</p>
-                      <p className="text-xs text-gray-400">{l.attended} of {l.total_sessions} classes attended</p>
+                      <p className="text-xs text-gray-500">{l.attended} of {l.total_sessions} classes attended</p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${l.total_sessions ? chipCls : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${l.total_sessions ? chipCls : 'bg-gray-100 text-gray-600'}`}>
                       {l.total_sessions ? `${pct}%` : '—'}
                     </span>
                   </div>
@@ -321,7 +322,7 @@ export default function StudentDashboard() {
                           className={`text-xs px-2 py-0.5 rounded-md ${
                             r.status === 'present' ? 'bg-green-50 text-green-700'
                               : r.status === 'service' ? 'bg-indigo-50 text-indigo-700'
-                              : 'bg-red-50 text-red-600'
+                              : 'bg-red-50 text-red-700'
                           }`}
                         >
                           {fmtDayIST(r.session_date)} · {r.status === 'present' ? 'Present' : r.status === 'service' ? 'Service' : 'Absent'}
@@ -342,13 +343,13 @@ export default function StudentDashboard() {
           <h2 className="font-semibold text-gray-900">Recent Marks</h2>
           <button
             onClick={() => navigate('/student/marks')}
-            className="text-xs text-primary-600 hover:underline"
+            className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]"
           >
             View all →
           </button>
         </div>
         {recentMarks.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4 text-center">No marks published yet.</p>
+          <p className="text-sm text-gray-500 py-4 text-center">No marks published yet.</p>
         ) : (
           <div className="divide-y divide-gray-100">
             {recentMarks.map((m, i) => {
@@ -360,7 +361,7 @@ export default function StudentDashboard() {
                 <div key={i} className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-800">{subject}</p>
-                    <p className="text-xs text-gray-400">{m.assessment_name ?? m.type ?? 'Assessment'}</p>
+                    <p className="text-xs text-gray-500">{m.assessment_name ?? m.type ?? 'Assessment'}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-gray-700">

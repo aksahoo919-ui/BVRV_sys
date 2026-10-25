@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { jwtDecode } from '../../utils/jwt';
+import { TempleMark } from '../../components/TempleMark';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -36,7 +37,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-temple-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* The mandir's cusped-arch stonework, very faint, as the ground. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.07]"
+           style={{
+             backgroundImage:
+               "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='70' viewBox='0 0 120 70'><path d='M0 70 Q30 4 60 70 Q90 4 120 70' fill='none' stroke='%23E0B750' stroke-width='2'/></svg>\")",
+             backgroundSize: '120px 70px',
+           }} />
       <Link
         to="/guide"
         className="fixed top-4 right-4 z-10 flex items-center gap-1.5 bg-white/80 backdrop-blur border border-gray-200 text-primary-700 text-sm font-medium px-3.5 py-2 rounded-lg shadow-sm hover:bg-white hover:shadow transition"
@@ -46,15 +54,17 @@ export default function LoginPage() {
         </svg>
         User Guide
       </Link>
-      <div className="card w-full max-w-sm">
+      <div className="relative w-full max-w-sm bg-ivory-50 rounded-2xl shadow-altar border border-gold-600/40 overflow-hidden">
+        {/* marigold + mango-leaf toran along the top edge */}
+        <div className="toran" aria-hidden="true" />
+        <div className="p-6">
         <div className="mb-6 text-center">
-          <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">BVRV Attendance</h1>
-          <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
+          <TempleMark className="w-20 h-20 mx-auto mb-3" tone="gold" />
+          <p className="text-[11px] uppercase tracking-[0.2em] text-temple-600">ISKCON Abids · Hyderabad</p>
+          <h1 className="font-temple text-3xl text-temple-800 leading-tight mt-1">Sri Sri Radha Madanmohan</h1>
+          <div className="arch-rule my-3" aria-hidden="true" />
+          <p className="text-temple-700 text-sm font-medium inline-flex items-center min-h-[24px]">BVRV Attendance</p>
+          <p className="text-gray-500 text-sm">Sign in to continue</p>
         </div>
 
         {/* Username + password */}
@@ -84,8 +94,8 @@ export default function LoginPage() {
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
-          <p className="text-xs text-gray-400 text-center">
-            <Link to="/auth/forgot-password" className="text-primary-600 hover:underline">Forgot password?</Link>
+          <p className="text-xs text-gray-500 text-center">
+            <Link to="/auth/forgot-password" className="text-primary-600 hover:underline inline-flex items-center min-h-[24px]">Forgot password?</Link>
             {' '}(staff) · students contact your administrator.
           </p>
         </form>
@@ -93,7 +103,7 @@ export default function LoginPage() {
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
           <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-400">or</span>
+          <span className="text-xs text-gray-500">or</span>
           <div className="h-px flex-1 bg-gray-200" />
         </div>
 
@@ -105,13 +115,18 @@ export default function LoginPage() {
           Sign in with Google
         </a>
 
-        <p className="mt-6 text-xs text-gray-400 text-center">
+        <p className="mt-6 text-xs text-gray-500 text-center">
           Administrator?{' '}
-          <Link to="/admin/login" className="text-primary-600 hover:underline">
+          <Link to="/admin/login" className="text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
             Admin login
           </Link>
         </p>
+        </div>
       </div>
+
+      <p className="absolute bottom-3 inset-x-0 text-center text-[11px] text-temple-200 px-4">
+        Hare Krishna Land, Nampally Station Road, Abids, Hyderabad
+      </p>
     </div>
   );
 }

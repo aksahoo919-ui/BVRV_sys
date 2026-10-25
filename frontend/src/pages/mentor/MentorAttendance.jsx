@@ -4,7 +4,7 @@ import AttendanceRoster from '../../components/AttendanceRoster';
 import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, editableUntil } from '../../utils/datetime';
 
 function Spinner() {
-  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>;
+  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-temple-600 border-t-transparent rounded-full animate-spin" /></div>;
 }
 
 export default function MentorAttendance() {
@@ -99,7 +99,7 @@ export default function MentorAttendance() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Weekly Class Attendance</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <p className="text-sm text-gray-500 mt-0.5">
           One common weekly class for all your students. Sessions held on the same day are merged into one record.
           Records can be changed for 7 days after the class; older days are locked.
         </p>
@@ -110,7 +110,7 @@ export default function MentorAttendance() {
       {/* New session */}
       <form onSubmit={createSession} className="card flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-40">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Session title <span className="text-gray-400 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Session title <span className="text-gray-500 font-normal">(optional)</span></label>
           <input className="input" placeholder="e.g. Bhagavad Gita — Ch 2" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
         <div className="w-44">
@@ -129,9 +129,9 @@ export default function MentorAttendance() {
       {code && (
         <div className="card bg-emerald-50 border border-emerald-200 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <p className="text-xs text-emerald-700 uppercase tracking-wider font-semibold">Attendance code (5 min)</p>
+            <p className="text-xs text-temple-800 uppercase tracking-wider font-semibold">Attendance code (5 min)</p>
             <p className="text-4xl font-mono font-bold text-emerald-800 tracking-widest mt-1">{code.pin}</p>
-            <p className="text-xs text-emerald-600 mt-1">Students enter this PIN in their Mark Attendance screen.</p>
+            <p className="text-xs text-temple-700 mt-1 inline-flex items-center min-h-[24px]">Students enter this PIN in their Mark Attendance screen.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => openSession(code.session_id)} className="btn-secondary text-sm">View who's present →</button>
@@ -150,7 +150,7 @@ export default function MentorAttendance() {
                 🔒 This day is locked — it could be changed until {fmtDateIST(editableUntil(activeSession.session_date))}.
               </p>
             ) : (
-              <p className="mt-1 text-xs text-gray-400">Editable until {fmtDateIST(editableUntil(activeSession.session_date))}.</p>
+              <p className="mt-1 text-xs text-gray-500">Editable until {fmtDateIST(editableUntil(activeSession.session_date))}.</p>
             )}
           </div>
 
@@ -168,7 +168,7 @@ export default function MentorAttendance() {
                   <button onClick={save} disabled={saving || roster.length === 0} className="btn-primary">
                     {saving ? 'Saving…' : 'Save Attendance'}
                   </button>
-                  {savedMsg && <span className="text-emerald-600 text-sm font-semibold">✓ {savedMsg}</span>}
+                  {savedMsg && <span className="text-temple-700 text-sm font-semibold inline-flex items-center min-h-[24px]">✓ {savedMsg}</span>}
                 </div>
               )}
             </>
@@ -180,14 +180,14 @@ export default function MentorAttendance() {
       <div className="card p-0 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100"><h2 className="font-semibold text-gray-800 text-sm">Attendance records</h2></div>
         {loading ? <Spinner /> : sessions.length === 0 ? (
-          <p className="px-4 py-8 text-center text-gray-400 text-sm">No sessions yet for this class.</p>
+          <p className="px-4 py-8 text-center text-gray-500 text-sm">No sessions yet for this class.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {sessions.map(s => (
               <li key={s.session_date} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer" onClick={() => openSession(s.id)}>
                 <div>
                   <p className="font-medium text-gray-800 text-sm">{fmtDayIST(s.session_date)}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {s.title || 'Session'}{s.session_count > 1 ? ` · ${s.session_count} sessions merged` : ''}
                     {s.last_marked_at ? ` · last marked ${fmtDateTimeIST(s.last_marked_at)}` : ''}
                   </p>
@@ -197,8 +197,8 @@ export default function MentorAttendance() {
                     {s.present_count} present{s.service_count ? ` · ${s.service_count} service` : ''}
                   </p>
                   {s.locked
-                    ? <span className="text-xs text-gray-400">🔒 Locked · view</span>
-                    : <span className="text-xs text-emerald-600">Mark / edit →</span>}
+                    ? <span className="text-xs text-gray-500">🔒 Locked · view</span>
+                    : <span className="text-xs text-temple-700 inline-flex items-center min-h-[24px]">Mark / edit →</span>}
                 </div>
               </li>
             ))}

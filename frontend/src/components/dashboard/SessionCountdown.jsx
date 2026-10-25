@@ -34,7 +34,7 @@ export default function SessionCountdown({ expiresAt }) {
     secondsLeft < 30
       ? 'text-red-600 animate-pulse'
       : secondsLeft < 60
-      ? 'text-amber-500'
+      ? 'text-amber-700'
       : 'text-gray-500';
 
   return (

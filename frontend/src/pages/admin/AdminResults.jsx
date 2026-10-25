@@ -7,7 +7,7 @@ function Spinner() {
 
 function GpaBadge({ gpa }) {
   const n = parseFloat(gpa);
-  const cls = n >= 8 ? 'bg-emerald-100 text-emerald-700' : n >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const cls = n >= 8 ? 'bg-emerald-100 text-temple-800' : n >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{isNaN(n) ? '—' : n.toFixed(2)}</span>;
 }
 
@@ -94,7 +94,7 @@ export default function AdminResults() {
       <div className="card flex flex-wrap items-end gap-4">
         <div className="flex-1 min-w-44">
           <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-          {metaLoading ? <div className="input text-gray-400 text-sm">Loading…</div> : (
+          {metaLoading ? <div className="input text-gray-500 text-sm">Loading…</div> : (
             <select className="input" value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
               <option value="">— Select academic year —</option>
               {years.map(y => (
@@ -107,7 +107,7 @@ export default function AdminResults() {
         </div>
         <div className="flex-1 min-w-44">
           <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-          {metaLoading ? <div className="input text-gray-400 text-sm">Loading…</div> : (
+          {metaLoading ? <div className="input text-gray-500 text-sm">Loading…</div> : (
             <select className="input" value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
               <option value="">— Select course —</option>
               {courses.map(c => (
@@ -146,7 +146,7 @@ export default function AdminResults() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {results.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-12 text-gray-400">
+                <tr><td colSpan={5} className="text-center py-12 text-gray-500">
                   No results yet. Select an academic year and course, then click "Generate Results".
                 </td></tr>
               ) : results.map((row, i) => (
@@ -154,14 +154,14 @@ export default function AdminResults() {
                   <td className="px-4 py-3 font-bold text-gray-500">#{row.rank ?? i+1}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800">{row.student_name}</p>
-                    <p className="text-xs text-gray-400">{row.student_email}</p>
+                    <p className="text-xs text-gray-500">{row.student_email}</p>
                   </td>
                   <td className="px-4 py-3"><GpaBadge gpa={row.gpa} /></td>
                   <td className="px-4 py-3 text-gray-600">{parseFloat(row.cgpa)?.toFixed(2) ?? '—'}</td>
                   <td className="px-4 py-3">
                     {row.published
                       ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Published</span>
-                      : <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Draft</span>}
+                      : <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">Draft</span>}
                   </td>
                 </tr>
               ))}

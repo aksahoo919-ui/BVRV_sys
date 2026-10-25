@@ -41,16 +41,16 @@ export default function StudentTimelineModal({ student, onClose }) {
           <div>
             <h2 className="font-bold text-gray-900">Timeline: {student.name}</h2>
             {data?.user && (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {[data.user.phone, data.user.email].filter(Boolean).join(' · ')} · joined the portal {fmt(data.user.created_at)}
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">✕</button>
         </div>
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
-        {!data && !error ? <p className="text-sm text-gray-400">Loading…</p> : data && (
-          groups.length === 0 ? <p className="text-sm text-gray-400">Not in any class yet.</p> : (
+        {!data && !error ? <p className="text-sm text-gray-500">Loading…</p> : data && (
+          groups.length === 0 ? <p className="text-sm text-gray-500">Not in any class yet.</p> : (
             <ol className="relative border-l-2 border-gray-100 ml-2 space-y-5">
               {groups.map(g => (
                 <li key={g.key} className="relative pl-4">
@@ -58,7 +58,7 @@ export default function StudentTimelineModal({ student, onClose }) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-gray-800 text-sm">{g.label}</p>
                     {g.current && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Current</span>}
-                    {g.start && <span className="text-xs text-gray-400">{fmt(g.start)} – {fmt(g.end)}</span>}
+                    {g.start && <span className="text-xs text-gray-500">{fmt(g.start)} – {fmt(g.end)}</span>}
                   </div>
                   <div className="mt-2 space-y-2">
                     {g.rows.map(r => (
@@ -66,19 +66,19 @@ export default function StudentTimelineModal({ student, onClose }) {
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-sm font-medium text-gray-800">{r.course_name ? `${r.course_name} · ` : ''}{r.code}</p>
-                            <p className="text-xs text-gray-400">{r.class_name}{r.topic ? ` · ${r.topic}` : ''}</p>
+                            <p className="text-xs text-gray-500">{r.class_name}{r.topic ? ` · ${r.topic}` : ''}</p>
                           </div>
                           <div className="text-right">
-                            <p className={`text-sm font-semibold ${r.percentage == null ? 'text-gray-400' : r.percentage < 75 ? 'text-amber-600' : 'text-green-600'}`}>
+                            <p className={`text-sm font-semibold ${r.percentage == null ? 'text-gray-500' : r.percentage < 75 ? 'text-amber-600' : 'text-green-600'}`}>
                               {r.percentage == null ? 'No classes yet' : `${r.percentage}%`}
                             </p>
-                            <p className="text-xs text-gray-400">{r.days_present} of {r.class_days} class day{r.class_days === 1 ? '' : 's'}</p>
+                            <p className="text-xs text-gray-500">{r.days_present} of {r.class_days} class day{r.class_days === 1 ? '' : 's'}</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 mt-2 text-xs text-gray-600">
-                          <p><span className="text-gray-400">Teacher:</span> {r.teachers || '—'}</p>
-                          <p><span className="text-gray-400">BV Leader:</span> {r.bv_leader || '—'}</p>
-                          <p><span className="text-gray-400">Classes held:</span> {r.first_class ? `${fmt(r.first_class)} – ${fmt(r.last_class)}` : '—'}</p>
+                          <p><span className="text-gray-500">Teacher:</span> {r.teachers || '—'}</p>
+                          <p><span className="text-gray-500">BV Leader:</span> {r.bv_leader || '—'}</p>
+                          <p><span className="text-gray-500">Classes held:</span> {r.first_class ? `${fmt(r.first_class)} – ${fmt(r.last_class)}` : '—'}</p>
                         </div>
                       </div>
                     ))}
@@ -90,7 +90,7 @@ export default function StudentTimelineModal({ student, onClose }) {
         )}
         <div className="border-t border-gray-100 pt-4">
           <h3 className="font-semibold text-gray-800 text-sm mb-2">Attendance over time</h3>
-          {!history ? <p className="text-sm text-gray-400">Loading…</p>
+          {!history ? <p className="text-sm text-gray-500">Loading…</p>
             : history.failed ? <p className="text-sm text-red-600">Could not load the attendance graph</p>
             : <AttendanceTimeline data={history} datesOpen={false} />}
         </div>

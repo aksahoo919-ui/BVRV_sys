@@ -76,7 +76,7 @@ export default function TeacherReports() {
       {loadingReport && <Spinner />}
 
       {!loadingReport && selectedId && report.length === 0 && !error && (
-        <div className="card text-center py-10 text-gray-400">
+        <div className="card text-center py-10 text-gray-500">
           No attendance data found for this subject.
         </div>
       )}
@@ -128,7 +128,7 @@ export default function TeacherReports() {
                           <Avatar user={row} />
                           <div>
                             <p className="font-medium text-gray-900">{row.name}</p>
-                            <p className="text-xs text-gray-400">{row.email}</p>
+                            <p className="text-xs text-gray-500">{row.email}</p>
                           </div>
                           {row.below_threshold && (
                             <span title="Below threshold" className="text-amber-500 text-base leading-none">

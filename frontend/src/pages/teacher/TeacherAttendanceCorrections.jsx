@@ -69,7 +69,7 @@ export default function TeacherAttendanceCorrections() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Session ID</label>
             <input className="input" placeholder="Paste session UUID" value={form.session_id}
               onChange={e => { setForm(f=>({...f, session_id: e.target.value, student_id:''})); loadSessionStudents(e.target.value); }} />
-            <p className="text-xs text-gray-400 mt-0.5">Find session ID in the session view after it closes.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Find session ID in the session view after it closes.</p>
           </div>
           {sessionStudents.length > 0 && (
             <div>
@@ -117,7 +117,7 @@ export default function TeacherAttendanceCorrections() {
         <h2 className="text-base font-semibold text-gray-900 mb-3">My Submitted Corrections</h2>
         {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
         {loading ? <Spinner /> : corrections.length === 0 ? (
-          <div className="card text-center text-gray-400 py-10">No correction requests yet.</div>
+          <div className="card text-center text-gray-500 py-10">No correction requests yet.</div>
         ) : (
           <div className="space-y-3">
             {corrections.map(c => (
@@ -126,7 +126,7 @@ export default function TeacherAttendanceCorrections() {
                   <div>
                     <p className="font-medium text-gray-800">{c.student_name}</p>
                     <p className="text-xs text-gray-500">{c.subject_name} · {new Date(c.session_date).toLocaleDateString()}</p>
-                    <p className="text-xs text-gray-400 mt-1">{c.original_status} → {c.requested_status}</p>
+                    <p className="text-xs text-gray-500 mt-1">{c.original_status} → {c.requested_status}</p>
                     <p className="text-sm text-gray-600 mt-1 italic">"{c.reason}"</p>
                   </div>
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${STATUS_BADGE[c.status]||'bg-gray-100 text-gray-600'}`}>

@@ -166,7 +166,7 @@ export default function AdminClasses() {
 
             {/* Assigned teachers list */}
             {members.instructors.length === 0 ? (
-              <p className="text-sm text-gray-400 mb-4">No teachers assigned.</p>
+              <p className="text-sm text-gray-500 mb-4">No teachers assigned.</p>
             ) : (
               <ul className="space-y-2 mb-4">
                 {members.instructors.map(t => (
@@ -176,7 +176,7 @@ export default function AdminClasses() {
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-800">{t.name}</p>
-                      <p className="text-xs text-gray-400">{t.email}</p>
+                      <p className="text-xs text-gray-500">{t.email}</p>
                     </div>
                     <button
                       onClick={() => handleRemoveTeacher(t.id)}
@@ -250,19 +250,19 @@ export default function AdminClasses() {
                   <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{s.email}</p>
                     </div>
                     <button
                       onClick={() => handleRemoveStudent(s.id)}
                       disabled={busyStudent === s.id}
-                      className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-60"
+                      className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-700 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-60"
                     >
                       {busyStudent === s.id ? '…' : 'Remove'}
                     </button>
                   </div>
                 ))}
                 {registeredStudents.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-6">
+                  <p className="text-sm text-gray-500 text-center py-6">
                     {members.students.length === 0 ? 'No students enrolled yet.' : 'No matches.'}
                   </p>
                 )}
@@ -273,20 +273,20 @@ export default function AdminClasses() {
                   <div key={s.id} className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                      <p className="text-xs text-gray-500 truncate">{s.email}</p>
                       {s.course && <p className="text-xs text-amber-700 truncate" title="Already in this course">Already in: {s.course}</p>}
                     </div>
                     <button
                       onClick={() => handleAddStudent(s.id)}
                       disabled={busyStudent === s.id}
-                      className="text-xs font-medium py-1 px-2 rounded-md border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors flex-shrink-0 disabled:opacity-60"
+                      className="text-xs font-medium py-1 px-2 rounded-md border border-emerald-300 text-temple-800 hover:bg-emerald-50 transition-colors flex-shrink-0 disabled:opacity-60"
                     >
                       {busyStudent === s.id ? '…' : 'Add'}
                     </button>
                   </div>
                 ))}
                 {otherStudents.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-6">No other students to add.</p>
+                  <p className="text-sm text-gray-500 text-center py-6">No other students to add.</p>
                 )}
               </div>
             )}
@@ -302,7 +302,7 @@ export default function AdminClasses() {
               <span className="font-medium">{confirmAdd.student?.name}</span> is already in{' '}
               <span className="font-medium">{confirmAdd.courses.join(', ')}</span>. Add them to this course as well?
             </p>
-            <p className="text-xs text-gray-400 mt-2">To move them instead, use All Users &gt; Course.</p>
+            <p className="text-xs text-gray-500 mt-2">To move them instead, use All Users &gt; Course.</p>
             <div className="flex gap-2 mt-4">
               <button onClick={() => handleAddStudent(confirmAdd.student.id, true)} disabled={busyStudent === confirmAdd.student?.id} className="btn-primary flex-1">Add anyway</button>
               <button onClick={() => setConfirmAdd(null)} className="btn-secondary flex-1">Cancel</button>

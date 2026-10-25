@@ -161,7 +161,7 @@ export default function AdminAuditLogs() {
                 <tbody className="divide-y divide-gray-100">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-gray-400">
+                      <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                         No audit logs match the current filters.
                       </td>
                     </tr>
@@ -174,7 +174,7 @@ export default function AdminAuditLogs() {
                         <td className="px-4 py-3">
                           <p className="font-medium text-gray-900 whitespace-nowrap">{row.actor_name || '—'}</p>
                           {row.actor_email && (
-                            <p className="text-xs text-gray-400">{row.actor_email}</p>
+                            <p className="text-xs text-gray-500">{row.actor_email}</p>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -188,7 +188,7 @@ export default function AdminAuditLogs() {
                               {row.entity_type}
                             </span>
                           ) : (
-                            <span className="text-gray-300">—</span>
+                            <span className="text-gray-500">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-gray-500">

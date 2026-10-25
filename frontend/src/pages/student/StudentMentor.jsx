@@ -38,18 +38,18 @@ export default function StudentMentor() {
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My BV Leaders</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Your BV Leader for each class</p>
+        <p className="text-sm text-gray-500 mt-0.5">Your BV Leader for each class</p>
       </div>
 
       {mentors.length === 0 ? (
         <div className="card text-center py-16">
           <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-7 h-7 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
           <p className="text-gray-600 font-medium">No BV Leader assigned yet.</p>
-          <p className="text-gray-400 text-sm mt-1">Please contact admin to get a BV Leader assigned.</p>
+          <p className="text-gray-500 text-sm mt-1">Please contact admin to get a BV Leader assigned.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -63,11 +63,11 @@ export default function StudentMentor() {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-primary-600 uppercase tracking-wider">
+                <p className="text-xs font-semibold text-primary-600 uppercase tracking-wider inline-flex items-center min-h-[24px]">
                   {m.subject_code} · {m.subject_name}
                 </p>
                 <p className="text-lg font-bold text-gray-900 leading-tight">{m.mentor_name}</p>
-                <a href={`mailto:${m.mentor_email}`} className="text-sm text-primary-600 hover:underline truncate block">
+                <a href={`mailto:${m.mentor_email}`} className="text-sm text-primary-600 hover:underline truncate block inline-flex items-center min-h-[24px]">
                   {m.mentor_email}
                 </a>
                 {m.phone && <p className="text-sm text-gray-500">{m.phone}</p>}

@@ -15,7 +15,7 @@ export default function StudentHome() {
     <div>
       <h1 className="text-xl font-bold text-gray-900 mb-6">My Subjects</h1>
       {subjects.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">Not enrolled in any subjects yet.</div>
+        <div className="card text-center py-12 text-gray-500">Not enrolled in any subjects yet.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {subjects.map(s => (

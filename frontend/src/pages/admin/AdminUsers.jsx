@@ -49,24 +49,24 @@ function CourseModal({ user, onClose, onChanged }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-bold text-gray-900">Course: {user.name}</h2>
-            <p className="text-xs text-gray-400">Changing a class moves the student and their BV leader to the new class. Past attendance stays with the old class. Only current-semester classes are offered; past semesters are on the Timeline.</p>
+            <p className="text-xs text-gray-500">Changing a class moves the student and their BV leader to the new class. Past attendance stays with the old class. Only current-semester classes are offered; past semesters are on the Timeline.</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">✕</button>
         </div>
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>}
         {notice && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">{notice}</div>}
-        {!classes ? <p className="text-sm text-gray-400">Loading…</p> : (
+        {!classes ? <p className="text-sm text-gray-500">Loading…</p> : (
           <div className="space-y-3">
-            {classes.length === 0 && <p className="text-sm text-gray-400">Not in any class yet.</p>}
+            {classes.length === 0 && <p className="text-sm text-gray-500">Not in any class yet.</p>}
             {classes.map(c => (
               <div key={c.subject_id} className="border border-gray-100 rounded-lg p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{c.label}</p>
-                    <p className="text-xs text-gray-400">BV Leader: {c.bv_leader || '—'} · {c.days_present} day{c.days_present === 1 ? '' : 's'} present</p>
+                    <p className="text-xs text-gray-500">BV Leader: {c.bv_leader || '—'} · {c.days_present} day{c.days_present === 1 ? '' : 's'} present</p>
                   </div>
                   <button disabled={busy} onClick={() => send({ from_subject_id: c.subject_id }, `Removed from ${c.code}.`)}
-                    className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50">Remove</button>
+                    className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-700 hover:bg-red-50">Remove</button>
                 </div>
                 <div className="flex gap-2">
                   <select className="input text-sm" value={pick[c.subject_id] || ''} onChange={e => setPick(p => ({ ...p, [c.subject_id]: e.target.value }))}>
@@ -406,7 +406,7 @@ export default function AdminUsers() {
       <th className={`text-left px-4 py-3 font-medium text-gray-500 ${className}`}>
         <button type="button" onClick={() => toggleSort(k)} aria-label={`Sort by ${label}`} className="inline-flex items-center gap-1 py-1 -my-1 min-h-[24px] hover:text-gray-800">
           {label}
-          <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-300'}`}>
+          <span className={`text-[10px] ${active ? 'text-gray-700' : 'text-gray-500'}`}>
             {active ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
           </span>
         </button>
@@ -422,7 +422,7 @@ export default function AdminUsers() {
         <div className="flex gap-2 flex-wrap">
           <button onClick={openAdd} className="btn-primary text-sm">+ Add User</button>
           <button onClick={() => setShowImport(true)} className="btn-secondary text-sm">Bulk Import</button>
-          <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">Bulk Delete</button>
+          <button onClick={() => { setShowBulkDelete(true); setBulkResult(''); }} className="text-sm font-semibold py-2 px-4 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors">Bulk Delete</button>
         </div>
       </div>
 
@@ -461,7 +461,7 @@ export default function AdminUsers() {
       )}
 
       {actionError && (
-        <p className="text-sm text-red-600 mb-3">{actionError}</p>
+        <p className="text-sm text-red-700 mb-3">{actionError}</p>
       )}
 
       {/* Bulk import modal */}
@@ -470,11 +470,11 @@ export default function AdminUsers() {
           <div className="card w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Bulk Import Users</h2>
-              <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => { setShowImport(false); setImportResult(null); }} className="text-gray-500 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">CSV columns: <code className="bg-gray-100 px-1 rounded">name, email, role, phone number, course name, language</code></p>
-            <p className="text-xs text-gray-400 mb-3">Only name &amp; role are required — email, phone, course name &amp; language are optional. Rows without an email still import (a placeholder is generated). If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and BV Leader automatically get a dual role.</p>
-            <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block">Download template CSV</button>
+            <p className="text-xs text-gray-500 mb-3">Only name &amp; role are required — email, phone, course name &amp; language are optional. Rows without an email still import (a placeholder is generated). If a student row has course + language, they're auto-enrolled into that subject. Two rows with the same email as teacher and BV Leader automatically get a dual role.</p>
+            <button onClick={downloadTemplate} className="text-xs text-primary-600 hover:underline mb-3 block inline-flex items-center min-h-[24px]">Download template CSV</button>
             <input ref={fileRef} type="file" accept=".csv" className="input mb-3" />
             {importResult && (
               <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
@@ -537,7 +537,7 @@ export default function AdminUsers() {
           <div className="card w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Add User</h2>
-              <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => setShowAdd(false)} className="text-gray-500 hover:text-gray-600">✕</button>
             </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
             <input className="input mb-3" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
@@ -553,25 +553,25 @@ export default function AdminUsers() {
               <option value="Male">Male</option>
               <option value="Female">Female</option>
             </select>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-500 font-normal">(optional)</span></label>
             <input type="email" className="input mb-3" value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-gray-500 font-normal">(optional)</span></label>
             <input className="input mb-3" value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
             {addForm.role === 'student' && (
               <>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-gray-400 font-normal">(optional, current semester)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class <span className="text-gray-500 font-normal">(optional, current semester)</span></label>
                 <select className="input mb-3" value={addForm.subject_id} onChange={e => setAddForm(f => ({ ...f, subject_id: e.target.value }))}>
                   <option value="">— No class yet —</option>
                   {(addOptions?.classes || []).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}{semText(c) ? ` · ${semText(c)}` : ''}</option>)}
                 </select>
-                <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader <span className="text-gray-500 font-normal">(optional)</span></label>
                 <select className="input mb-3" value={addForm.mentor_id} onChange={e => setAddForm(f => ({ ...f, mentor_id: e.target.value }))}>
                   <option value="">— No BV Leader —</option>
                   {(addOptions?.leaders || []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </>
             )}
-            {addError && <p className="text-sm text-red-600 mb-3">{addError}</p>}
+            {addError && <p className="text-sm text-red-700 mb-3">{addError}</p>}
             <div className="flex gap-2">
               <button onClick={handleAddUser} disabled={addingUser || !addForm.name.trim()} className="btn-primary flex-1">
                 {addingUser ? 'Adding…' : 'Add User'}
@@ -588,11 +588,11 @@ export default function AdminUsers() {
           <div className="card w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Edit user</h2>
-              <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => setEditTarget(null)} className="text-gray-500 hover:text-gray-600">✕</button>
             </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input className="input mb-3" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
-            <label className="block text-sm font-medium text-gray-700 mb-1">Initiated name <span className="text-gray-400 font-normal">(if initiated)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Initiated name <span className="text-gray-500 font-normal">(if initiated)</span></label>
             <input className="input mb-3" value={editForm.initiated_name} onChange={e => setEditForm(f => ({ ...f, initiated_name: e.target.value }))} placeholder="e.g. Amiyalila Gaura Das" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
             <select className="input mb-3" value={editForm.gender} onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}>
@@ -605,8 +605,8 @@ export default function AdminUsers() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input type="text" className="input mb-1" value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))} placeholder="Leave blank to keep unchanged" />
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400">Default password is <code className="bg-gray-100 px-1 rounded">1896</code>.</p>
-              <button type="button" onClick={resetPasswordToDefault} disabled={savingEdit} className="text-xs font-medium text-amber-700 hover:underline">Reset to 1896</button>
+              <p className="text-xs text-gray-500">Default password is <code className="bg-gray-100 px-1 rounded">1896</code>.</p>
+              <button type="button" onClick={resetPasswordToDefault} disabled={savingEdit} className="text-xs font-medium text-amber-700 hover:underline inline-flex items-center min-h-[24px]">Reset to 1896</button>
             </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input type="email" className="input mb-3" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
@@ -621,20 +621,20 @@ export default function AdminUsers() {
             {editTarget.role === 'student' && (
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-1">BV Leader</label>
-                {!editLeader ? <p className="text-sm text-gray-400 mb-3">Loading…</p> : (
+                {!editLeader ? <p className="text-sm text-gray-500 mb-3">Loading…</p> : (
                   <>
                     <select className="input mb-1" value={editLeader.value} onChange={e => setEditLeader(l => ({ ...l, value: e.target.value }))}>
                       {editLeader.mixed && <option value="__mixed">Different per course: {editLeader.leaders.map(l => l.name).join(' / ')}</option>}
                       <option value="">— No BV Leader —</option>
                       {(leaderList || []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
-                    <p className="text-xs text-gray-400 mb-3">Applies to all of the student's current-semester courses.</p>
+                    <p className="text-xs text-gray-500 mb-3">Applies to all of the student's current-semester courses.</p>
                   </>
                 )}
               </>
             )}
-            <p className="text-xs text-gray-400 mb-3">A real email lets this person sign in with Google.</p>
-            {editError && <p className="text-sm text-red-600 mb-3">{editError}</p>}
+            <p className="text-xs text-gray-500 mb-3">A real email lets this person sign in with Google.</p>
+            {editError && <p className="text-sm text-red-700 mb-3">{editError}</p>}
             <div className="flex gap-2">
               <button onClick={saveEdit} disabled={savingEdit || !editForm.email.trim() || !editForm.name.trim()} className="btn-primary flex-1">
                 {savingEdit ? 'Saving…' : 'Save'}
@@ -651,16 +651,16 @@ export default function AdminUsers() {
           <div className="card w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Dual role assignment</h2>
-              <button onClick={() => setDualTarget(null)} className="text-gray-400 hover:text-gray-600">✕</button>
+              <button onClick={() => setDualTarget(null)} className="text-gray-500 hover:text-gray-600">✕</button>
             </div>
             <p className="text-sm text-gray-500 mb-1">{dualTarget.name}</p>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-gray-500 mb-4">
               Primary role: <span className="font-medium text-gray-700">{roleLabel(dualTarget.role)}</span>
               {dualTarget.secondary_role && (
                 <> · Current secondary: <span className="font-medium text-gray-700">{roleLabel(dualTarget.secondary_role)}</span></>
               )}
             </p>
-            {dualError && <p className="text-sm text-red-600 mb-3">{dualError}</p>}
+            {dualError && <p className="text-sm text-red-700 mb-3">{dualError}</p>}
             <div className="space-y-2">
               {dualTarget.role === 'teacher' && (
                 <button
@@ -668,8 +668,8 @@ export default function AdminUsers() {
                   disabled={savingDual || dualTarget.secondary_role === 'mentor'}
                   className="w-full text-left px-4 py-3 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  <span className="font-medium text-emerald-700">Add BV Leader role</span>
-                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
+                  <span className="font-medium text-temple-800">Add BV Leader role</span>
+                  <p className="text-xs text-gray-500 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
                 </button>
               )}
               {dualTarget.role === 'mentor' && (
@@ -679,7 +679,7 @@ export default function AdminUsers() {
                   className="w-full text-left px-4 py-3 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   <span className="font-medium text-blue-700">Add Teacher role</span>
-                  <p className="text-xs text-gray-400 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
                 </button>
               )}
               {dualTarget.secondary_role && (
@@ -688,8 +688,8 @@ export default function AdminUsers() {
                   disabled={savingDual}
                   className="w-full text-left px-4 py-3 rounded-lg border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50 text-sm"
                 >
-                  <span className="font-medium text-red-600">Remove secondary role</span>
-                  <p className="text-xs text-gray-400 mt-0.5">User will only access their primary role.</p>
+                  <span className="font-medium text-red-700">Remove secondary role</span>
+                  <p className="text-xs text-gray-500 mt-0.5">User will only access their primary role.</p>
                 </button>
               )}
             </div>
@@ -707,7 +707,7 @@ export default function AdminUsers() {
           <div className="card w-full max-w-sm">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <span className="text-red-600 text-lg">⚠</span>
+                <span className="text-red-700 text-lg">⚠</span>
               </div>
               <div>
                 <h2 className="font-bold text-gray-900">Remove user permanently?</h2>
@@ -717,9 +717,9 @@ export default function AdminUsers() {
             <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
               <p className="font-medium text-gray-800">{deleteTarget.name}</p>
               <p className="text-gray-500">{deleteTarget.email}</p>
-              <p className="text-gray-400 capitalize">{deleteTarget.role}</p>
+              <p className="text-gray-500 capitalize">{deleteTarget.role}</p>
             </div>
-            {actionError && <p className="text-sm text-red-600 mb-3">{actionError}</p>}
+            {actionError && <p className="text-sm text-red-700 mb-3">{actionError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={confirmDelete}
@@ -759,7 +759,7 @@ export default function AdminUsers() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {rows.length === 0 && (
-                  <tr><td colSpan={showLeaderCol ? 9 : 8} className="text-center py-10 text-gray-400">No users found.</td></tr>
+                  <tr><td colSpan={showLeaderCol ? 9 : 8} className="text-center py-10 text-gray-500">No users found.</td></tr>
                 )}
                 {rows.map(u => (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -768,20 +768,20 @@ export default function AdminUsers() {
                         <Avatar user={u} />
                         <div>
                           <p className="font-medium text-gray-900">{u.name}</p>
-                          <p className="text-xs text-gray-400">{u.email}</p>
+                          <p className="text-xs text-gray-500">{u.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{u.initiated_name || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-700">{u.initiated_name || <span className="text-gray-500">—</span>}</td>
                     {showLeaderCol && <td className="px-4 py-3">
                       {u.role === 'student' && (u.bv_leader
                         ? <span className="font-medium text-teal-700">{u.bv_leader}</span>
-                        : <span className="text-gray-300">—</span>)}
+                        : <span className="text-gray-500">—</span>)}
                     </td>}
                     <td className="px-4 py-3 text-gray-600">
-                      {u.course || <span className="text-gray-300">—</span>}
+                      {u.course || <span className="text-gray-500">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{u.gender || <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-gray-600">{u.gender || <span className="text-gray-500">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`badge ${ROLE_COLORS[u.role] || 'bg-gray-100 text-gray-600'}`}>{roleLabel(u.role)}</span>
@@ -791,14 +791,14 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`badge ${STATUS_COLORS[u.status] || 'bg-gray-100 text-gray-500'}`}>{u.status}</span>
+                      <span className={`badge ${STATUS_COLORS[u.status] || 'bg-gray-100 text-gray-600'}`}>{u.status}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 hidden md:table-cell">
+                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
                       {u.role === 'admin' ? (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-gray-500">—</span>
                       ) : (
                         <div className="flex gap-1.5 justify-end">
                           {/* Edit user */}
@@ -852,7 +852,7 @@ export default function AdminUsers() {
                           {/* Delete */}
                           <button
                             onClick={() => { setDeleteTarget(u); setActionError(''); }}
-                            className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                            className="text-xs font-medium py-1 px-2 rounded-md border border-red-200 text-red-700 hover:bg-red-50 transition-colors"
                           >
                             Remove
                           </button>
@@ -864,7 +864,7 @@ export default function AdminUsers() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-400">
+          <div className="px-4 py-2 border-t border-gray-100 text-xs text-gray-500">
             {visible.length} of {users.length} users
           </div>
         </div>

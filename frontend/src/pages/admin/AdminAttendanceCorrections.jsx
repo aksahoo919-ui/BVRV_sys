@@ -24,7 +24,7 @@ function Spinner() {
 
 function ReasonCell({ reason }) {
   const [expanded, setExpanded] = useState(false);
-  if (!reason) return <span className="text-gray-400">—</span>;
+  if (!reason) return <span className="text-gray-500">—</span>;
   const short = reason.length > 60;
   return (
     <span>
@@ -32,7 +32,7 @@ function ReasonCell({ reason }) {
       {short && (
         <button
           onClick={() => setExpanded(e => !e)}
-          className="ml-1 text-primary-600 hover:underline text-xs"
+          className="ml-1 text-primary-600 hover:underline text-xs inline-flex items-center min-h-[24px]"
         >
           {expanded ? 'less' : 'more'}
         </button>
@@ -107,7 +107,7 @@ export default function AdminAttendanceCorrections() {
       {loading ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <div className="card text-center text-gray-400 py-12">No correction requests found.</div>
+        <div className="card text-center text-gray-500 py-12">No correction requests found.</div>
       ) : (
         <div className="card overflow-x-auto p-0">
           <div className="overflow-x-auto">
@@ -144,7 +144,7 @@ export default function AdminAttendanceCorrections() {
                         <span className={`badge capitalize ${STATUS_BADGE[row.original_status] || 'bg-gray-100 text-gray-600'}`}>
                           {row.original_status || '—'}
                         </span>
-                        <span className="text-gray-400">→</span>
+                        <span className="text-gray-500">→</span>
                         <span className={`badge capitalize ${STATUS_BADGE[row.requested_status] || 'bg-gray-100 text-gray-600'}`}>
                           {row.requested_status || '—'}
                         </span>
@@ -177,7 +177,7 @@ export default function AdminAttendanceCorrections() {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-gray-500 text-xs">—</span>
                       )}
                     </td>
                   </tr>

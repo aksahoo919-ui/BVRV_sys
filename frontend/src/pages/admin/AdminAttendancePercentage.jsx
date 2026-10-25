@@ -16,7 +16,7 @@ export default function AdminAttendancePercentage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">Attendance %</h1>
-        <p className="text-sm text-gray-400 mt-0.5">BVRV class attendance for every student. Several sessions on one day count as one class; "Service" counts as present.</p>
+        <p className="text-sm text-gray-500 mt-0.5">BVRV class attendance for every student. Several sessions on one day count as one class; "Service" counts as present.</p>
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200">
@@ -142,7 +142,7 @@ function PercentageReport({ subjects }) {
           <option value="low">Low</option>
           <option value="no_data">No sessions</option>
         </select>
-        <span className="text-xs text-gray-400">{data ? `${rows.length} of ${data.rows.length}` : ''}</span>
+        <span className="text-xs text-gray-500">{data ? `${rows.length} of ${data.rows.length}` : ''}</span>
         <div className="flex-1" />
         <button onClick={() => download('xlsx')} className="btn-secondary text-sm">Export Excel</button>
         <button onClick={() => download('csv')} className="btn-secondary text-sm">Export CSV</button>
@@ -166,23 +166,23 @@ function PercentageReport({ subjects }) {
                   <tr key={r.id} className={`hover:bg-gray-50 ${r.status === 'low' ? 'bg-amber-50/60' : ''}`}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{r.name}</p>
-                      <p className="text-xs text-gray-400">{[r.roll_number, r.phone, r.email].filter(Boolean).join(' · ')}</p>
+                      <p className="text-xs text-gray-500">{[r.roll_number, r.phone, r.email].filter(Boolean).join(' · ')}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       <p>{r.courses || '—'}</p>
-                      <p className="text-xs text-gray-400">{r.classes || 'Not enrolled in a class'}</p>
+                      <p className="text-xs text-gray-500">{r.classes || 'Not enrolled in a class'}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{r.attended} / {r.total_sessions}</td>
                     <td className="px-4 py-3"><PctBar pct={r.percentage} threshold={s.threshold} /></td>
                     <td className="px-4 py-3">
-                      <span className={`badge ${r.status === 'ok' ? 'bg-green-100 text-green-700' : r.status === 'low' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`badge ${r.status === 'ok' ? 'bg-green-100 text-green-700' : r.status === 'low' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
                         {STATUS_LABEL[r.status]}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {!rows.length && (
-                  <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400">No students match.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-500">No students match.</td></tr>
                 )}
               </tbody>
             </table>
@@ -373,13 +373,13 @@ function Stat({ label, value, sub, tone = 'gray', onClick, active }) {
     <div onClick={onClick} className={`card py-3 ${onClick ? 'cursor-pointer hover:border-primary-300' : ''} ${active ? 'ring-2 ring-primary-400' : ''}`}>
       <p className="text-xs text-gray-500">{label}</p>
       <p className={`text-2xl font-bold mt-0.5 ${colors[tone]}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
+      {sub && <p className="text-xs text-gray-500">{sub}</p>}
     </div>
   );
 }
 
 function PctBar({ pct, threshold }) {
-  if (pct == null) return <span className="text-gray-400">—</span>;
+  if (pct == null) return <span className="text-gray-500">—</span>;
   const low = pct < threshold;
   return (
     <div className="flex items-center gap-2">
@@ -395,7 +395,7 @@ function Th({ k, sort, setSort, children, className = '' }) {
   const active = sort.key === k;
   return (
     <th className={`text-left px-4 py-3 text-gray-500 font-medium ${className}`}>
-      <button className="flex items-center gap-1 hover:text-gray-800"
+      <button className="flex items-center gap-1 py-1 -my-1 min-h-[24px] hover:text-gray-800"
         onClick={() => setSort(active ? { key: k, dir: -sort.dir } : { key: k, dir: k === 'name' || k === 'courses' ? 1 : -1 })}>
         {children}{active && <span>{sort.dir === 1 ? '▲' : '▼'}</span>}
       </button>

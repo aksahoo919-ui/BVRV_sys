@@ -90,7 +90,7 @@ export default function AttendanceRecords({ role }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Attendance Records</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <p className="text-sm text-gray-500 mt-0.5">
           Pick a date to see the attendance{isTeacher ? ' of a class' : ' of your weekly class'}. All sessions on the same day are merged.
           Attendance can be changed for 7 days after the class.
         </p>
@@ -121,7 +121,7 @@ export default function AttendanceRecords({ role }) {
               <h2 className="font-semibold text-gray-800">
                 {isTeacher ? `${subject?.name || 'Class'} · ` : ''}{fmtDayIST(date)}
               </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {day.has_record
                   ? `Recorded ${fmtDateTimeIST(day.recorded_at)}${day.session_count > 1 ? ` · ${day.session_count} sessions merged` : ''}`
                   : 'No attendance recorded on this date.'}
@@ -148,7 +148,7 @@ export default function AttendanceRecords({ role }) {
               emptyText={isTeacher ? 'No students enrolled in this class.' : 'No students assigned to you.'}
             />
           ) : (
-            <p className="text-center py-8 text-gray-400 text-sm">
+            <p className="text-center py-8 text-gray-500 text-sm">
               {roster.length ? 'Nothing recorded for this date.' : (isTeacher ? 'No students enrolled in this class.' : 'No students assigned to you.')}
             </p>
           )}
@@ -159,7 +159,7 @@ export default function AttendanceRecords({ role }) {
               <button onClick={load} disabled={saving} className="btn-secondary">Cancel</button>
             </div>
           )}
-          {savedMsg && !editing && <p className="text-emerald-600 text-sm font-semibold mt-3">✓ {savedMsg}</p>}
+          {savedMsg && !editing && <p className="text-temple-700 text-sm font-semibold mt-3 inline-flex items-center min-h-[24px]">✓ {savedMsg}</p>}
         </div>
       )}
     </div>

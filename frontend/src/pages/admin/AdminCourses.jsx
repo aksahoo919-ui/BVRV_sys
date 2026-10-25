@@ -101,7 +101,7 @@ export default function AdminCourses() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={4} className="py-6 text-center text-gray-400">No courses yet</td></tr>
+                <tr><td colSpan={4} className="py-6 text-center text-gray-500">No courses yet</td></tr>
               )}
             </tbody>
           </table>

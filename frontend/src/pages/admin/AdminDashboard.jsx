@@ -101,12 +101,12 @@ export default function AdminDashboard() {
       {/* Top bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-temple-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
             A
           </div>
           <div>
             <p className="text-xs text-gray-500 leading-none">Admin</p>
-            <p className="text-sm font-semibold text-gray-800 leading-tight">BVRV Institution</p>
+            <h1 className="text-sm font-semibold text-gray-800 leading-tight">BVRV Institution</h1>
           </div>
         </div>
         <button
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Attendance by Course</h3>
           {deptAttendance.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">No data yet.</p>
+            <p className="text-sm text-gray-500 text-center py-4">No data yet.</p>
           ) : (
             <div>
               {deptAttendance.map((dept, i) => {
@@ -249,7 +249,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Teacher Activity Today</h3>
           {teacherActivity.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">No activity data yet.</p>
+            <p className="text-sm text-gray-500 text-center py-4">No activity data yet.</p>
           ) : (
             <div>
               {teacherActivity.slice(0, 4).map((row, i) => {
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
                   <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0 gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-800 truncate font-medium">{row.teacher_name || row.name || 'Teacher'}</p>
-                      <p className="text-xs text-gray-400 truncate">{row.subject_code || row.subject || ''}</p>
+                      <p className="text-xs text-gray-500 truncate">{row.subject_code || row.subject || ''}</p>
                     </div>
                     <span
                       className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                           ? 'bg-green-100 text-green-700'
                           : chipColor === 'blue'
                           ? 'bg-blue-100 text-blue-700 animate-pulse'
-                          : 'bg-gray-100 text-gray-500'
+                          : 'bg-gray-100 text-gray-600'
                       }`}
                     >
                       {chipLabel}
@@ -292,7 +292,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Recent Audit Logs</h3>
           {auditLogs.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">No audit logs yet.</p>
+            <p className="text-sm text-gray-500 text-center py-4">No audit logs yet.</p>
           ) : (
             <div>
               {auditLogs.slice(0, 4).map((log, i) => {
@@ -303,11 +303,11 @@ export default function AdminDashboard() {
                       <p className="text-xs font-mono text-gray-700 truncate">
                         {log.action || log.event || 'action'}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 truncate">
                         {log.entity_type || log.resource || ''}{log.entity_type && actor ? ' · ' : ''}{actor}
                       </p>
                     </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-gray-500 flex-shrink-0 mt-0.5">
                       {timeAgo(log.created_at || log.timestamp)}
                     </span>
                   </div>

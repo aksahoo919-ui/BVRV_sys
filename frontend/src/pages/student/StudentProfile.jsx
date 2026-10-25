@@ -107,7 +107,7 @@ export default function StudentProfile() {
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Your account information</p>
+        <p className="text-sm text-gray-500 mt-0.5">Your account information</p>
       </div>
 
       {/* Avatar + name card */}
@@ -137,17 +137,17 @@ export default function StudentProfile() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
           {/* Non-editable fields */}
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Roll Number</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Roll Number</p>
             <p className="text-sm text-gray-500">{profile.roll_number || '—'}</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Account Status</p>
-            <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Account Status</p>
+            <span className="inline-block bg-emerald-100 text-temple-800 text-xs font-semibold px-2 py-0.5 rounded-full">
               Active
             </span>
           </div>
           <div className="sm:col-span-2">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Courses</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Courses</p>
             {profile.courses && profile.courses.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {profile.courses.map((c) => (
@@ -157,7 +157,7 @@ export default function StudentProfile() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400">Not enrolled in any course yet.</p>
+              <p className="text-sm text-gray-500">Not enrolled in any course yet.</p>
             )}
           </div>
 
@@ -176,7 +176,7 @@ export default function StudentProfile() {
                 className="input w-full"
               />
             ) : (
-              <p className="text-sm text-gray-800">{profile.phone || <span className="text-gray-400 italic">Not set</span>}</p>
+              <p className="text-sm text-gray-800">{profile.phone || <span className="text-gray-500 italic">Not set</span>}</p>
             )}
           </div>
 
@@ -196,7 +196,7 @@ export default function StudentProfile() {
                   ? new Date(profile.date_of_birth).toLocaleDateString('en-IN', {
                       day: '2-digit', month: 'long', year: 'numeric',
                     })
-                  : <span className="text-gray-400 italic">Not set</span>}
+                  : <span className="text-gray-500 italic">Not set</span>}
               </p>
             )}
           </div>
@@ -236,7 +236,7 @@ export default function StudentProfile() {
 
         {/* Last updated */}
         {profile.profile_updated_at && (
-          <p className="mt-3 text-xs text-gray-400">
+          <p className="mt-3 text-xs text-gray-500">
             Last updated: {daysAgo(profile.profile_updated_at)}
           </p>
         )}

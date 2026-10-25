@@ -111,7 +111,7 @@ export default function AdminSemesters() {
                   <td className="py-3 pr-4">
                     {row.is_current
                       ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Current</span>
-                      : <span className="text-gray-400">—</span>}
+                      : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="py-3 flex gap-2 justify-end">
                     <button className="btn-secondary text-xs" onClick={() => openEdit(row)}>Edit</button>
@@ -120,7 +120,7 @@ export default function AdminSemesters() {
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={6} className="py-6 text-center text-gray-400">No semesters yet</td></tr>
+                <tr><td colSpan={6} className="py-6 text-center text-gray-500">No semesters yet</td></tr>
               )}
             </tbody>
           </table>

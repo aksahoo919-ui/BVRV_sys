@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
+import { TempleLockup } from '../../components/TempleMark';
 
 const navItems = [
   { to: '/student/home',       label: 'Home',       icon: HomeIcon },
@@ -18,7 +19,7 @@ export default function StudentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-ivory-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-20 sm:hidden" onClick={() => setSidebarOpen(false)} />
@@ -26,13 +27,13 @@ export default function StudentLayout() {
 
       {/* Sidebar — drawer on mobile, static on desktop */}
       <aside
-        className={`fixed sm:static inset-y-0 left-0 z-30 w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 transform transition-transform duration-200
+        className={`fixed sm:static inset-y-0 left-0 z-30 w-56 bg-temple-800 border-r border-temple-900 flex flex-col flex-shrink-0 transform transition-transform duration-200
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'}`}
       >
-        <div className="px-4 py-5 border-b border-gray-100">
-          <p className="text-xs text-gray-400 uppercase tracking-wider">Student</p>
-          <p className="font-bold text-gray-800 mt-0.5">BVRV Attendance</p>
+        <div className="px-3 py-4 border-b border-temple-700">
+          <TempleLockup ground="dark" subtitle="Student Portal" />
         </div>
+        <div className="toran flex-shrink-0" aria-hidden="true" />
         <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -40,10 +41,10 @@ export default function StudentLayout() {
               to={to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors border-l-[3px] ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-50'
+                    ? 'bg-temple-700 text-white font-medium border-gold-400'
+                    : 'text-temple-100 hover:bg-temple-700/60 border-transparent'
                 }`
               }
             >
@@ -57,14 +58,17 @@ export default function StudentLayout() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile top bar with hamburger */}
-        <div className="sm:hidden flex items-center bg-white border-b border-gray-200 px-3 py-2">
-          <button onClick={() => setSidebarOpen(true)} className="mr-3 text-gray-500" aria-label="Open menu">
+        <div className="sm:hidden bg-temple-800">
+          <div className="flex items-center px-3 py-2">
+          <button onClick={() => setSidebarOpen(true)} className="mr-3 text-gold-300" aria-label="Open menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-gray-800 text-sm">Student Portal</span>
+          <span className="font-semibold text-ivory-100 text-sm">Student Portal</span>
           <MobileLogout />
+          </div>
+          <div className="toran" aria-hidden="true" />
         </div>
         <div className="hidden sm:block">
           <TopNav title="Student Portal" />

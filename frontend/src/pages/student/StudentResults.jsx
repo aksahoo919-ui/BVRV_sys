@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 
 function gpaColor(gpa) {
-  if (gpa >= 8) return 'text-emerald-600';
+  if (gpa >= 8) return 'text-temple-700';
   if (gpa >= 6) return 'text-amber-500';
   return 'text-red-500';
 }
 
 function gpaBadgeColor(gpa) {
-  if (gpa >= 8) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (gpa >= 8) return 'bg-emerald-100 text-temple-800 border-emerald-200';
   if (gpa >= 6) return 'bg-amber-100 text-amber-700 border-amber-200';
   return 'bg-red-100 text-red-700 border-red-200';
 }
@@ -50,14 +50,14 @@ export default function StudentResults() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My Results</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Published results by course</p>
+        <p className="text-sm text-gray-500 mt-0.5">Published results by course</p>
       </div>
 
       {sortedResults.length === 0 ? (
         <div className="card text-center py-16">
           <div className="text-4xl mb-3">📋</div>
-          <p className="text-gray-400 font-medium">No results published yet.</p>
-          <p className="text-gray-300 text-sm mt-1">Check back after your semester exams.</p>
+          <p className="text-gray-500 font-medium">No results published yet.</p>
+          <p className="text-gray-500 text-sm mt-1">Check back after your semester exams.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -69,7 +69,7 @@ export default function StudentResults() {
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">
                       {r.year_label}
                     </p>
                     <p className="text-sm font-semibold text-gray-700 mt-0.5">
@@ -93,13 +93,13 @@ export default function StudentResults() {
                 {/* GPA */}
                 <div className="flex items-end gap-3 py-2">
                   <div>
-                    <p className="text-xs text-gray-400 mb-0.5">GPA</p>
+                    <p className="text-xs text-gray-500 mb-0.5">GPA</p>
                     <p className={`text-4xl font-bold leading-none ${gpaColor(gpa)}`}>
                       {isNaN(gpa) ? '—' : gpa.toFixed(1)}
                     </p>
                   </div>
                   <div className="border-l border-gray-100 pl-3">
-                    <p className="text-xs text-gray-400 mb-0.5">CGPA</p>
+                    <p className="text-xs text-gray-500 mb-0.5">CGPA</p>
                     <p className={`text-2xl font-semibold leading-none ${gpaColor(cgpa)}`}>
                       {isNaN(cgpa) ? '—' : cgpa.toFixed(2)}
                     </p>
@@ -110,12 +110,12 @@ export default function StudentResults() {
                 <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
                   <div
                     className={`h-1.5 rounded-full transition-all ${
-                      gpa >= 8 ? 'bg-emerald-500' : gpa >= 6 ? 'bg-amber-400' : 'bg-red-400'
+                      gpa >= 8 ? 'bg-temple-600' : gpa >= 6 ? 'bg-amber-400' : 'bg-red-400'
                     }`}
                     style={{ width: `${Math.min((gpa / 10) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-300 text-right">out of 10.0</p>
+                <p className="text-xs text-gray-500 text-right">out of 10.0</p>
 
                 {/* Download Report Card */}
                 {r.semester_id != null && (

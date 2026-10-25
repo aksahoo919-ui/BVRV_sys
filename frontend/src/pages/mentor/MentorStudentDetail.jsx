@@ -25,7 +25,7 @@ function StatCard({ label, value, sub, color }) {
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-temple-700" />
     </div>
   );
 }
@@ -35,7 +35,7 @@ function ErrorState({ message, onRetry }) {
     <div className="text-center py-12">
       <p className="text-red-500 text-sm">{message}</p>
       {onRetry && (
-        <button onClick={onRetry} className="mt-3 text-sm text-emerald-600 hover:underline">
+        <button onClick={onRetry} className="mt-3 text-sm text-temple-700 hover:underline inline-flex items-center min-h-[24px]">
           Try again
         </button>
       )}
@@ -45,7 +45,7 @@ function ErrorState({ message, onRetry }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="text-center py-12 text-gray-400">
+    <div className="text-center py-12 text-gray-500">
       <p>{message}</p>
     </div>
   );
@@ -86,24 +86,24 @@ function OverviewTab({ studentId }) {
         <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
         <p className="text-sm text-gray-500">{[data.email, data.phone, data.roll_number].filter(Boolean).join(' · ')}</p>
         <div className="mt-2">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">BVRV course</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">BVRV course</p>
           {data.courses && data.courses.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {data.courses.map((c) => (
                 <span key={c.subject_id} className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-sm font-medium px-2.5 py-1 rounded-full">
                   {c.label}
                   {(c.semesters || []).length > 0
-                    ? <span className="text-xs text-emerald-600 font-normal">
+                    ? <span className="text-xs text-temple-700 font-normal inline-flex items-center min-h-[24px]">
                         {c.semesters.map(s => `${s.label} ${s.percentage != null ? `${s.percentage}%` : '—'}`).join(' · ')}
                       </span>
                     : c.percentage != null
-                      ? <span className="text-xs text-emerald-600 font-normal">{c.percentage}%</span>
-                      : <span className="text-xs text-emerald-600/70 font-normal">no classes yet</span>}
+                      ? <span className="text-xs text-temple-700 font-normal inline-flex items-center min-h-[24px]">{c.percentage}%</span>
+                      : <span className="text-xs text-temple-700/70 font-normal inline-flex items-center min-h-[24px]">no classes yet</span>}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">Not registered in any BVRV course</p>
+            <p className="text-sm text-gray-500 italic">Not registered in any BVRV course</p>
           )}
         </div>
       </div>
@@ -139,7 +139,7 @@ function OverviewTab({ studentId }) {
           <p className="text-sm font-semibold text-red-700 mb-2">Active Alerts</p>
           <ul className="space-y-1">
             {data.alert_reasons.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-red-600">
+              <li key={i} className="flex items-start gap-2 text-sm text-red-700">
                 <span className="mt-0.5">⚠</span>
                 <span>{r}</span>
               </li>
@@ -196,12 +196,12 @@ function AttendanceTab({ studentId }) {
           <h3 className="font-semibold text-gray-900">Attendance over time</h3>
           {pastCount > 0 && (
             <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-              <button onClick={() => setShowPast(false)} className={`px-3 py-1.5 ${!showPast ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Current semester</button>
-              <button onClick={() => setShowPast(true)} className={`px-3 py-1.5 ${showPast ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>All semesters</button>
+              <button onClick={() => setShowPast(false)} className={`px-3 py-1.5 ${!showPast ? 'bg-temple-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Current semester</button>
+              <button onClick={() => setShowPast(true)} className={`px-3 py-1.5 ${showPast ? 'bg-temple-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>All semesters</button>
             </div>
           )}
         </div>
-        {!history ? <p className="text-sm text-gray-400">Loading…</p>
+        {!history ? <p className="text-sm text-gray-500">Loading…</p>
           : history.failed ? <p className="text-sm text-red-500">Could not load the attendance timeline.</p>
           : <AttendanceTimeline data={history} showPast={showPast} />}
       </div>
@@ -316,7 +316,7 @@ function MarksTab({ studentId }) {
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 text-sm">
                         {sub.name}
-                        {sub.code && <span className="ml-2 text-xs font-mono text-gray-400">{sub.code}</span>}
+                        {sub.code && <span className="ml-2 text-xs font-mono text-gray-500">{sub.code}</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -341,14 +341,14 @@ function MarksTab({ studentId }) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">No assessments recorded.</p>
+                    <p className="text-xs text-gray-500">No assessments recorded.</p>
                   )}
                 </div>
               ))}
             </div>
           )}
           {openSemesters[idx] && (!sem.subjects || sem.subjects.length === 0) && (
-            <p className="px-4 py-3 text-sm text-gray-400">No subjects for this semester.</p>
+            <p className="px-4 py-3 text-sm text-gray-500">No subjects for this semester.</p>
           )}
         </div>
       ))}
@@ -410,7 +410,7 @@ function CounselingTab({ studentId }) {
         <button
           type="submit"
           disabled={submitting || !noteText.trim()}
-          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-lg bg-temple-700 hover:bg-temple-800 disabled:opacity-50 text-white text-sm font-medium transition-colors"
         >
           {submitting ? 'Submitting…' : 'Submit Note'}
         </button>
@@ -427,7 +427,7 @@ function CounselingTab({ studentId }) {
             <div key={note.id} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-gray-500">{note.created_by_name}</span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   {new Date(note.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
               </div>
@@ -498,7 +498,7 @@ function ContactsTab({ studentId }) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
+          className="px-4 py-2 rounded-lg bg-temple-700 hover:bg-temple-800 text-white text-sm font-medium transition-colors"
         >
           {showForm ? 'Cancel' : 'Add Contact'}
         </button>
@@ -529,7 +529,7 @@ function ContactsTab({ studentId }) {
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+            className="px-4 py-2 rounded-lg bg-temple-700 hover:bg-temple-800 disabled:opacity-50 text-white text-sm font-medium transition-colors"
           >
             {submitting ? 'Saving…' : 'Save Contact'}
           </button>
@@ -560,7 +560,7 @@ function ContactsTab({ studentId }) {
                     <button
                       onClick={() => handleDelete(c.id)}
                       disabled={deleting === c.id}
-                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 inline-flex items-center min-h-[24px]"
                     >
                       {deleting === c.id ? 'Deleting…' : 'Delete'}
                     </button>
@@ -633,7 +633,7 @@ function LeaveHistoryTab({ studentId }) {
               </td>
               <td className="py-3 pr-4 text-gray-700 max-w-xs truncate">{r.reason}</td>
               <td className="py-3 pr-4">{statusBadge(r.status)}</td>
-              <td className="py-3 pr-4 text-gray-400 text-xs whitespace-nowrap">
+              <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
                 {r.reviewed_at
                   ? new Date(r.reviewed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—'}
@@ -673,7 +673,7 @@ export default function MentorStudentDetail() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === tab
-                  ? 'border-emerald-600 text-emerald-700'
+                  ? 'border-temple-700 text-temple-800'
                   : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
               }`}
             >

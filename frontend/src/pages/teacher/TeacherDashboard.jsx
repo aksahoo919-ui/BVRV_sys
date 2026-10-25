@@ -210,7 +210,7 @@ export default function TeacherDashboard() {
       <section>
         <h2 className="text-base font-semibold text-gray-800 mb-3">Today's Classes</h2>
         {todaySlots.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-400 text-sm">
+          <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-500 text-sm">
             No classes scheduled for today.
           </div>
         ) : (
@@ -224,7 +224,7 @@ export default function TeacherDashboard() {
                     <p className="font-semibold text-gray-900 text-sm truncate">
                       {slot.subject_name}
                       {slot.subject_code && (
-                        <span className="ml-2 text-xs font-mono text-gray-400">{slot.subject_code}</span>
+                        <span className="ml-2 text-xs font-mono text-gray-500">{slot.subject_code}</span>
                       )}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -290,7 +290,7 @@ export default function TeacherDashboard() {
           <h2 className="font-semibold text-gray-800 text-sm">Recent Sessions</h2>
         </div>
         {recentSessions.length === 0 ? (
-          <p className="px-4 py-8 text-center text-gray-400 text-sm">No recent sessions.</p>
+          <p className="px-4 py-8 text-center text-gray-500 text-sm">No recent sessions.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {recentSessions.map(session => (
@@ -303,24 +303,24 @@ export default function TeacherDashboard() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 text-sm truncate">{session.subject_name}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {fmtDateIST(session.session_date || session.opened_at)}
                     {session.session_count > 1 ? ` · ${session.session_count} sessions merged` : session.manual ? ' · Manual' : ' · PIN'}
-                    <span className="text-gray-300"> · recorded {fmtDateTimeIST(session.opened_at)}</span>
+                    <span className="text-gray-500"> · recorded {fmtDateTimeIST(session.opened_at)}</span>
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-semibold text-gray-700">
                     {session.present_count ?? 0}
                     {session.total_students != null && (
-                      <span className="font-normal text-gray-400">/{session.total_students}</span>
+                      <span className="font-normal text-gray-500">/{session.total_students}</span>
                     )}
                   </p>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       session.status === 'open'
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
+                        : 'bg-gray-100 text-gray-600'
                     }`}
                   >
                     {session.status ?? 'closed'}

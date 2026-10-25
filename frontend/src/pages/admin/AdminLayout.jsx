@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import api from '../../utils/api';
+import { TempleLockup } from '../../components/TempleMark';
 
 const NAV = [
   { to: '/admin/home', label: 'Dashboard', icon: '🏠' },
@@ -53,21 +54,21 @@ export default function AdminLayout() {
     api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-ivory-100">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-slate-800 text-white flex flex-col transform transition-transform duration-200
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-temple-800 text-white flex flex-col transform transition-transform duration-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="px-4 py-4 border-b border-slate-700 flex-shrink-0">
-          <p className="text-xs text-slate-400 uppercase tracking-wider">Admin Panel</p>
-          <p className="font-bold text-white mt-0.5 text-sm">BVRV Attendance</p>
+        <div className="px-3 py-3 border-b border-temple-700 flex-shrink-0">
+          <TempleLockup ground="dark" subtitle="Admin Panel" compact />
         </div>
+        <div className="toran flex-shrink-0" aria-hidden="true" />
         <nav className="flex-1 py-2 overflow-y-auto">
           {NAV.map((item, i) =>
             item.section ? (
-              <p key={i} className="px-4 pt-3 pb-1 text-xs text-slate-500 uppercase tracking-wider font-semibold">
+              <p key={i} className="px-4 pt-3 pb-1 text-xs text-gold-300/90 uppercase tracking-wider font-semibold">
                 {item.section}
               </p>
             ) : (
@@ -76,8 +77,10 @@ export default function AdminLayout() {
                 to={item.to}
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 px-4 py-1.5 text-sm transition-colors ${
-                    isActive ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-700/50'
+                  `flex items-center gap-2 px-4 py-1.5 text-sm transition-colors border-l-[3px] ${
+                    isActive
+                      ? 'bg-temple-700 text-white border-gold-400 font-medium'
+                      : 'text-temple-100 hover:bg-temple-700/60 border-transparent'
                   }`
                 }
               >
@@ -96,14 +99,17 @@ export default function AdminLayout() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="lg:hidden flex items-center bg-white border-b border-gray-200 px-3 py-2">
-          <button onClick={() => setSidebarOpen(true)} className="mr-3 p-1 -m-1 text-gray-500" aria-label="Open menu">
+        <div className="lg:hidden bg-temple-800">
+          <div className="flex items-center px-3 py-2">
+          <button onClick={() => setSidebarOpen(true)} className="mr-3 p-1 -m-1 text-gold-300" aria-label="Open menu">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="font-semibold text-gray-800 text-sm">Admin Dashboard</h1>
-          <MobileLogout />
+          <p className="font-semibold text-ivory-100 text-sm">Admin Dashboard</p>
+            <MobileLogout />
+          </div>
+          <div className="toran" aria-hidden="true" />
         </div>
         <div className="hidden lg:block">
           <TopNav title="Admin Dashboard" />

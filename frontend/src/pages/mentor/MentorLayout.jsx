@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
+import { TempleLockup } from '../../components/TempleMark';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -34,7 +35,7 @@ export default function MentorLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-ivory-100">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -45,17 +46,14 @@ export default function MentorLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-56 bg-emerald-800 flex flex-col transform transition-transform duration-200 ease-in-out sm:static sm:translate-x-0 sm:flex sm:flex-shrink-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-56 bg-temple-800 flex flex-col transform transition-transform duration-200 ease-in-out sm:static sm:translate-x-0 sm:flex sm:flex-shrink-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="px-5 py-5 border-b border-emerald-700 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-emerald-300 uppercase tracking-wider">BV Leader Portal</p>
-            <p className="font-bold text-white mt-0.5">BVRV Attendance</p>
-          </div>
+        <div className="px-3 py-4 border-b border-temple-700 flex items-center justify-between gap-2">
+          <TempleLockup ground="dark" subtitle="BV Leader Portal" />
           <button
-            className="sm:hidden text-emerald-300 hover:text-white"
+            className="sm:hidden text-gold-300 hover:text-white flex-shrink-0"
             onClick={() => setSidebarOpen(false)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,6 +61,7 @@ export default function MentorLayout() {
             </svg>
           </button>
         </div>
+        <div className="toran flex-shrink-0" aria-hidden="true" />
         <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -70,10 +69,10 @@ export default function MentorLayout() {
               to={to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors border-l-[3px] ${
                   isActive
-                    ? 'bg-emerald-700 text-white font-medium'
-                    : 'text-emerald-100 hover:bg-emerald-700 hover:text-white'
+                    ? 'bg-temple-700 text-white font-medium border-gold-400'
+                    : 'text-temple-100 hover:bg-temple-700 hover:text-white border-transparent'
                 }`
               }
             >
@@ -84,11 +83,11 @@ export default function MentorLayout() {
         </nav>
 
         {user?.secondary_role === 'teacher' && (
-          <div className="px-3 py-3 border-t border-emerald-700 flex-shrink-0">
+          <div className="px-3 py-3 border-t border-temple-700 flex-shrink-0">
             <button
               onClick={switchToTeacher}
               disabled={switching}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-emerald-200 hover:bg-emerald-700 transition-colors disabled:opacity-60"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-temple-100 hover:bg-temple-700 transition-colors disabled:opacity-60"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />

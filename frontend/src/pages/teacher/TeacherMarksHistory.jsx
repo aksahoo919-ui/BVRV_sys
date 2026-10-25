@@ -74,7 +74,7 @@ export default function TeacherMarksHistory() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Marks History</h1>
-        <p className="text-sm text-gray-400 mt-0.5">View and edit marks you've entered, grouped by assessment.</p>
+        <p className="text-sm text-gray-500 mt-0.5">View and edit marks you've entered, grouped by assessment.</p>
       </div>
 
       <div className="card flex flex-wrap gap-4">
@@ -96,7 +96,7 @@ export default function TeacherMarksHistory() {
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
 
       {loading ? <Spinner /> : grouped.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">No marks entered yet for this selection.</div>
+        <div className="card text-center py-12 text-gray-500">No marks entered yet for this selection.</div>
       ) : (
         <div className="space-y-6">
           {grouped.map(g => (
@@ -104,9 +104,9 @@ export default function TeacherMarksHistory() {
               <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
                 <p className="font-semibold text-gray-800 text-sm">
                   {g.type}
-                  <span className="ml-2 text-gray-400 font-normal">Max {g.max_marks}</span>
+                  <span className="ml-2 text-gray-500 font-normal">Max {g.max_marks}</span>
                 </p>
-                <span className="text-xs text-gray-400">Assessed: {fmtDate(g.assessed_on)}</span>
+                <span className="text-xs text-gray-500">Assessed: {fmtDate(g.assessed_on)}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -123,7 +123,7 @@ export default function TeacherMarksHistory() {
                       const dirty = edits[m.id] != null && String(edits[m.id]) !== String(m.scored_marks);
                       return (
                         <tr key={m.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-2.5 text-gray-400 font-mono text-xs">{m.roll_number || '—'}</td>
+                          <td className="px-6 py-2.5 text-gray-500 font-mono text-xs">{m.roll_number || '—'}</td>
                           <td className="px-4 py-2.5 text-gray-800">{m.student_name}</td>
                           <td className="px-4 py-2.5 text-right">
                             <input
@@ -135,7 +135,7 @@ export default function TeacherMarksHistory() {
                           </td>
                           <td className="px-6 py-2.5 text-right">
                             {savedId === m.id ? (
-                              <span className="text-emerald-600 text-xs font-semibold">✓ Saved</span>
+                              <span className="text-temple-700 text-xs font-semibold inline-flex items-center min-h-[24px]">✓ Saved</span>
                             ) : (
                               <button
                                 onClick={() => saveMark(m)}

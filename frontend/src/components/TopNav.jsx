@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { TempleMark } from './TempleMark';
 
 export default function TopNav({ title }) {
   const { user, logout } = useAuth();
@@ -60,14 +61,24 @@ export default function TopNav({ title }) {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between relative z-20">
-      <h1 className="font-semibold text-gray-800 text-sm sm:text-base">{title}</h1>
+    <header className="bg-white border-b border-ivory-300 relative z-20">
+      <div className="toran" aria-hidden="true" />
+      <div className="px-4 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <TempleMark className="w-7 h-7 flex-shrink-0 hidden sm:block" tone="green" />
+        <div className="min-w-0">
+          <p className="font-semibold text-temple-800 text-sm sm:text-base truncate">{title}</p>
+          <p className="hidden sm:block text-[10px] uppercase tracking-[0.14em] text-temple-600 truncate">
+            Sri Sri Radha Madanmohan · ISKCON Abids
+          </p>
+        </div>
+      </div>
       <div className="flex items-center gap-3">
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>
           <button
             onClick={() => { setPanelOpen(v => !v); if (!panelOpen) fetchNotifications(); }}
-            className="relative p-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+            className="relative p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-700 transition-colors"
             title="Notifications"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,14 +98,14 @@ export default function TopNav({ title }) {
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span className="font-semibold text-gray-800 text-sm">Notifications</span>
                 {unread > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-primary-600 hover:underline">
+                  <button onClick={markAllRead} className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
                     Mark all read
                   </button>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                 {notifications.length === 0 ? (
-                  <p className="text-center text-gray-400 text-sm py-8">No notifications</p>
+                  <p className="text-center text-gray-500 text-sm py-8">No notifications</p>
                 ) : notifications.slice(0, 20).map(n => (
                   <div
                     key={n.id}
@@ -105,8 +116,8 @@ export default function TopNav({ title }) {
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-gray-400">{n.sender_name}</span>
-                      <span className="text-xs text-gray-400">{timeAgo(n.sent_at)}</span>
+                      <span className="text-xs text-gray-500">{n.sender_name}</span>
+                      <span className="text-xs text-gray-500">{timeAgo(n.sent_at)}</span>
                     </div>
                   </div>
                 ))}
@@ -118,7 +129,7 @@ export default function TopNav({ title }) {
         {/* User info */}
         <div className="hidden sm:flex flex-col items-end">
           <span className="text-sm font-medium text-gray-800">{user?.name}</span>
-          <span className="text-xs text-gray-400 capitalize">{user?.role}</span>
+          <span className="text-xs text-gray-500 capitalize">{user?.role}</span>
         </div>
         {user?.avatar_url ? (
           <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full ring-2 ring-primary-100" />
@@ -127,11 +138,12 @@ export default function TopNav({ title }) {
             {user?.name?.[0]?.toUpperCase()}
           </div>
         )}
-        <button onClick={handleLogout} className="p-2 -m-1 text-gray-400 hover:text-red-500 transition-colors ml-1" title="Sign out" aria-label="Sign out">
+        <button onClick={handleLogout} className="p-2 -m-1 text-gray-500 hover:text-red-500 transition-colors ml-1" title="Sign out" aria-label="Sign out">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
         </button>
+      </div>
       </div>
     </header>
   );

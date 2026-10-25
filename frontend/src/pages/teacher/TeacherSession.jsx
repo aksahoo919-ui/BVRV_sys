@@ -115,7 +115,7 @@ export default function TeacherSession() {
           {closedSession?.subject_id && (
             <Link
               to={`/teacher/manual-attendance?subject_id=${closedSession.subject_id}&date=${closedSession.session_day}`}
-              className="block text-sm text-blue-600 hover:underline mt-1"
+              className="block text-sm text-blue-600 hover:underline mt-1 inline-flex items-center min-h-[24px]"
             >
               Review or change this day's attendance →
             </Link>
@@ -141,7 +141,7 @@ export default function TeacherSession() {
             </p>
           )}
           {!expiresAt && (
-            <p className="text-xs text-gray-400 mt-3">Share this PIN with your students</p>
+            <p className="text-xs text-gray-500 mt-3">Share this PIN with your students</p>
           )}
         </div>
 
@@ -149,7 +149,7 @@ export default function TeacherSession() {
         <div className="card">
           <p className="text-sm text-gray-500 mb-2 font-medium">Present Now</p>
           <p className="text-4xl font-bold text-green-600">{presentCount}</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {students.length} total marked &nbsp;·&nbsp; {students.filter(s => s.status === 'late').length} late &nbsp;·&nbsp; {students.filter(s => s.status === 'flagged').length} flagged &nbsp;·&nbsp; {students.filter(s => s.status === 'service').length} service
           </p>
         </div>
@@ -160,12 +160,12 @@ export default function TeacherSession() {
         <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
           <h2 className="font-semibold text-gray-700 text-sm">Live Attendance</h2>
           {!closed && (
-            <span className="text-xs text-gray-400 animate-pulse">● Updating every 5 s</span>
+            <span className="text-xs text-gray-500 animate-pulse">● Updating every 5 s</span>
           )}
         </div>
 
         {students.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">
+          <div className="py-12 text-center text-gray-500 text-sm">
             Waiting for students to mark attendance…
           </div>
         ) : (
@@ -175,7 +175,7 @@ export default function TeacherSession() {
                 <Avatar user={s} />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 text-sm truncate">{s.name}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {s.submitted_at
                       ? new Date(s.submitted_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) + ' IST'
                       : '—'}

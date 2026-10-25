@@ -151,7 +151,7 @@ export default function MentorDashboard() {
 
       {/* ── Top bar ── */}
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+        <div className="w-12 h-12 rounded-full bg-temple-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
           {displayName[0]?.toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -227,14 +227,14 @@ export default function MentorDashboard() {
             {alerts.length > 3 && (
               <button
                 onClick={() => navigate('/mentor/students')}
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
               >
                 View all {alerts.length} students →
               </button>
             )}
           </div>
           {alerts.length === 0 ? (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">
+            <p className="px-4 py-8 text-center text-gray-500 text-sm">
               All students are on track.
             </p>
           ) : (
@@ -258,7 +258,7 @@ export default function MentorDashboard() {
                         <p className="font-medium text-gray-900 text-sm truncate">
                           {alert.student_name}
                           {alert.roll_number && (
-                            <span className="ml-2 text-xs text-gray-400 font-normal">{alert.roll_number}</span>
+                            <span className="ml-2 text-xs text-gray-500 font-normal">{alert.roll_number}</span>
                           )}
                         </p>
                         {reasons && (
@@ -282,7 +282,7 @@ export default function MentorDashboard() {
                 <div className="px-4 py-2 border-t border-gray-100">
                   <button
                     onClick={() => navigate('/mentor/students')}
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
                   >
                     View all {alerts.length} students →
                   </button>
@@ -298,17 +298,17 @@ export default function MentorDashboard() {
             <h2 className="font-semibold text-gray-800 text-sm">Upcoming Meetings</h2>
             <button
               onClick={() => navigate('/mentor/meetings')}
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
             >
               View all →
             </button>
           </div>
           {upcomingMeetings.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">
+            <div className="px-4 py-8 text-center text-sm text-gray-500">
               No upcoming meetings.{' '}
               <button
                 onClick={() => navigate('/mentor/meetings')}
-                className="text-blue-600 hover:underline"
+                className="text-temple-700 hover:underline inline-flex items-center min-h-[24px]"
               >
                 Schedule one →
               </button>
@@ -324,13 +324,13 @@ export default function MentorDashboard() {
                   : '—';
                 return (
                   <li key={meeting.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-temple-800 flex items-center justify-center font-bold text-sm flex-shrink-0">
                       {name[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{name}</p>
                       <p className="text-xs text-gray-500 truncate">{agenda}</p>
-                      <p className="text-xs text-gray-400">{fmtDateTime(meeting.scheduled_at)}</p>
+                      <p className="text-xs text-gray-500">{fmtDateTime(meeting.scheduled_at)}</p>
                     </div>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                       {meeting.status}

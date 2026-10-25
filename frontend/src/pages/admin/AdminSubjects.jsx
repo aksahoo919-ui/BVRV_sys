@@ -227,10 +227,10 @@ export default function AdminSubjects() {
                     {s.topic && <span className="text-gray-900 font-medium"> · {s.topic}</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
-                    {s.course_code ? `${s.course_code} — ${s.course_name}` : <span className="text-gray-400">—</span>}
+                    {s.course_code ? `${s.course_code} — ${s.course_name}` : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">
-                    {s.academic_year_label || <span className="text-gray-400">—</span>}
+                    {s.academic_year_label || <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{s.credits ?? '—'}</td>
                   <td className="px-4 py-3">

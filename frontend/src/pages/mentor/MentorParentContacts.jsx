@@ -13,7 +13,7 @@ function Modal({ title, onClose, children }) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -112,7 +112,7 @@ export default function MentorParentContacts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Parent Contacts</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{contacts.length} record(s)</p>
+          <p className="text-sm text-gray-500 mt-0.5">{contacts.length} record(s)</p>
         </div>
         <button onClick={openModal} className="btn-primary self-start sm:self-auto">
           + Log Contact
@@ -133,12 +133,12 @@ export default function MentorParentContacts() {
       {/* Timeline */}
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-emerald-600" />
+          <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-temple-700" />
         </div>
       ) : error ? (
         <p className="text-red-500 text-sm">{error}</p>
       ) : sortedContacts.length === 0 ? (
-        <div className="card text-center py-10 text-gray-400">No parent contacts logged yet.</div>
+        <div className="card text-center py-10 text-gray-500">No parent contacts logged yet.</div>
       ) : (
         <div className="relative">
           {/* Vertical line */}
@@ -164,7 +164,7 @@ export default function MentorParentContacts() {
                             {meta.label}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-gray-500 mt-0.5">
                           {c.contact_date ? new Date(c.contact_date).toLocaleDateString() : '—'}
                         </p>
                       </div>
@@ -214,7 +214,7 @@ export default function MentorParentContacts() {
                     onClick={() => setForm((f) => ({ ...f, medium: key }))}
                     className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border text-xs font-medium transition-colors ${
                       form.medium === key
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                        ? 'border-temple-600 bg-emerald-50 text-temple-800'
                         : 'border-gray-200 text-gray-500 hover:border-gray-300'
                     }`}
                   >

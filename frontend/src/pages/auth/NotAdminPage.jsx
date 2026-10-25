@@ -14,7 +14,7 @@ export default function NotAdminPage() {
         <p className="text-gray-600 text-sm">
           This Google account is not registered as an administrator.
         </p>
-        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline">
+        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
           ← Back to login
         </Link>
       </div>

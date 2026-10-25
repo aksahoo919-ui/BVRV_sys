@@ -152,7 +152,7 @@ function ResetAttendanceCard() {
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
           <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} />
-          <p className="text-xs text-gray-400 mt-1">Deletes every class's attendance recorded on this day.</p>
+          <p className="text-xs text-gray-500 mt-1">Deletes every class's attendance recorded on this day.</p>
         </div>
       )}
 

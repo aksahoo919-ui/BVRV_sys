@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 
 function pctColor(pct) {
-  if (pct >= 60) return 'text-emerald-600';
+  if (pct >= 60) return 'text-temple-700';
   if (pct >= 40) return 'text-amber-500';
   return 'text-red-500';
 }
@@ -104,11 +104,11 @@ export default function StudentMarks() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-gray-900">My Marks</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Academic performance records</p>
+        <p className="text-sm text-gray-500 mt-0.5">Academic performance records</p>
       </div>
 
       {marks.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">No marks available.</div>
+        <div className="card text-center py-12 text-gray-500">No marks available.</div>
       ) : (
         <>
           {/* Semester selector */}
@@ -129,7 +129,7 @@ export default function StudentMarks() {
           </div>
 
           {displaySemesters.length === 0 ? (
-            <div className="card text-center py-10 text-gray-400">No marks available.</div>
+            <div className="card text-center py-10 text-gray-500">No marks available.</div>
           ) : (
             <div className="space-y-6">
               {displaySemesters.map((sem) => {

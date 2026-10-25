@@ -15,9 +15,9 @@ function Spinner() {
 
 function StepBadge({ n, active, done, label }) {
   return (
-    <div className={`flex items-center gap-2 ${active ? 'text-primary-700' : done ? 'text-emerald-600' : 'text-gray-400'}`}>
+    <div className={`flex items-center gap-2 ${active ? 'text-primary-700' : done ? 'text-temple-700' : 'text-gray-500'}`}>
       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2
-        ${active ? 'border-primary-600 bg-primary-50' : done ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 bg-white'}`}>
+        ${active ? 'border-primary-600 bg-primary-50' : done ? 'border-temple-600 bg-emerald-50' : 'border-gray-300 bg-white'}`}>
         {done ? '✓' : n}
       </span>
       <span className="text-sm font-medium hidden sm:inline">{label}</span>
@@ -158,7 +158,7 @@ export default function TeacherMarks() {
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Assessment <span className="text-gray-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Assessment <span className="text-gray-500 font-normal">(optional)</span></label>
                 <input type="date" className="input" value={ctx.assessed_on} onChange={e => setCtx(c => ({...c, assessed_on: e.target.value}))} />
               </div>
               <div className="w-28">
@@ -178,7 +178,7 @@ export default function TeacherMarks() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="font-semibold text-gray-800">Enter Marks</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{subjectName} · Sem {ctx.semester} · {composeAssessmentType(ctx.assessment_kind, ctx.assessment_number)} · Max: {ctx.max_marks} · {ayLabel}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{subjectName} · Sem {ctx.semester} · {composeAssessmentType(ctx.assessment_kind, ctx.assessment_number)} · Max: {ctx.max_marks} · {ayLabel}</p>
             </div>
             <button className="btn-secondary text-sm" onClick={() => { setStep(1); setStudents([]); setSavedCount(null); }}>← Change</button>
           </div>
@@ -202,11 +202,11 @@ export default function TeacherMarks() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {students.length === 0 && (
-                      <tr><td colSpan={3} className="text-center py-8 text-gray-400">No students enrolled in this subject.</td></tr>
+                      <tr><td colSpan={3} className="text-center py-8 text-gray-500">No students enrolled in this subject.</td></tr>
                     )}
                     {students.map((s, i) => (
                       <tr key={s.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-400 font-mono text-xs">{s.roll_number || '—'}</td>
+                        <td className="px-4 py-2 text-gray-500 font-mono text-xs">{s.roll_number || '—'}</td>
                         <td className="px-4 py-2 text-gray-800 font-medium">{s.name}</td>
                         <td className="px-4 py-2 text-right">
                           <input
@@ -226,7 +226,7 @@ export default function TeacherMarks() {
                 <button type="submit" disabled={saving || students.length===0} className="btn-primary">
                   {saving ? 'Saving…' : 'Save All Marks'}
                 </button>
-                {savedCount !== null && <span className="text-emerald-600 text-sm font-semibold">✓ {savedCount} saved</span>}
+                {savedCount !== null && <span className="text-temple-700 text-sm font-semibold inline-flex items-center min-h-[24px]">✓ {savedCount} saved</span>}
               </div>
             </form>
           )}

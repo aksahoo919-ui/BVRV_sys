@@ -12,11 +12,14 @@ export default function SubjectRow({ name, code, value, chip, onClick }) {
         onClick ? 'cursor-pointer hover:bg-gray-50 rounded-lg transition-colors' : ''
       }`}
     >
-      <div className="flex-1 min-w-0">
-        <span className="text-xs font-mono font-bold text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded mr-2">
+      {/* `truncate` only takes effect on a block-level box, so the name needs
+          to be its own min-w-0 flex child — as an inline span it overflowed
+          the row on a 390px phone instead of ellipsising. */}
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        <span className="text-xs font-mono font-bold text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded flex-shrink-0">
           {code}
         </span>
-        <span className="text-sm text-gray-700 truncate">{name}</span>
+        <span className="text-sm text-gray-700 truncate min-w-0">{name}</span>
       </div>
       {value !== undefined && (
         <span className="text-sm font-semibold text-gray-800 flex-shrink-0">{value}</span>

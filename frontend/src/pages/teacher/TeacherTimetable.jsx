@@ -33,11 +33,11 @@ export default function TeacherTimetable() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold text-gray-900">My Timetable</h1>
-        <p className="text-sm text-gray-400 mt-0.5">{slots.length} class slot{slots.length!==1?'s':''} scheduled</p>
+        <p className="text-sm text-gray-500 mt-0.5">{slots.length} class slot{slots.length!==1?'s':''} scheduled</p>
       </div>
       {error && <p className="text-red-600 text-sm">{error}</p>}
       {slots.length === 0 ? (
-        <div className="card text-center py-16 text-gray-400">No timetable slots assigned yet.</div>
+        <div className="card text-center py-16 text-gray-500">No timetable slots assigned yet.</div>
       ) : (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-xs border-collapse min-w-[600px]">
@@ -50,7 +50,7 @@ export default function TeacherTimetable() {
             <tbody>
               {HOURS.map(h => (
                 <tr key={h} className="border-t border-gray-100">
-                  <td className="py-1.5 px-3 text-gray-400 font-mono align-top">{timeLabel(h)}</td>
+                  <td className="py-1.5 px-3 text-gray-500 font-mono align-top">{timeLabel(h)}</td>
                   {DAYS.map((_, d) => {
                     const cellSlots = grid[d]?.[h] || [];
                     return (
@@ -59,8 +59,8 @@ export default function TeacherTimetable() {
                           <div key={s.id} className="bg-primary-50 border border-primary-200 rounded px-1.5 py-1 mb-1">
                             <p className="font-semibold text-primary-700 truncate">{s.subject_code}</p>
                             <p className="text-gray-500 truncate">{s.subject_name}</p>
-                            <p className="text-gray-400">{s.start_time?.slice(0,5)}–{s.end_time?.slice(0,5)}</p>
-                            {s.room && <p className="text-gray-400">📍 {s.room}</p>}
+                            <p className="text-gray-500">{s.start_time?.slice(0,5)}–{s.end_time?.slice(0,5)}</p>
+                            {s.room && <p className="text-gray-500">📍 {s.room}</p>}
                           </div>
                         ))}
                       </td>

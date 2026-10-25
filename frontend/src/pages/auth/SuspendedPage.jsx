@@ -14,7 +14,7 @@ export default function SuspendedPage({ message }) {
         <p className="text-gray-600 text-sm">
           {message || 'Your account has been suspended. Please contact the administrator.'}
         </p>
-        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline">
+        <Link to="/login" className="mt-6 inline-block text-sm text-primary-600 hover:underline inline-flex items-center min-h-[24px]">
           ← Back to login
         </Link>
       </div>

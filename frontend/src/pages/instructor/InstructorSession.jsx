@@ -84,7 +84,7 @@ export default function InstructorSession() {
         <div className="card">
           <p className="text-sm text-gray-500 mb-2">Present Now</p>
           <p className="text-4xl font-bold text-green-600">{students.filter(s => !s.replayed).length}</p>
-          <p className="text-xs text-gray-400 mt-1">students marked</p>
+          <p className="text-xs text-gray-500 mt-1">students marked</p>
         </div>
       </div>
 
@@ -93,7 +93,7 @@ export default function InstructorSession() {
           <h2 className="font-semibold text-gray-700 text-sm">Live Attendance</h2>
         </div>
         {students.length === 0 ? (
-          <div className="py-10 text-center text-gray-400 text-sm">Waiting for students to mark attendance…</div>
+          <div className="py-10 text-center text-gray-500 text-sm">Waiting for students to mark attendance…</div>
         ) : (
           <ul className="divide-y divide-gray-100">
             {students.map(s => (
@@ -101,7 +101,7 @@ export default function InstructorSession() {
                 <Avatar user={s} />
                 <div className="flex-1">
                   <p className="font-medium text-gray-900 text-sm">{s.name}</p>
-                  <p className="text-xs text-gray-400">{new Date(s.submitted_at).toLocaleTimeString()}</p>
+                  <p className="text-xs text-gray-500">{new Date(s.submitted_at).toLocaleTimeString()}</p>
                 </div>
                 <select
                   value={s.status}

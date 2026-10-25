@@ -57,7 +57,7 @@ export default function InstructorReports() {
                       <Avatar user={r} />
                       <div>
                         <p className="font-medium text-gray-900">{r.name}</p>
-                        <p className="text-xs text-gray-400">{r.email}</p>
+                        <p className="text-xs text-gray-500">{r.email}</p>
                       </div>
                     </div>
                   </td>

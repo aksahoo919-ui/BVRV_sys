@@ -57,7 +57,7 @@ function AddMemberModal({ leader, onClose, onAdded }) {
       <div className="card w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-gray-900">Add BV Member: {leader.name}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-600">✕</button>
         </div>
         <div className="flex gap-1 mb-4 border-b border-gray-200">
           {[['existing', 'Existing student'], ['new', 'New student']].map(([id, label]) => (
@@ -75,20 +75,20 @@ function AddMemberModal({ leader, onClose, onAdded }) {
               <div className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2 mb-3">
                 <div>
                   <p className="text-sm font-medium text-gray-800">{picked.name}</p>
-                  <p className="text-xs text-gray-400">{picked.phone || picked.email} · {picked.course || 'no class'} · BV Leader: {picked.bv_leader || '—'}</p>
+                  <p className="text-xs text-gray-500">{picked.phone || picked.email} · {picked.course || 'no class'} · BV Leader: {picked.bv_leader || '—'}</p>
                 </div>
-                <button onClick={() => setStudentId('')} className="text-xs text-primary-600 hover:underline">Change</button>
+                <button onClick={() => setStudentId('')} className="text-xs text-primary-600 hover:underline inline-flex items-center min-h-[24px]">Change</button>
               </div>
             ) : (
               <>
                 <input className="input mb-1" placeholder="Type a name, phone or email…" value={q} onChange={e => setQ(e.target.value)} autoFocus />
                 <div className="border border-gray-100 rounded-lg mb-3 max-h-48 overflow-y-auto divide-y divide-gray-50">
-                  {q.trim().length < 2 ? <p className="text-xs text-gray-400 px-3 py-2">Type at least 2 letters.</p>
-                    : matches.length === 0 ? <p className="text-xs text-gray-400 px-3 py-2">No student found. Use "New student".</p>
+                  {q.trim().length < 2 ? <p className="text-xs text-gray-500 px-3 py-2">Type at least 2 letters.</p>
+                    : matches.length === 0 ? <p className="text-xs text-gray-500 px-3 py-2">No student found. Use "New student".</p>
                     : matches.map(u => (
                       <button key={u.id} onClick={() => setStudentId(u.id)} className="w-full text-left px-3 py-2 hover:bg-gray-50">
                         <p className="text-sm text-gray-800">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.phone || u.email} · {u.course || 'no class'} · BV Leader: {u.bv_leader || '—'}</p>
+                        <p className="text-xs text-gray-500">{u.phone || u.email} · {u.course || 'no class'} · BV Leader: {u.bv_leader || '—'}</p>
                       </button>
                     ))}
                 </div>
@@ -101,7 +101,7 @@ function AddMemberModal({ leader, onClose, onAdded }) {
             <input className="input mb-3" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input className="input mb-3" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="9876543210" />
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-gray-500 font-normal">(optional)</span></label>
             <input type="email" className="input mb-3" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
             <select className="input mb-3" value={form.gender} onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}>
@@ -112,12 +112,12 @@ function AddMemberModal({ leader, onClose, onAdded }) {
           </>
         )}
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">Course <span className="text-gray-400 font-normal">(optional, current semester)</span></label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Course <span className="text-gray-500 font-normal">(optional, current semester)</span></label>
         <select className="input mb-3" value={subjectId} onChange={e => setSubjectId(e.target.value)}>
           <option value="">— No course —</option>
           {classes.map(c => <option key={c.id} value={c.id}>{classLabel(c)}</option>)}
         </select>
-        <p className="text-xs text-gray-400 mb-3">
+        <p className="text-xs text-gray-500 mb-3">
           {subjectId
             ? `The student is enrolled in this course if not already, and linked to ${leader.name} there.`
             : `The student is linked to ${leader.name} in their current courses, or without a course if they have none. A course can be added later in All Users > Course.`}
@@ -184,7 +184,7 @@ export default function AdminBVMembers() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">BV Members</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Pick a BV Leader to see the students assigned to them. Add a member here or on the Class BV Leaders page. Click a name for the student's timeline.</p>
+        <p className="text-sm text-gray-500 mt-0.5">Pick a BV Leader to see the students assigned to them. Add a member here or on the Class BV Leaders page. Click a name for the student's timeline.</p>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}
@@ -199,13 +199,13 @@ export default function AdminBVMembers() {
       </div>
 
       {!leaderId ? (
-        <div className="card text-center py-10 text-gray-400 text-sm">Select a BV Leader to see their members.</div>
+        <div className="card text-center py-10 text-gray-500 text-sm">Select a BV Leader to see their members.</div>
       ) : loading ? <Spinner /> : data && (
         <div className="card overflow-x-auto p-0">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
             <div className="mr-auto">
               <p className="font-semibold text-gray-900">{data.leader.name}</p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {data.count} member{data.count === 1 ? '' : 's'}
                 {search && ` · ${shown.length} shown`}
               </p>
@@ -232,20 +232,20 @@ export default function AdminBVMembers() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {shown.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-10 text-gray-400">
+                <tr><td colSpan={6} className="text-center py-10 text-gray-500">
                   {data.count === 0 ? 'No members are assigned to this BV Leader yet.' : 'No members match your search.'}
                 </td></tr>
               ) : shown.map((m, i) => (
                 <tr key={m.student_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2.5 text-gray-400 text-xs">{i + 1}</td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs">{i + 1}</td>
                   <td className="px-4 py-2.5">
                     <button onClick={() => setTimelineFor({ id: m.student_id, name: m.name })} className="font-medium text-gray-800 hover:text-primary-600 hover:underline text-left">{m.name}</button>
                     {m.status !== 'active' && <span className="text-xs text-amber-600">{m.status}</span>}
                   </td>
                   <td className="px-4 py-2.5 text-gray-600">{m.email || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">{m.phone || '—'}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{m.classes || <span className="font-sans text-gray-400">No course yet</span>}</td>
-                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-400">{m.classes && !m.has_current ? 'past only' : '—'}</span>}</td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-700">{m.classes || <span className="font-sans text-gray-500">No course yet</span>}</td>
+                  <td className="px-4 py-2.5 text-xs text-gray-600">{m.semester || <span className="text-gray-500">{m.classes && !m.has_current ? 'past only' : '—'}</span>}</td>
                 </tr>
               ))}
             </tbody>
