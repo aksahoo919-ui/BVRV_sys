@@ -5,6 +5,8 @@ import api from '../../utils/api';
 import StatCard from '../../components/dashboard/StatCard';
 import AlertBanner from '../../components/dashboard/AlertBanner';
 import RoleSwitcher from '../../components/RoleSwitcher';
+import { WelcomeBanner } from '../../components/Devotional';
+import QuickAction from '../../components/dashboard/QuickAction';
 import { fmtDateIST, fmtDateTimeIST, nowPartsIST } from '../../utils/datetime';
 
 // ── SessionCountdown (inline) ───────────────────────────────────────────────
@@ -141,24 +143,16 @@ export default function TeacherDashboard() {
   return (
     <div className="space-y-6">
 
-      {/* ── Top bar ── */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-          {displayName[0]?.toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-gray-900 leading-tight">{displayName}</h1>
-          {subText && <p className="text-xs text-gray-500">{subText}</p>}
-        </div>
+      <WelcomeBanner name={displayName} role="BVRV Teacher">
         <RoleSwitcher />
-      </div>
+      </WelcomeBanner>
 
       {/* ── Active sessions banner ── */}
       {activeSessions.length > 0 && (
         <div className="space-y-2">
           <AlertBanner
             variant="warning"
-            message={`🟢 ${activeSessions.length} session(s) currently live. Click to manage.`}
+            message={`${activeSessions.length} session(s) live now. Click to manage.`}
             onClick={() => navigate(`/teacher/session/${activeSessions[0].session_id}`)}
           />
           <div className="bg-green-50 rounded-xl border border-green-200 divide-y divide-green-100 overflow-hidden">
@@ -208,7 +202,7 @@ export default function TeacherDashboard() {
 
       {/* ── Today's classes ── */}
       <section>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Today's Classes</h2>
+        <h2 className="section-title">Today's Classes</h2>
         {todaySlots.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-500 text-sm">
             No classes scheduled for today.
@@ -248,7 +242,7 @@ export default function TeacherDashboard() {
                       disabled={!!startingFor[slot.subject_id]}
                       className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
                         withinWindow
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          ? 'bg-temple-700 text-white hover:bg-temple-800'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
@@ -264,23 +258,12 @@ export default function TeacherDashboard() {
 
       {/* ── Quick actions ── */}
       <section>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h2>
+        <h2 className="section-title">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { icon: '📊', label: 'Upload Marks', color: 'blue', path: '/teacher/marks' },
-            { icon: '🚨', label: 'Defaulters', color: 'red', path: '/teacher/defaulters' },
-            { icon: '✅', label: 'Manual Attend.', color: 'purple', path: '/teacher/manual-attendance' },
-            { icon: '📅', label: 'Timetable', color: 'green', path: '/teacher/timetable' },
-          ].map(({ icon, label, color, path }) => (
-            <button
-              key={label}
-              onClick={() => navigate(path)}
-              className={`bg-white rounded-xl shadow-sm p-4 flex flex-col items-center gap-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 cursor-pointer`}
-            >
-              <span className="text-2xl">{icon}</span>
-              <span className="text-xs font-medium text-gray-700 text-center">{label}</span>
-            </button>
-          ))}
+          <QuickAction icon="chart" label="Upload Marks" onClick={() => navigate('/teacher/marks')} />
+          <QuickAction icon="warning" label="Defaulters" onClick={() => navigate('/teacher/defaulters')} />
+          <QuickAction icon="check" label="Manual Attendance" onClick={() => navigate('/teacher/manual-attendance')} />
+          <QuickAction icon="calendar" label="Timetable" onClick={() => navigate('/teacher/timetable')} />
         </div>
       </section>
 

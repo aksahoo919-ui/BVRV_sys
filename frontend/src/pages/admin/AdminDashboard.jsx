@@ -4,6 +4,8 @@ import api from '../../utils/api';
 import StatCard from '../../components/dashboard/StatCard';
 import QuickAction from '../../components/dashboard/QuickAction';
 import SubjectRow from '../../components/dashboard/SubjectRow';
+import { WelcomeBanner } from '../../components/Devotional';
+import { useAuth } from '../../context/AuthContext';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -46,6 +48,7 @@ function SkeletonDashboard() {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -76,7 +79,7 @@ export default function AdminDashboard() {
     } catch {
       // proceed to show complete regardless
     }
-    setTimeout(() => setBackupToast('Backup complete ✓'), 2000);
+    setTimeout(() => setBackupToast('Backup complete'), 2000);
     setTimeout(() => setBackupToast(''), 4000);
   }
 
@@ -98,33 +101,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-temple-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            A
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 leading-none">Admin</p>
-            <h1 className="text-sm font-semibold text-gray-800 leading-tight">BVRV Institution</h1>
-          </div>
-        </div>
-        <button
-          className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
-          onClick={() => navigate('/admin/pending')}
-          aria-label="Notifications"
-        >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          {pendingCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center leading-none font-bold">
-              {pendingCount > 9 ? '9+' : pendingCount}
-            </span>
-          )}
-        </button>
-      </div>
+      <WelcomeBanner name={user?.name || 'Administrator'} role="BVRV Admin" />
 
       {/* Alert row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -202,16 +179,16 @@ export default function AdminDashboard() {
 
       {/* Quick actions */}
       <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Actions</h2>
+        <h2 className="section-title">Quick Actions</h2>
         <div className="grid grid-cols-4 gap-3">
-          <QuickAction icon="✅" label="Approve Users" onClick={() => navigate('/admin/pending')} color="red" />
-          <QuickAction icon="📥" label="Bulk Import" onClick={() => navigate('/admin/users')} color="blue" />
-          <QuickAction icon="🏆" label="Generate Results" onClick={() => navigate('/admin/results')} color="amber" />
-          <QuickAction icon="🧑‍🏫" label="Class BV Leaders" onClick={() => navigate('/admin/class-mentors')} color="purple" />
-          <QuickAction icon="📊" label="Reports" onClick={() => navigate('/admin/reports')} color="blue" />
-          <QuickAction icon="📚" label="Courses" onClick={() => navigate('/admin/courses')} color="green" />
-          <QuickAction icon="⚙️" label="Settings" onClick={() => navigate('/admin/settings')} color="amber" />
-          <QuickAction icon="💾" label="Backup Now" onClick={handleBackup} color="green" />
+          <QuickAction icon="check" label="Approve Users" onClick={() => navigate('/admin/pending')} color="red" />
+          <QuickAction icon="upload" label="Bulk Import" onClick={() => navigate('/admin/users')} color="blue" />
+          <QuickAction icon="trophy" label="Generate Results" onClick={() => navigate('/admin/results')} color="amber" />
+          <QuickAction icon="link" label="Class BV Leaders" onClick={() => navigate('/admin/class-mentors')} color="purple" />
+          <QuickAction icon="chart" label="Reports" onClick={() => navigate('/admin/reports')} color="blue" />
+          <QuickAction icon="book" label="Courses" onClick={() => navigate('/admin/courses')} color="green" />
+          <QuickAction icon="cog" label="Settings" onClick={() => navigate('/admin/settings')} color="amber" />
+          <QuickAction icon="archive" label="Backup Now" onClick={handleBackup} color="green" />
         </div>
         {backupToast && (
           <div className="mt-2 text-sm text-center text-green-700 bg-green-50 border border-green-200 rounded-lg py-2 px-4 transition-all">
@@ -269,7 +246,7 @@ export default function AdminDashboard() {
                         chipColor === 'green'
                           ? 'bg-green-100 text-green-700'
                           : chipColor === 'blue'
-                          ? 'bg-blue-100 text-blue-700 animate-pulse'
+                          ? 'bg-shyama-100 text-shyama-800 animate-pulse'
                           : 'bg-gray-100 text-gray-600'
                       }`}
                     >
@@ -280,7 +257,7 @@ export default function AdminDashboard() {
               })}
               <button
                 onClick={() => navigate('/admin/reports')}
-                className="mt-3 py-1 min-h-[24px] text-xs text-blue-600 hover:underline font-medium"
+                className="mt-3 py-1 min-h-[24px] text-xs text-temple-700 hover:underline font-medium"
               >
                 View all &rarr;
               </button>
@@ -315,7 +292,7 @@ export default function AdminDashboard() {
               })}
               <button
                 onClick={() => navigate('/admin/audit')}
-                className="mt-3 py-1 min-h-[24px] text-xs text-blue-600 hover:underline font-medium"
+                className="mt-3 py-1 min-h-[24px] text-xs text-temple-700 hover:underline font-medium"
               >
                 View full audit log &rarr;
               </button>

@@ -60,7 +60,7 @@ export default function TeacherTimetable() {
                             <p className="font-semibold text-primary-700 truncate">{s.subject_code}</p>
                             <p className="text-gray-500 truncate">{s.subject_name}</p>
                             <p className="text-gray-500">{s.start_time?.slice(0,5)}–{s.end_time?.slice(0,5)}</p>
-                            {s.room && <p className="text-gray-500">📍 {s.room}</p>}
+                            {s.room && <p className="text-gray-500">{s.room}</p>}
                           </div>
                         ))}
                       </td>

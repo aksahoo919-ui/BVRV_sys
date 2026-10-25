@@ -12,9 +12,9 @@ export default function TodayPill({ subjectName, status, onClick }) {
     return (
       <button
         onClick={onClick}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gold-100 text-gold-800 hover:bg-gold-200 transition-colors cursor-pointer"
       >
-        <span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0 animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-gold-600 flex-shrink-0 animate-pulse" />
         {subjectName}
       </button>
     );

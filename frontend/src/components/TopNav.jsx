@@ -1,12 +1,23 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
-import { TempleMark } from './TempleMark';
 
-export default function TopNav({ title }) {
+// The current page's label from the role's sidebar list (longest matching path).
+function pageLabel(nav, pathname) {
+  let best = null;
+  for (const item of nav || []) {
+    if (!item.to) continue;
+    if ((pathname === item.to || pathname.startsWith(item.to + '/')) && (!best || item.to.length > best.to.length)) best = item;
+  }
+  return best?.label || null;
+}
+
+export default function TopNav({ title, portal, nav, leading }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const page = pageLabel(nav, pathname);
   const [panelOpen, setPanelOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -64,14 +75,21 @@ export default function TopNav({ title }) {
     <header className="bg-white border-b border-ivory-300 relative z-20">
       <div className="toran" aria-hidden="true" />
       <div className="px-4 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <TempleMark className="w-7 h-7 flex-shrink-0 hidden sm:block" tone="green" />
-        <div className="min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
+        {leading}
+        {portal ? (
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 min-w-0 text-sm">
+            <span className="text-gray-500 whitespace-nowrap">{portal}</span>
+            {page && (<>
+              <svg className="w-3.5 h-3.5 text-gold-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clipRule="evenodd" />
+              </svg>
+              <span className="font-semibold text-temple-800 truncate">{page}</span>
+            </>)}
+          </nav>
+        ) : (
           <p className="font-semibold text-temple-800 text-sm sm:text-base truncate">{title}</p>
-          <p className="hidden sm:block text-[10px] uppercase tracking-[0.14em] text-temple-600 truncate">
-            Sri Sri Radha Madanmohan · ISKCON Abids
-          </p>
-        </div>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {/* Notification bell */}

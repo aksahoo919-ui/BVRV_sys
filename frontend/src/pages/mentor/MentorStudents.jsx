@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import useThreshold from '../../hooks/useThreshold';
+import Icon from '../../components/Icon';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useMemberRequests } from '../../components/MentorAddMember';
 import EditDevoteeContact, { isPlaceholderEmail } from '../../components/EditDevoteeContact';
 
-function AttendanceBar({ pct, label = 'Attendance' }) {
+function AttendanceBar({ pct, label = 'Attendance', threshold = 75 }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
+  const warn = Math.max(threshold - 15, 0);
   const color =
-    value >= 75 ? 'bg-green-500' : value >= 60 ? 'bg-amber-400' : 'bg-red-500';
+    value >= threshold ? 'bg-green-500' : value >= warn ? 'bg-amber-400' : 'bg-red-500';
   const textColor =
-    value >= 75 ? 'text-green-700' : value >= 60 ? 'text-amber-700' : 'text-red-600';
+    value >= threshold ? 'text-green-700' : value >= warn ? 'text-amber-700' : 'text-red-600';
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
@@ -51,7 +54,7 @@ function SkeletonCard() {
   );
 }
 
-function StudentCard({ student, onEdit }) {
+function StudentCard({ student, onEdit, threshold }) {
   const navigate = useNavigate();
   const initial = student.name ? student.name.charAt(0).toUpperCase() : '?';
 
@@ -66,7 +69,7 @@ function StudentCard({ student, onEdit }) {
               className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
+            <div className="w-12 h-12 rounded-full bg-temple-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
               {initial}
             </div>
           )}
@@ -76,7 +79,7 @@ function StudentCard({ student, onEdit }) {
           {student.initiated_name && <p className="text-xs text-temple-800 truncate">{student.initiated_name}</p>}
           <p className="text-xs text-gray-500 truncate">{student.roll_number}</p>
           <p className="text-xs text-gray-500 truncate">{isPlaceholderEmail(student.email) ? 'No email on record' : student.email}</p>
-          <p className="text-xs text-gray-600 truncate">{student.phone ? `📞 ${student.phone}` : <span className="text-gray-500">No phone number</span>}</p>
+          <p className="text-xs text-gray-600 truncate">{student.phone ? <span className="inline-flex items-center gap-1"><Icon name="phone" className="w-3.5 h-3.5" />{student.phone}</span> : <span className="text-gray-500">No phone number</span>}</p>
         </div>
         {student.alert_reasons && student.alert_reasons.length > 0 && (
           <span className="flex-shrink-0 inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -90,7 +93,7 @@ function StudentCard({ student, onEdit }) {
         {student.courses && student.courses.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {student.courses.map((c) => (
-              <span key={c.subject_id} className="inline-block bg-emerald-50 text-emerald-800 text-xs font-medium px-2 py-0.5 rounded-full">{c.label}</span>
+              <span key={c.subject_id} className="inline-block bg-temple-50 text-temple-800 text-xs font-medium px-2 py-0.5 rounded-full">{c.label}</span>
             ))}
           </div>
         ) : (
@@ -102,13 +105,13 @@ function StudentCard({ student, onEdit }) {
       {(student.course_attendance_semesters || []).length > 0
         ? student.course_attendance_semesters.map(s => (
             s.percentage != null
-              ? <AttendanceBar key={s.label} pct={s.percentage} label={`BVRV course attendance · ${s.label}`} />
+              ? <AttendanceBar key={s.label} pct={s.percentage} threshold={threshold} label={`BVRV course attendance · ${s.label}`} />
               : <p key={s.label} className="text-xs text-gray-500">BVRV course attendance · {s.label} — no classes held yet</p>
           ))
         : student.course_attendance_percentage != null
-          ? <AttendanceBar pct={student.course_attendance_percentage} label="BVRV course attendance" />
+          ? <AttendanceBar pct={student.course_attendance_percentage} threshold={threshold} label="BVRV course attendance" />
           : <p className="text-xs text-gray-500">BVRV course attendance — no classes held yet</p>}
-      <AttendanceBar pct={student.attendance_percentage} label="BV Leader class attendance" />
+      <AttendanceBar pct={student.attendance_percentage} threshold={threshold} label="BV Leader class attendance" />
 
       <GpaBadge gpa={student.latest_gpa} />
 
@@ -132,6 +135,7 @@ function StudentCard({ student, onEdit }) {
 
 export default function MentorStudents() {
   const addMember = useMemberRequests();
+  const threshold = useThreshold();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -180,7 +184,7 @@ export default function MentorStudents() {
           placeholder="Search by name, phone or roll number…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-temple-400"
         />
         {addMember.button}
         </div>
@@ -214,7 +218,7 @@ export default function MentorStudents() {
       {!loading && !error && filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((s) => (
-            <StudentCard key={s.id} student={s} onEdit={setEditing} />
+            <StudentCard key={s.id} student={s} onEdit={setEditing} threshold={threshold} />
           ))}
         </div>
       )}

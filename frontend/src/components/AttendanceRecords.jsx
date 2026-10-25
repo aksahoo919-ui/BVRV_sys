@@ -19,7 +19,7 @@ const API = {
 };
 
 function Spinner() {
-  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-shyama-500 border-t-transparent rounded-full animate-spin" /></div>;
 }
 
 export default function AttendanceRecords({ role }) {
@@ -126,9 +126,9 @@ export default function AttendanceRecords({ role }) {
                   ? `Recorded ${fmtDateTimeIST(day.recorded_at)}${day.session_count > 1 ? ` · ${day.session_count} sessions merged` : ''}`
                   : 'No attendance recorded on this date.'}
               </p>
-              <p className={`text-xs mt-1 ${locked ? 'text-gray-500' : 'text-blue-600'}`}>
+              <p className={`text-xs mt-1 ${locked ? 'text-gray-500' : 'text-temple-700'}`}>
                 {locked
-                  ? `🔒 Locked — could be changed until ${fmtDateIST(editableUntil(date))}.`
+                  ? `Locked — could be changed until ${fmtDateIST(editableUntil(date))}.`
                   : `✎ Can be changed until ${fmtDateIST(editableUntil(date))}.`}
               </p>
             </div>

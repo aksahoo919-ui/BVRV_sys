@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import { TempleLockup } from '../../components/TempleMark';
+import { MahaMantra } from '../../components/Devotional';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -55,7 +56,7 @@ export default function TeacherLayout() {
         </div>
         <div className="toran flex-shrink-0" aria-hidden="true" />
 
-        <nav className="flex-1 py-3 overflow-y-auto space-y-0.5">
+        <nav className="nav-scroll flex-1 py-3 overflow-y-auto space-y-0.5">
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -89,6 +90,7 @@ export default function TeacherLayout() {
             </button>
           </div>
         )}
+        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -106,7 +108,7 @@ export default function TeacherLayout() {
           <MobileLogout />
         </div>
         <div className="hidden lg:block">
-          <TopNav title="Teacher Dashboard" />
+          <TopNav portal="Teacher" nav={NAV} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />

@@ -187,7 +187,7 @@ function Avatar({ user }) {
     );
   }
   return (
-    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0">
+    <div className="w-8 h-8 rounded-full bg-shyama-100 text-shyama-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
       {user.name?.[0]?.toUpperCase()}
     </div>
   );
@@ -196,7 +196,7 @@ function Avatar({ user }) {
 function Spinner() {
   return (
     <div className="flex justify-center py-8">
-      <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-7 h-7 border-4 border-shyama-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }

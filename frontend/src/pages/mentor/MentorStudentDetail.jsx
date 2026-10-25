@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import useThreshold from '../../hooks/useThreshold';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import AttendanceTimeline from '../../components/AttendanceTimeline';
@@ -10,7 +11,7 @@ function StatCard({ label, value, sub, color }) {
     green: 'bg-green-50 border-green-200 text-green-700',
     amber: 'bg-amber-50 border-amber-200 text-amber-700',
     red: 'bg-red-50 border-red-200 text-red-700',
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
+    blue: 'bg-shyama-50 border-shyama-200 text-shyama-800',
     gray: 'bg-gray-50 border-gray-200 text-gray-700',
   };
   return (
@@ -76,7 +77,7 @@ function OverviewTab({ studentId }) {
   if (!data) return null;
 
   const attColor =
-    (data.attendance_pct || 0) >= 75 ? 'green' : (data.attendance_pct || 0) >= 60 ? 'amber' : 'red';
+    (data.attendance_pct || 0) >= threshold ? 'green' : (data.attendance_pct || 0) >= Math.max(threshold - 15, 0) ? 'amber' : 'red';
   const gpaColor =
     (data.latest_gpa || 0) >= 8 ? 'green' : (data.latest_gpa || 0) >= 6 ? 'amber' : 'red';
 
@@ -90,7 +91,7 @@ function OverviewTab({ studentId }) {
           {data.courses && data.courses.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {data.courses.map((c) => (
-                <span key={c.subject_id} className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 text-sm font-medium px-2.5 py-1 rounded-full">
+                <span key={c.subject_id} className="inline-flex items-center gap-1.5 bg-temple-50 text-temple-800 text-sm font-medium px-2.5 py-1 rounded-full">
                   {c.label}
                   {(c.semesters || []).length > 0
                     ? <span className="text-xs text-temple-700 font-normal inline-flex items-center min-h-[24px]">
@@ -221,7 +222,7 @@ function AttendanceTab({ studentId }) {
         <tbody className="divide-y divide-gray-100">
           {rows.map((r, i) => {
             const pct = r.percentage != null ? Number(r.percentage) : (r.total ? (r.attended / r.total) * 100 : 0);
-            const ok = pct >= 75;
+            const ok = pct >= threshold;
             return (
               <tr key={i} className="hover:bg-gray-50">
                 <td className="py-3 pr-4 text-gray-500 font-mono text-xs">{r.subject_code}</td>
@@ -245,7 +246,7 @@ function AttendanceTab({ studentId }) {
             <td colSpan={2} className="py-3 pr-4 text-gray-700">Total</td>
             <td className="py-3 pr-4 text-right text-gray-700">{totalAttended}</td>
             <td className="py-3 pr-4 text-right text-gray-700">{totalClasses}</td>
-            <td className={`py-3 pr-4 text-right font-bold ${Number(overallPct) >= 75 ? 'text-green-600' : 'text-red-500'}`}>
+            <td className={`py-3 pr-4 text-right font-bold ${Number(overallPct) >= threshold ? 'text-green-600' : 'text-red-500'}`}>
               {overallPct}{overallPct !== '—' ? '%' : ''}
             </td>
             <td />
@@ -327,7 +328,7 @@ function MarksTab({ studentId }) {
                         <span className="text-xs text-gray-500">({Number(sub.percentage).toFixed(1)}%)</span>
                       )}
                       {sub.grade && (
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">{sub.grade}</span>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-shyama-50 text-shyama-800">{sub.grade}</span>
                       )}
                     </div>
                   </div>
@@ -404,7 +405,7 @@ function CounselingTab({ studentId }) {
           onChange={(e) => setNoteText(e.target.value)}
           rows={3}
           placeholder="Write a counseling note…"
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-temple-400"
         />
         {submitError && <p className="text-xs text-red-500">{submitError}</p>}
         <button
@@ -520,7 +521,7 @@ function ContactsTab({ studentId }) {
                   value={form[key]}
                   onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-temple-400"
                 />
               </div>
             ))}
@@ -647,6 +648,7 @@ function LeaveHistoryTab({ studentId }) {
 }
 
 export default function MentorStudentDetail() {
+  const threshold = useThreshold();
   const { studentId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Overview');

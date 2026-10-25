@@ -4,37 +4,39 @@ import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import api from '../../utils/api';
 import { TempleLockup } from '../../components/TempleMark';
+import { MahaMantra } from '../../components/Devotional';
+import Icon from '../../components/Icon';
 
 const NAV = [
-  { to: '/admin/home', label: 'Dashboard', icon: '🏠' },
+  { to: '/admin/home', label: 'Dashboard', icon: 'home' },
   { section: 'Users' },
-  { to: '/admin/pending', label: 'Approvals', icon: '⏳' },
-  { to: '/admin/users', label: 'All Users', icon: '👥' },
-  { to: '/admin/profile-requests', label: 'Profile Requests', icon: '📨' },
+  { to: '/admin/pending', label: 'Approvals', icon: 'clock' },
+  { to: '/admin/users', label: 'All Users', icon: 'users' },
+  { to: '/admin/profile-requests', label: 'Profile Requests', icon: 'inbox' },
   { section: 'Mentors' },
-  { to: '/admin/mentors/bvrv', label: 'BVRV Mentors', icon: '🧑‍🏫' },
-  { to: '/admin/mentors/bv', label: 'BV Mentors', icon: '🙏' },
+  { to: '/admin/mentors/bvrv', label: 'BVRV Mentors', icon: 'cap' },
+  { to: '/admin/mentors/bv', label: 'BV Mentors', icon: 'group' },
   { section: 'Academic' },
-  { to: '/admin/courses', label: 'Courses', icon: '📚' },
-  { to: '/admin/academic-years', label: 'Academic Years', icon: '📅' },
-  { to: '/admin/semesters', label: 'Semesters', icon: '🗓️' },
+  { to: '/admin/courses', label: 'Courses', icon: 'book' },
+  { to: '/admin/academic-years', label: 'Academic Years', icon: 'calendar' },
+  { to: '/admin/semesters', label: 'Semesters', icon: 'calendar' },
 { section: 'Classes' },
-  { to: '/admin/subjects', label: 'Subjects', icon: '📖' },
-  { to: '/admin/classes', label: 'Class Management', icon: '🏫' },
-  { to: '/admin/timetable', label: 'Timetable', icon: '🕐' },
-  { to: '/admin/class-mentors', label: 'Class BV Leaders', icon: '🧑‍🏫' },
-  { to: '/admin/bv-members', label: 'BV Members', icon: '🫂' },
-  { to: '/admin/enrollments', label: 'Enrollments', icon: '📝' },
+  { to: '/admin/subjects', label: 'Subjects', icon: 'book' },
+  { to: '/admin/classes', label: 'Class Management', icon: 'temple' },
+  { to: '/admin/timetable', label: 'Timetable', icon: 'clock' },
+  { to: '/admin/class-mentors', label: 'Class BV Leaders', icon: 'link' },
+  { to: '/admin/bv-members', label: 'BV Members', icon: 'group' },
+  { to: '/admin/enrollments', label: 'Enrollments', icon: 'clipboard' },
   { section: 'Operations' },
-  { to: '/admin/corrections', label: 'Attend. Corrections', icon: '✏️' },
-  { to: '/admin/results', label: 'Results', icon: '🏆' },
+  { to: '/admin/corrections', label: 'Attend. Corrections', icon: 'pencil' },
+  { to: '/admin/results', label: 'Results', icon: 'trophy' },
   { section: 'Reports' },
-  { to: '/admin/attendance', label: 'Attendance %', icon: '📈' },
-  { to: '/admin/reports', label: 'Reports', icon: '📊' },
+  { to: '/admin/attendance', label: 'Attendance %', icon: 'trend' },
+  { to: '/admin/reports', label: 'Reports', icon: 'chart' },
   { section: 'System' },
-  { to: '/admin/settings', label: 'Settings', icon: '⚙️' },
-  { to: '/admin/audit', label: 'Audit Logs', icon: '📜' },
-  { to: '/admin/backups', label: 'Backups', icon: '💾' },
+  { to: '/admin/settings', label: 'Settings', icon: 'cog' },
+  { to: '/admin/audit', label: 'Audit Logs', icon: 'doc' },
+  { to: '/admin/backups', label: 'Backups', icon: 'archive' },
 ];
 
 export default function AdminLayout() {
@@ -65,7 +67,7 @@ export default function AdminLayout() {
           <TempleLockup ground="dark" subtitle="Admin Panel" compact />
         </div>
         <div className="toran flex-shrink-0" aria-hidden="true" />
-        <nav className="flex-1 py-2 overflow-y-auto">
+        <nav className="nav-scroll flex-1 py-2 overflow-y-auto">
           {NAV.map((item, i) =>
             item.section ? (
               <p key={i} className="px-4 pt-3 pb-1 text-xs text-gold-300/90 uppercase tracking-wider font-semibold">
@@ -84,7 +86,7 @@ export default function AdminLayout() {
                   }`
                 }
               >
-                <span className="text-base w-5 text-center flex-shrink-0">{item.icon}</span>
+                <Icon name={item.icon} className="w-[18px] h-[18px] flex-shrink-0 opacity-90" />
                 <span className="flex-1 truncate">{item.label}</span>
                 {item.to === '/admin/pending' && pendingCount > 0 && (
                   <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{pendingCount}</span>
@@ -96,6 +98,7 @@ export default function AdminLayout() {
             )
           )}
         </nav>
+        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -112,7 +115,7 @@ export default function AdminLayout() {
           <div className="toran" aria-hidden="true" />
         </div>
         <div className="hidden lg:block">
-          <TopNav title="Admin Dashboard" />
+          <TopNav portal="Admin" nav={NAV} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet context={{ refreshPending }} />

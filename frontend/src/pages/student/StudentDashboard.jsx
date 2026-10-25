@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import StatCard from '../../components/dashboard/StatCard';
 import AlertBanner from '../../components/dashboard/AlertBanner';
 import QuickAction from '../../components/dashboard/QuickAction';
+import { WelcomeBanner } from '../../components/Devotional';
 import SubjectRow from '../../components/dashboard/SubjectRow';
 import TodayPill from '../../components/dashboard/TodayPill';
 import { fmtDayIST } from '../../utils/datetime';
@@ -29,9 +30,14 @@ function initials(name = '') {
     .join('');
 }
 
-function avg(arr) {
-  if (!arr.length) return null;
-  return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+// Overall attendance must pool the days, the way the admin report and the
+// BV Leader view do. Averaging the per-class percentages gave a different
+// number: 10 days/5 present + 2 days/2 present read as 75% instead of 58.3%.
+function pooledPct(rows) {
+  const total = rows.reduce((n, s) => n + Number(s.total_sessions ?? s.class_days ?? 0), 0);
+  const attended = rows.reduce((n, s) => n + Number(s.attended ?? s.days_present ?? 0), 0);
+  if (total > 0) return Math.round(attended / total * 10) / 10;
+  return null;
 }
 
 // ── skeleton ──────────────────────────────────────────────────────────────────
@@ -99,12 +105,17 @@ export default function StudentDashboard() {
   const subjectsWithPct = attendance.map((s) => ({
     ...s,
     pct: Number(s.attendance_pct ?? s.percentage ?? 0),
+    // a class whose first session has not happened yet is "no data", not 0%
+    started: Number(s.total_sessions ?? s.class_days ?? 0) > 0,
   }));
 
-  const overallPct = avg(subjectsWithPct.map((s) => s.pct));
+  const startedSubjects = subjectsWithPct.filter((s) => s.started);
+  const overallPct = pooledPct(startedSubjects);
 
+  // Only warn about classes that have actually met; the server says so via
+  // `warning`, and before the first class it is false.
   const belowThreshold = subjectsWithPct
-    .filter((s) => s.pct < threshold)
+    .filter((s) => (s.warning !== undefined ? s.warning : s.started && s.pct < threshold))
     .sort((a, b) => a.pct - b.pct);
 
   const latestResult = results.slice().sort((a, b) => {
@@ -122,7 +133,7 @@ export default function StudentDashboard() {
   if (belowThreshold.length > 0) {
     const worst = belowThreshold[0];
     const name = worst.subject_name ?? worst.name ?? 'Subject';
-    alertMsg = `⚠ Attendance warning — ${name} is at ${worst.pct}% — below the ${threshold}% threshold`;
+    alertMsg = `Attendance warning — ${name} is at ${worst.pct}% — below the ${threshold}% threshold`;
     if (belowThreshold.length > 1) alertMsg += ` (+${belowThreshold.length - 1} more)`;
   }
 
@@ -146,31 +157,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <h1 className="sr-only">Student dashboard</h1>
-      {/* ── Top bar ── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {user?.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt="avatar"
-              className="w-10 h-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              {initials(user?.name ?? user?.full_name ?? '')}
-            </div>
-          )}
-          <div>
-            <p className="font-semibold text-gray-900 leading-tight">
-              {user?.name ?? user?.full_name ?? 'Student'}
-            </p>
-            {user?.roll_number && (
-              <p className="text-xs text-gray-500">{user.roll_number}</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <WelcomeBanner name={user?.name ?? user?.full_name ?? 'Devotee'} role="Student" />
 
       {/* ── Alert banner ── */}
       {alertMsg && (
@@ -219,21 +206,18 @@ export default function StudentDashboard() {
       {/* ── Quick actions ── */}
       <div className="grid grid-cols-3 gap-3">
         <QuickAction
-          icon="📝"
+          icon="check"
           label="Mark Attendance"
-          color="blue"
           onClick={() => navigate('/student/attendance')}
         />
         <QuickAction
-          icon="📅"
+          icon="calendar"
           label="Timetable"
-          color="purple"
           onClick={() => navigate('/student/timetable')}
         />
         <QuickAction
-          icon="📄"
+          icon="trophy"
           label="Results"
-          color="green"
           onClick={() => navigate('/student/results')}
         />
       </div>
@@ -321,7 +305,7 @@ export default function StudentDashboard() {
                           key={r.session_date}
                           className={`text-xs px-2 py-0.5 rounded-md ${
                             r.status === 'present' ? 'bg-green-50 text-green-700'
-                              : r.status === 'service' ? 'bg-indigo-50 text-indigo-700'
+                              : r.status === 'service' ? 'bg-shyama-50 text-shyama-800'
                               : 'bg-red-50 text-red-700'
                           }`}
                         >
@@ -368,7 +352,7 @@ export default function StudentDashboard() {
                       {scored}/{max}
                     </span>
                     {grade && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-shyama-50 text-shyama-800">
                         {grade}
                       </span>
                     )}

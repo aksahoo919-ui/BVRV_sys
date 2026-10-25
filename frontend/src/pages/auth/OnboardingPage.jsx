@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import Icon from '../../components/Icon';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
 const ROLES = [
-  { value: 'student',    label: 'Student',    icon: '🎓', desc: 'I am enrolled in courses' },
-  { value: 'teacher',    label: 'Teacher',    icon: '👨‍🏫', desc: 'I teach subjects' },
-  { value: 'mentor',     label: 'BV Leader',  icon: '🤝', desc: 'I guide & counsel students' },
-  { value: 'admin',      label: 'Admin',      icon: '🔐', desc: 'I manage the institution', adminNote: true },
+  { value: 'student',    label: 'Student',    icon: 'cap', desc: 'I am enrolled in courses' },
+  { value: 'teacher',    label: 'Teacher',    icon: 'temple', desc: 'I teach subjects' },
+  { value: 'mentor',     label: 'BV Leader',  icon: 'group', desc: 'I guide & counsel students' },
+  { value: 'admin',      label: 'Admin',      icon: 'cog', desc: 'I manage the institution', adminNote: true },
 ];
 
 export default function OnboardingPage() {
@@ -32,7 +33,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-shyama-100 flex items-center justify-center p-4">
       <div className="card w-full max-w-lg">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Welcome, {name || 'there'}!</h1>
@@ -49,7 +50,7 @@ export default function OnboardingPage() {
                 selected === r.value ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="text-3xl mb-2">{r.icon}</div>
+              <Icon name={r.icon} className="w-8 h-8 mx-auto mb-2 text-temple-700" />
               <div className="font-semibold text-gray-800 text-sm">{r.label}</div>
               <div className="text-xs text-gray-500 mt-0.5">{r.desc}</div>
               {r.adminNote && (

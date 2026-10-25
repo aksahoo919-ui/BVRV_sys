@@ -9,8 +9,8 @@ const STATUS_COLORS = {
   suspended: 'bg-red-100 text-red-700',
 };
 const ROLE_COLORS = {
-  admin:   'bg-purple-100 text-purple-700',
-  teacher: 'bg-blue-100 text-blue-700',
+  admin:   'bg-gold-100 text-gold-800',
+  teacher: 'bg-shyama-100 text-shyama-800',
   mentor:  'bg-teal-100 text-teal-700',
   student: 'bg-green-100 text-green-700',
 };
@@ -666,7 +666,7 @@ export default function AdminUsers() {
                 <button
                   onClick={() => saveDual('mentor')}
                   disabled={savingDual || dualTarget.secondary_role === 'mentor'}
-                  className="w-full text-left px-4 py-3 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="w-full text-left px-4 py-3 rounded-lg border border-temple-200 hover:bg-temple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   <span className="font-medium text-temple-800">Add BV Leader role</span>
                   <p className="text-xs text-gray-500 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
@@ -676,9 +676,9 @@ export default function AdminUsers() {
                 <button
                   onClick={() => saveDual('teacher')}
                   disabled={savingDual || dualTarget.secondary_role === 'teacher'}
-                  className="w-full text-left px-4 py-3 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="w-full text-left px-4 py-3 rounded-lg border border-shyama-200 hover:bg-shyama-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  <span className="font-medium text-blue-700">Add Teacher role</span>
+                  <span className="font-medium text-temple-800">Add Teacher role</span>
                   <p className="text-xs text-gray-500 mt-0.5">User will see both Teacher and BV Leader dashboards.</p>
                 </button>
               )}

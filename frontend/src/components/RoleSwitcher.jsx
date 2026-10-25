@@ -36,7 +36,9 @@ export default function RoleSwitcher() {
     <>
       <button
         onClick={handleSwitch}
-        className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+        // Sits inside the altar-green welcome banner, so it is styled for a
+        // dark ground: light text on green, not grey text on green.
+        className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border border-gold-400/60 text-gold-200 hover:bg-temple-700 hover:border-gold-300 transition-colors"
         title={`Switch to ${targetLabel} view`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -5,7 +5,7 @@ import AttendanceRoster from '../../components/AttendanceRoster';
 import { todayIST, fmtDayIST, fmtDateIST, fmtDateTimeIST, editableUntil } from '../../utils/datetime';
 
 function Spinner() {
-  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>;
+  return <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-shyama-500 border-t-transparent rounded-full animate-spin" /></div>;
 }
 
 export default function TeacherManualAttendance() {
@@ -107,10 +107,10 @@ export default function TeacherManualAttendance() {
             <h2 className="font-semibold text-gray-800">{subject?.name} · {fmtDayIST(date)}</h2>
             {locked ? (
               <p className="mt-2 text-xs bg-gray-100 text-gray-600 rounded-md px-3 py-2">
-                🔒 This day is locked — it could be changed until {fmtDateIST(editableUntil(date))}. Ask an admin for a correction.
+                This day is locked — it could be changed until {fmtDateIST(editableUntil(date))}. Ask an admin for a correction.
               </p>
             ) : day.has_record ? (
-              <p className="mt-2 text-xs bg-blue-50 text-blue-700 rounded-md px-3 py-2">
+              <p className="mt-2 text-xs bg-shyama-50 text-shyama-800 rounded-md px-3 py-2">
                 ✎ Editing the saved record{day.session_count > 1 ? ` (${day.session_count} sessions merged)` : ''} — last recorded {fmtDateTimeIST(day.recorded_at)}.
                 Editable until {fmtDateIST(editableUntil(date))}.
               </p>
@@ -149,7 +149,7 @@ export default function TeacherManualAttendance() {
                 <li
                   key={d.session_date}
                   onClick={() => setDate(d.session_date)}
-                  className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer ${d.session_date === date ? 'bg-blue-50/50' : ''}`}
+                  className={`flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer ${d.session_date === date ? 'bg-shyama-50/50' : ''}`}
                 >
                   <div>
                     <p className="font-medium text-gray-800 text-sm">{fmtDayIST(d.session_date)}</p>
@@ -162,8 +162,8 @@ export default function TeacherManualAttendance() {
                       {d.present_count}/{d.total_students} present{d.service_count ? ` · ${d.service_count} service` : ''}
                     </p>
                     {d.locked
-                      ? <span className="text-xs text-gray-500">🔒 Locked</span>
-                      : <span className="text-xs text-blue-600">Edit →</span>}
+                      ? <span className="text-xs text-gray-500">Locked</span>
+                      : <span className="text-xs text-temple-700">Edit →</span>}
                   </div>
                 </li>
               ))}

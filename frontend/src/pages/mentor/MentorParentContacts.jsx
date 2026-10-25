@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import Icon from '../../components/Icon';
 import api from '../../utils/api';
 
 const MEDIUM_META = {
-  call:    { label: 'Call',    emoji: '📞', color: 'bg-blue-100 text-blue-700' },
-  email:   { label: 'Email',   emoji: '✉️',  color: 'bg-green-100 text-green-700' },
-  meeting: { label: 'Meeting', emoji: '🤝', color: 'bg-purple-100 text-purple-700' },
+  call:    { label: 'Call',    icon: 'phone', color: 'bg-shyama-100 text-shyama-800' },
+  email:   { label: 'Email',   icon: 'inbox', color: 'bg-green-100 text-green-700' },
+  meeting: { label: 'Meeting', icon: 'group', color: 'bg-gold-100 text-gold-800' },
 };
 
 function Modal({ title, onClose, children }) {
@@ -150,7 +151,7 @@ export default function MentorParentContacts() {
                 <div key={c.id} className="relative flex gap-4">
                   {/* Timeline dot */}
                   <div className="hidden sm:flex flex-shrink-0 w-10 justify-center pt-3">
-                    <div className="w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-white z-10" />
+                    <div className="w-3 h-3 rounded-full bg-temple-400 ring-2 ring-white z-10" />
                   </div>
                   <div className="card flex-1">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
@@ -160,7 +161,7 @@ export default function MentorParentContacts() {
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}
                           >
-                            <span>{meta.emoji}</span>
+                            <Icon name={meta.icon} className="w-4 h-4" />
                             {meta.label}
                           </span>
                         </div>
@@ -214,11 +215,11 @@ export default function MentorParentContacts() {
                     onClick={() => setForm((f) => ({ ...f, medium: key }))}
                     className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border text-xs font-medium transition-colors ${
                       form.medium === key
-                        ? 'border-temple-600 bg-emerald-50 text-temple-800'
+                        ? 'border-temple-600 bg-temple-50 text-temple-800'
                         : 'border-gray-200 text-gray-500 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-lg">{meta.emoji}</span>
+                    <Icon name={meta.icon} className="w-5 h-5" />
                     {meta.label}
                   </button>
                 ))}

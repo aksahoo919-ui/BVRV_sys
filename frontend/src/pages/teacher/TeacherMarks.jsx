@@ -17,7 +17,7 @@ function StepBadge({ n, active, done, label }) {
   return (
     <div className={`flex items-center gap-2 ${active ? 'text-primary-700' : done ? 'text-temple-700' : 'text-gray-500'}`}>
       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2
-        ${active ? 'border-primary-600 bg-primary-50' : done ? 'border-temple-600 bg-emerald-50' : 'border-gray-300 bg-white'}`}>
+        ${active ? 'border-primary-600 bg-primary-50' : done ? 'border-temple-600 bg-temple-50' : 'border-gray-300 bg-white'}`}>
         {done ? '✓' : n}
       </span>
       <span className="text-sm font-medium hidden sm:inline">{label}</span>

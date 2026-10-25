@@ -9,7 +9,7 @@ import { hasSemesters } from '../utils/classLabel';
 
 const STATUS = {
   present: { label: 'Present', color: '#16a34a', chip: 'bg-green-50 text-green-700 border-green-200', mark: '✓' },
-  service: { label: 'Service', color: '#4f46e5', chip: 'bg-indigo-50 text-indigo-700 border-indigo-200', mark: '★' },
+  service: { label: 'Service', color: '#4f46e5', chip: 'bg-shyama-50 text-shyama-800 border-shyama-200', mark: '★' },
   absent:  { label: 'Absent',  color: '#dc2626', chip: 'bg-red-50 text-red-700 border-red-200', mark: '✕' },
 };
 

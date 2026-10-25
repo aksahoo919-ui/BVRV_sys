@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import { TempleLockup } from '../../components/TempleMark';
+import { MahaMantra } from '../../components/Devotional';
 
 const navItems = [
   { to: '/student/home',       label: 'Home',       icon: HomeIcon },
@@ -34,7 +35,7 @@ export default function StudentLayout() {
           <TempleLockup ground="dark" subtitle="Student Portal" />
         </div>
         <div className="toran flex-shrink-0" aria-hidden="true" />
-        <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="nav-scroll flex-1 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -53,6 +54,7 @@ export default function StudentLayout() {
             </NavLink>
           ))}
         </nav>
+        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       {/* Main */}
@@ -71,7 +73,7 @@ export default function StudentLayout() {
           <div className="toran" aria-hidden="true" />
         </div>
         <div className="hidden sm:block">
-          <TopNav title="Student Portal" />
+          <TopNav portal="Student" nav={navItems} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />

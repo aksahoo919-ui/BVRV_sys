@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import useThreshold from '../../hooks/useThreshold';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 import StatCard from '../../components/dashboard/StatCard';
 import AlertBanner from '../../components/dashboard/AlertBanner';
 import RoleSwitcher from '../../components/RoleSwitcher';
+import { WelcomeBanner } from '../../components/Devotional';
+import QuickAction from '../../components/dashboard/QuickAction';
 
 // ── timeAgo util ────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -79,6 +82,7 @@ function SkeletonPage() {
 // ── Main component ──────────────────────────────────────────────────────────
 export default function MentorDashboard() {
   const navigate = useNavigate();
+  const threshold = useThreshold();
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -128,7 +132,7 @@ export default function MentorDashboard() {
     return new Date(n.created_at ?? n.date) >= monthStart;
   });
 
-  const lowAtt = alerts.filter(a => a.attendance_percentage != null && a.attendance_percentage < 75).length;
+  const lowAtt = alerts.filter(a => a.attendance_percentage != null && a.attendance_percentage < threshold).length;
   const lowGpa = alerts.filter(a => a.latest_gpa != null && a.latest_gpa < 5).length;
 
   const now = new Date();
@@ -149,23 +153,15 @@ export default function MentorDashboard() {
   return (
     <div className="space-y-6">
 
-      {/* ── Top bar ── */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-temple-700 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-          {displayName[0]?.toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-gray-900 leading-tight">{displayName}</h1>
-          {user?.email && <p className="text-xs text-gray-500">{user.email}</p>}
-        </div>
+      <WelcomeBanner name={displayName} role="BV Leader">
         <RoleSwitcher />
-      </div>
+      </WelcomeBanner>
 
       {/* ── Alert banner ── */}
       {alerts.length > 0 && (
         <AlertBanner
           variant="warning"
-          message={`⚠ ${alerts.length} student(s) need attention — ${lowAtt} below attendance threshold · ${lowGpa} GPA dropped.`}
+          message={`${alerts.length} student(s) need attention — ${lowAtt} below attendance threshold · ${lowGpa} GPA dropped.`}
           onClick={() => navigate('/mentor/alerts')}
         />
       )}
@@ -197,23 +193,12 @@ export default function MentorDashboard() {
 
       {/* ── Quick actions ── */}
       <section>
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Quick Actions</h2>
+        <h2 className="section-title">Quick Actions</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { icon: '✅', label: 'Attendance', path: '/mentor/attendance' },
-            { icon: '📅', label: 'Schedule Meeting', path: '/mentor/meetings' },
-            { icon: '📝', label: 'Add Note', path: '/mentor/counseling' },
-            { icon: '📞', label: 'Log Contact', path: '/mentor/contacts' },
-          ].map(({ icon, label, path }) => (
-            <button
-              key={label}
-              onClick={() => navigate(path)}
-              className="bg-white rounded-xl shadow-sm p-4 flex flex-col items-center gap-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 cursor-pointer"
-            >
-              <span className="text-2xl">{icon}</span>
-              <span className="text-xs font-medium text-gray-700 text-center">{label}</span>
-            </button>
-          ))}
+          <QuickAction icon="check" label="Attendance" onClick={() => navigate('/mentor/attendance')} />
+          <QuickAction icon="calendar" label="Schedule Meeting" onClick={() => navigate('/mentor/meetings')} />
+          <QuickAction icon="note" label="Add Note" onClick={() => navigate('/mentor/counseling')} />
+          <QuickAction icon="phone" label="Log Contact" onClick={() => navigate('/mentor/contacts')} />
         </div>
       </section>
 
@@ -227,7 +212,7 @@ export default function MentorDashboard() {
             {alerts.length > 3 && (
               <button
                 onClick={() => navigate('/mentor/students')}
-                className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
+                className="text-xs text-temple-700 hover:underline inline-flex items-center min-h-[24px]"
               >
                 View all {alerts.length} students →
               </button>
@@ -282,7 +267,7 @@ export default function MentorDashboard() {
                 <div className="px-4 py-2 border-t border-gray-100">
                   <button
                     onClick={() => navigate('/mentor/students')}
-                    className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
+                    className="text-xs text-temple-700 hover:underline inline-flex items-center min-h-[24px]"
                   >
                     View all {alerts.length} students →
                   </button>
@@ -298,7 +283,7 @@ export default function MentorDashboard() {
             <h2 className="font-semibold text-gray-800 text-sm">Upcoming Meetings</h2>
             <button
               onClick={() => navigate('/mentor/meetings')}
-              className="text-xs text-blue-600 hover:underline inline-flex items-center min-h-[24px]"
+              className="text-xs text-temple-700 hover:underline inline-flex items-center min-h-[24px]"
             >
               View all →
             </button>
@@ -324,7 +309,7 @@ export default function MentorDashboard() {
                   : '—';
                 return (
                   <li key={meeting.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-temple-800 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-temple-100 text-temple-800 flex items-center justify-center font-bold text-sm flex-shrink-0">
                       {name[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -332,7 +317,7 @@ export default function MentorDashboard() {
                       <p className="text-xs text-gray-500 truncate">{agenda}</p>
                       <p className="text-xs text-gray-500">{fmtDateTime(meeting.scheduled_at)}</p>
                     </div>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                    <span className="text-xs bg-shyama-100 text-shyama-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                       {meeting.status}
                     </span>
                   </li>

@@ -4,7 +4,7 @@ import api from '../../utils/api';
 const STATUS_TABS = ['all', 'pending', 'completed', 'cancelled'];
 
 const STATUS_META = {
-  pending:   { label: 'Pending',   color: 'bg-blue-100 text-blue-700' },
+  pending:   { label: 'Pending',   color: 'bg-shyama-100 text-shyama-800' },
   completed: { label: 'Completed', color: 'bg-green-100 text-green-700' },
   cancelled: { label: 'Cancelled', color: 'bg-gray-100 text-gray-600' },
 };
@@ -232,7 +232,7 @@ export default function MentorMeetings() {
                         {meta.label}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">📅 {formatDateTime(m.scheduled_at)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatDateTime(m.scheduled_at)}</p>
                     {m.agenda && (
                       <p className="text-sm text-gray-700 mt-1">{m.agenda}</p>
                     )}

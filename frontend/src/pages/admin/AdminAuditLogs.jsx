@@ -178,7 +178,7 @@ export default function AdminAuditLogs() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-block font-mono text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                          <span className="inline-block font-mono text-xs bg-shyama-50 text-shyama-800 px-2 py-0.5 rounded">
                             {row.action || '—'}
                           </span>
                         </td>

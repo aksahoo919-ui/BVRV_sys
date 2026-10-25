@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import { TempleLockup } from '../../components/TempleMark';
+import { MahaMantra } from '../../components/Devotional';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -62,7 +63,7 @@ export default function MentorLayout() {
           </button>
         </div>
         <div className="toran flex-shrink-0" aria-hidden="true" />
-        <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="nav-scroll flex-1 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -96,23 +97,24 @@ export default function MentorLayout() {
             </button>
           </div>
         )}
+        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <TopNav
-          title={
-            <div className="flex items-center gap-3">
-              <button
-                className="sm:hidden text-gray-500 hover:text-gray-700 mr-1"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              BV Leader Portal
-            </div>
+          portal="BV Leader"
+          nav={navItems}
+          leading={
+            <button
+              className="sm:hidden p-1 -m-1 mr-1 text-temple-700 hover:text-temple-900"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           }
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">

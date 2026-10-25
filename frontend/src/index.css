@@ -76,3 +76,29 @@
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='10' viewBox='0 0 28 10'><path d='M0 10 Q7 0 14 10 Q21 0 28 10' fill='none' stroke='%23C8992E' stroke-width='1.4'/></svg>");
   }
 }
+
+/* Section headings inside a page, one style for every role. */
+@layer components {
+  .section-title {
+    @apply text-[13px] font-semibold uppercase tracking-[0.12em] text-temple-700 mb-3;
+  }
+  /* The sidebar list scrolls when a role has many links; fade the cut edge so
+     a half-visible row reads as "more below" rather than a clipped bug. */
+  .nav-scroll {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 14px), transparent 100%);
+  }
+}
+
+/* Page titles: every page's h1 in the temple serif, one size and colour, so
+   the portal reads as one publication. Higher specificity than a single
+   utility class on purpose — pages set their own ad-hoc h1 sizes. */
+@layer components {
+  main h1:not(.welcome-title):not(.sr-only) {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    letter-spacing: 0.005em;
+    color: theme('colors.temple.800');
+  }
+}

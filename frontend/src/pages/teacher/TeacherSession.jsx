@@ -91,7 +91,7 @@ export default function TeacherSession() {
         {closed ? (
           <Link
             to="/teacher/classes"
-            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+            className="text-sm text-temple-700 hover:underline flex items-center gap-1"
           >
             ← Back to classes
           </Link>
@@ -115,7 +115,7 @@ export default function TeacherSession() {
           {closedSession?.subject_id && (
             <Link
               to={`/teacher/manual-attendance?subject_id=${closedSession.subject_id}&date=${closedSession.session_day}`}
-              className="block text-sm text-blue-600 hover:underline mt-1 inline-flex items-center min-h-[24px]"
+              className="block text-sm text-temple-700 hover:underline mt-1 inline-flex items-center min-h-[24px]"
             >
               Review or change this day's attendance →
             </Link>
@@ -128,7 +128,7 @@ export default function TeacherSession() {
         {/* PIN card */}
         <div className="card text-center">
           <p className="text-sm text-gray-500 mb-2 font-medium">Attendance PIN</p>
-          <div className="font-mono text-5xl font-bold tracking-widest text-blue-700 select-all">
+          <div className="font-mono text-5xl font-bold tracking-widest text-temple-800 select-all">
             {pin}
           </div>
           {expiresAt && (
@@ -185,7 +185,7 @@ export default function TeacherSession() {
                   value={s.status}
                   onChange={e => overrideStatus(s.id, e.target.value)}
                   disabled={!!overriding[s.id] || closed}
-                  className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                  className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-temple-400 disabled:opacity-50"
                 >
                   <option value="present">Present</option>
                   <option value="late">Late</option>
@@ -198,7 +198,7 @@ export default function TeacherSession() {
                   </span>
                 )}
                 {s.status === 'service' && (
-                  <span className="text-xs bg-indigo-100 text-indigo-600 rounded px-1.5 py-0.5">
+                  <span className="text-xs bg-shyama-100 text-shyama-700 rounded px-1.5 py-0.5">
                     service
                   </span>
                 )}
@@ -221,7 +221,7 @@ function Avatar({ user }) {
     return <img src={user.avatar_url} className="w-9 h-9 rounded-full flex-shrink-0" alt="" />;
   }
   return (
-    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold flex-shrink-0">
+    <div className="w-9 h-9 rounded-full bg-shyama-100 text-shyama-800 flex items-center justify-center font-bold flex-shrink-0">
       {user.name?.[0]?.toUpperCase()}
     </div>
   );

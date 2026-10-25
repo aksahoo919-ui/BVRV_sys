@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Icon from '../../components/Icon';
 import api from '../../utils/api';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -8,9 +9,9 @@ const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8);
 
 const PALETTE = [
-  'bg-sky-100 text-sky-800 border-sky-200',
-  'bg-violet-100 text-violet-800 border-violet-200',
-  'bg-emerald-100 text-emerald-800 border-emerald-200',
+  'bg-shyama-100 text-shyama-800 border-shyama-200',
+  'bg-gold-100 text-gold-900 border-gold-200',
+  'bg-temple-100 text-temple-800 border-temple-200',
   'bg-rose-100 text-rose-800 border-rose-200',
   'bg-amber-100 text-amber-800 border-amber-200',
   'bg-teal-100 text-teal-800 border-teal-200',
@@ -127,7 +128,7 @@ export default function StudentTimetable() {
 
       {!hasSlots ? (
         <div className="card text-center py-16">
-          <div className="text-4xl mb-3">📅</div>
+          <Icon name="calendar" className="w-10 h-10 mx-auto mb-3 text-temple-300" />
           <p className="text-gray-500 font-medium">No timetable slots found.</p>
           <p className="text-gray-500 text-sm mt-1">Your schedule will appear here once it's set up.</p>
         </div>

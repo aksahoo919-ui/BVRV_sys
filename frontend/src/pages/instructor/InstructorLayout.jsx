@@ -16,10 +16,10 @@ export default function InstructorLayout() {
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-blue-800 text-white flex flex-col transform transition-transform duration-200
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-56 bg-temple-900 text-white flex flex-col transform transition-transform duration-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="px-4 py-5 border-b border-blue-700">
-          <p className="text-xs text-blue-300 uppercase tracking-wider">Instructor</p>
+        <div className="px-4 py-5 border-b border-shyama-700">
+          <p className="text-xs text-shyama-300 uppercase tracking-wider">Instructor</p>
           <p className="font-bold text-white mt-0.5">BVRV Attendance</p>
         </div>
         <nav className="flex-1 py-4 space-y-0.5">
@@ -30,7 +30,7 @@ export default function InstructorLayout() {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                  isActive ? 'bg-blue-700 text-white' : 'text-blue-200 hover:bg-blue-700/50'
+                  isActive ? 'bg-temple-800 text-white' : 'text-shyama-200 hover:bg-temple-800/50'
                 }`
               }
             >

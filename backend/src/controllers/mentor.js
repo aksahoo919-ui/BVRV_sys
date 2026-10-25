@@ -23,6 +23,15 @@ const className = name => String(name || '').replace(/\s*\((English|Hindi|Telugu
 // student's attendance % in each, for the student cards and the overview header.
 // A class of a semester that has just started has no sessions yet, so the % then
 // comes from the newest past semester of the same class, marked with its label.
+// The semester a headline % should speak for: the current one when it has
+// classes, otherwise the newest earlier semester that does. Shared by the
+// per-class figure and the per-student summary so they never disagree.
+function headlineSemester(semesters) {
+  const withDays = (semesters || []).filter(s => s.class_days > 0);
+  if (!withDays.length) return null;
+  return withDays.find(s => s.is_current) || withDays[withDays.length - 1];
+}
+
 async function currentCourses(studentIds) {
   const out = {};
   if (!studentIds.length) return out;
@@ -60,19 +69,32 @@ async function currentCourses(studentIds) {
       c.semester_label = sem;
       c.label = `${className(x.class_name || x.course_name || x.code)} (${x.code})${sem ? ` · ${sem}` : ''}`;
     }
-    // overall % across the semesters, so a new semester with no classes yet does not read as 0%
+    // Running totals are kept for reference, but the headline % must mean the
+    // same thing the student and admin see: the CURRENT semester. Pooling every
+    // semester made a BV Leader read 79% where the student's own page said 25%.
+    // A current semester with no classes yet falls back to the newest semester
+    // that has any, so a fresh semester does not read as 0%.
     c.class_days += x.class_days;
     c.days_present += x.days_present;
-    c.percentage = pct(c.days_present, c.class_days);
   }
   for (const list of Object.values(out)) {
-    for (const c of list) c.semesters.sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }));
+    for (const c of list) {
+      c.semesters.sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }));
+      const basis = headlineSemester(c.semesters);
+      if (basis) {
+        c.percentage = basis.percentage;
+        c.percentage_basis = basis.label;
+      } else {
+        // no semesters at all (Bhakti Vaibhav): the pooled figure is the only one
+        c.percentage = pct(c.days_present, c.class_days);
+        c.percentage_basis = null;
+      }
+    }
   }
   return out;
 }
 // Overall %, plus one entry per semester (Sem 1, Sem 2 ...) across all the student's classes.
 const courseSummary = list => {
-  const days = list.reduce((n, c) => n + c.class_days, 0), present = list.reduce((n, c) => n + c.days_present, 0);
   const bySem = new Map();
   for (const c of list) {
     for (const s of c.semesters || []) {
@@ -86,9 +108,18 @@ const courseSummary = list => {
   const semesters = [...bySem.values()]
     .sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { numeric: true }))
     .map(e => ({ ...e, percentage: e.class_days > 0 ? Math.round(e.days_present / e.class_days * 1000) / 10 : null }));
+  const basis = headlineSemester(semesters);
+  const noSemesterCourses = list.filter(c => !(c.semesters || []).length);
+  let headline = basis ? basis.percentage : null;
+  if (headline == null && noSemesterCourses.length) {
+    const d = noSemesterCourses.reduce((n, c) => n + c.class_days, 0);
+    const p = noSemesterCourses.reduce((n, c) => n + c.days_present, 0);
+    headline = d > 0 ? Math.round(p / d * 1000) / 10 : null;
+  }
   return {
     courses: list,
-    course_attendance_percentage: days > 0 ? Math.round(present / days * 1000) / 10 : null,
+    course_attendance_percentage: headline,
+    course_attendance_basis: basis ? basis.label : null,
     course_attendance_semesters: semesters,
   };
 };

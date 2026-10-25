@@ -7,7 +7,7 @@ function Spinner() {
 
 function GpaBadge({ gpa }) {
   const n = parseFloat(gpa);
-  const cls = n >= 8 ? 'bg-emerald-100 text-temple-800' : n >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
+  const cls = n >= 8 ? 'bg-temple-100 text-temple-800' : n >= 6 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700';
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{isNaN(n) ? '—' : n.toFixed(2)}</span>;
 }
 
@@ -88,7 +88,7 @@ export default function AdminResults() {
 
       {error && <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>}
       {genInfo && <div className="bg-green-50 text-green-700 text-sm p-3 rounded-lg">✓ {genInfo}</div>}
-      {publishInfo && <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg">✓ {publishInfo}</div>}
+      {publishInfo && <div className="bg-shyama-50 text-shyama-800 text-sm p-3 rounded-lg">✓ {publishInfo}</div>}
 
       {/* Academic year + course selector + actions */}
       <div className="card flex flex-wrap items-end gap-4">
@@ -121,7 +121,7 @@ export default function AdminResults() {
             {generating ? '⚙ Generating…' : '⚙ Generate Results'}
           </button>
           <button className="btn-primary" onClick={handlePublish} disabled={!selectedYear || !selectedCourse || publishing || results.length === 0}>
-            {publishing ? 'Publishing…' : '🚀 Publish'}
+            {publishing ? 'Publishing…' : 'Publish'}
           </button>
         </div>
       </div>

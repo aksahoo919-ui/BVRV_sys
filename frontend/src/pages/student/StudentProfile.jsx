@@ -18,7 +18,7 @@ function Toast({ message, onDone }) {
   }, [onDone]);
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">
-      <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 text-temple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
       {message}
@@ -142,7 +142,7 @@ export default function StudentProfile() {
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-0.5">Account Status</p>
-            <span className="inline-block bg-emerald-100 text-temple-800 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="inline-block bg-temple-100 text-temple-800 text-xs font-semibold px-2 py-0.5 rounded-full">
               Active
             </span>
           </div>

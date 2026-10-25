@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import useThreshold from '../../hooks/useThreshold';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 
@@ -12,6 +13,7 @@ function Avatar({ name }) {
 }
 
 export default function MentorAlerts() {
+  const threshold = useThreshold();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function MentorAlerts() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white"
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-temple-400 bg-white"
           >
             <option value="most_alerts">Most Alerts</option>
             <option value="lowest_attendance">Lowest Attendance</option>
@@ -136,7 +138,7 @@ export default function MentorAlerts() {
                 <div className="text-right">
                   <p className="text-xs text-gray-500">Attendance</p>
                   <p className={`text-sm font-semibold ${
-                    (s.attendance_percentage || 0) >= 75 ? 'text-green-600' :
+                    (s.attendance_percentage || 0) >= threshold ? 'text-green-600' :
                     (s.attendance_percentage || 0) >= 60 ? 'text-amber-600' : 'text-red-500'
                   }`}>
                     {s.attendance_percentage != null ? `${Number(s.attendance_percentage).toFixed(1)}%` : '—'}

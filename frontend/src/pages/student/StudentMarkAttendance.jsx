@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import Icon from '../../components/Icon';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import TodayPill from '../../components/dashboard/TodayPill';
@@ -160,7 +161,7 @@ export default function StudentMarkAttendance() {
         {/* ── No sessions ── */}
         {!loadingSessions && openSessions.length === 0 && (
           <div className="text-center py-14">
-            <p className="text-4xl mb-3">🔒</p>
+            <Icon name="clock" className="w-10 h-10 mx-auto mb-3 text-temple-300" />
             <p className="text-gray-500 text-sm font-medium">
               No active sessions right now — ask your teacher to open one.
             </p>

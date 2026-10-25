@@ -57,12 +57,25 @@ app.use(passport.session());
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser((id, done) => done(null, { id }));
 
+// A whole class signs in from the temple's one Wi-Fi connection, so every
+// devotee shares a public IP: a per-IP cap locked out everyone after the 50th
+// sign-in. Limit brute force per ACCOUNT instead (wrong passwords against one
+// username), and keep a per-IP ceiling high enough for a full class.
+const failedAttempts = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,          // only wrong passwords count
+  keyGenerator: (req) => String(req.body?.username || '').trim().toLowerCase() || req.ip,
+  message: { error: 'Too many failed sign-in attempts for this account. Please try again in 15 minutes.' },
+});
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 600,
   message: { error: 'Too many requests, please try again later.' },
 });
 
+app.post('/api/auth/login', failedAttempts);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);

@@ -121,16 +121,16 @@ export default function MentorAttendance() {
           {creating ? 'Opening…' : '+ Manual Session'}
         </button>
         <button type="button" onClick={generateCode} className="btn-secondary" disabled={generating}>
-          {generating ? 'Generating…' : '🔢 Generate Code'}
+          {generating ? 'Generating…' : 'Generate Code'}
         </button>
       </form>
 
       {/* Live code display */}
       {code && (
-        <div className="card bg-emerald-50 border border-emerald-200 flex items-center justify-between flex-wrap gap-3">
+        <div className="card bg-temple-50 border border-temple-200 flex items-center justify-between flex-wrap gap-3">
           <div>
             <p className="text-xs text-temple-800 uppercase tracking-wider font-semibold">Attendance code (5 min)</p>
-            <p className="text-4xl font-mono font-bold text-emerald-800 tracking-widest mt-1">{code.pin}</p>
+            <p className="text-4xl font-mono font-bold text-temple-800 tracking-widest mt-1">{code.pin}</p>
             <p className="text-xs text-temple-700 mt-1 inline-flex items-center min-h-[24px]">Students enter this PIN in their Mark Attendance screen.</p>
           </div>
           <div className="flex gap-2">
@@ -147,7 +147,7 @@ export default function MentorAttendance() {
             <h2 className="font-semibold text-gray-800">{activeSession.title || 'Session'} · {fmtDayIST(activeSession.session_date)}</h2>
             {locked ? (
               <p className="mt-2 text-xs bg-gray-100 text-gray-600 rounded-md px-3 py-2">
-                🔒 This day is locked — it could be changed until {fmtDateIST(editableUntil(activeSession.session_date))}.
+                This day is locked — it could be changed until {fmtDateIST(editableUntil(activeSession.session_date))}.
               </p>
             ) : (
               <p className="mt-1 text-xs text-gray-500">Editable until {fmtDateIST(editableUntil(activeSession.session_date))}.</p>
@@ -197,7 +197,7 @@ export default function MentorAttendance() {
                     {s.present_count} present{s.service_count ? ` · ${s.service_count} service` : ''}
                   </p>
                   {s.locked
-                    ? <span className="text-xs text-gray-500">🔒 Locked · view</span>
+                    ? <span className="text-xs text-gray-500">Locked · view</span>
                     : <span className="text-xs text-temple-700 inline-flex items-center min-h-[24px]">Mark / edit →</span>}
                 </div>
               </li>

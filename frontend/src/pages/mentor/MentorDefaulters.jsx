@@ -44,7 +44,7 @@ export default function MentorDefaulters() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {defaulters.length === 0 ? (
-                <tr><td colSpan={3} className="text-center py-10 text-temple-700">🎉 No defaulters.</td></tr>
+                <tr><td colSpan={3} className="text-center py-10 text-temple-700">No defaulters.</td></tr>
               ) : defaulters.map(s => (
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-500 font-mono text-xs">{s.roll_number || '—'}</td>

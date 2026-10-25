@@ -48,6 +48,20 @@ export default {
           300: '#E7DECB',
           400: '#D6C9AE',
         },
+        // Shyama: Krishna's dark-blue complexion. Info badges, categories.
+        shyama: {
+          50:  '#EEF2FB',
+          100: '#DCE4F6',
+          200: '#B9C8EC',
+          300: '#8EA5DD',
+          400: '#6180C9',
+          500: '#3B5BB5',
+          600: '#2C4A9C',
+          700: '#223B80',
+          800: '#1B2E6B',
+          900: '#142251',
+          950: '#0A1A44',
+        },
         // Jagannath altar red — reserved for alerts/absent, used sparingly.
         kumkum: '#C1272D',
       },

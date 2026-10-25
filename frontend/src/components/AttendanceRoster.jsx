@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import Icon from './Icon';
 
 // Roster with name/roll-number search and per-student status buttons.
 // Used by teacher manual attendance and BV Leader class attendance.
@@ -6,7 +7,7 @@ import React, { useMemo, useState } from 'react';
 const STYLES = {
   present: 'bg-temple-700 text-white border-temple-700',
   absent:  'bg-red-600 text-white border-red-600',
-  service: 'bg-indigo-600 text-white border-indigo-600',
+  service: 'bg-temple-700 text-white border-shyama-600',
   late:    'bg-amber-500 text-white border-amber-500',
   flagged: 'bg-rose-500 text-white border-rose-500',
 };
@@ -35,11 +36,11 @@ export default function AttendanceRoster({ roster, onStatus, onMarkAll, disabled
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm pointer-events-none">🔍</span>
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"><Icon name="search" className="w-4 h-4" /></span>
         </div>
         {!disabled && onMarkAll && (
           <div className="flex gap-2">
-            <button type="button" onClick={() => onMarkAll('present', visible.map(s => s.id))} className="text-xs px-3 py-1 rounded-md border border-emerald-300 text-temple-800 hover:bg-emerald-50">
+            <button type="button" onClick={() => onMarkAll('present', visible.map(s => s.id))} className="text-xs px-3 py-1 rounded-md border border-temple-300 text-temple-800 hover:bg-temple-50">
               {search ? 'Shown present' : 'All present'}
             </button>
             <button type="button" onClick={() => onMarkAll('absent', visible.map(s => s.id))} className="text-xs px-3 py-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50">

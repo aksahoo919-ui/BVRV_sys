@@ -279,7 +279,7 @@ export default function AdminClasses() {
                     <button
                       onClick={() => handleAddStudent(s.id)}
                       disabled={busyStudent === s.id}
-                      className="text-xs font-medium py-1 px-2 rounded-md border border-emerald-300 text-temple-800 hover:bg-emerald-50 transition-colors flex-shrink-0 disabled:opacity-60"
+                      className="text-xs font-medium py-1 px-2 rounded-md border border-temple-300 text-temple-800 hover:bg-temple-50 transition-colors flex-shrink-0 disabled:opacity-60"
                     >
                       {busyStudent === s.id ? '…' : 'Add'}
                     </button>

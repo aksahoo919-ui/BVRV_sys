@@ -287,7 +287,7 @@ function PastAttendanceImport({ subjects }) {
 
       {result && (
         <div className="card space-y-4">
-          <div className={`rounded-lg px-4 py-3 text-sm ${done ? 'bg-green-50 text-green-800' : 'bg-blue-50 text-blue-800'}`}>
+          <div className={`rounded-lg px-4 py-3 text-sm ${done ? 'bg-green-50 text-green-800' : 'bg-shyama-50 text-shyama-800'}`}>
             {done
               ? <>Imported <b>{done.dates.length}</b> class dates for <b>{done.students_matched}</b> students into <b>{done.subject.code}</b>{done.to_enroll ? `, and enrolled ${done.to_enroll} students` : ''}.</>
               : <>Preview for <b>{preview.subject.code} — {preview.subject.name}</b>: {preview.students_matched} students matched out of {preview.rows_read} rows, {preview.dates.length} class dates.{preview.to_enroll ? ` ${preview.to_enroll} will be enrolled.` : ''} Nothing has been saved yet.</>}
@@ -308,7 +308,7 @@ function PastAttendanceImport({ subjects }) {
                     <tr key={d.date}>
                       <td className="px-4 py-2 text-gray-800">{formatDate(d.date)}</td>
                       <td className="px-4 py-2 text-green-600 font-medium">{d.present}</td>
-                      <td className="px-4 py-2 text-blue-600 font-medium">{d.service}</td>
+                      <td className="px-4 py-2 text-temple-700 font-medium">{d.service}</td>
                       <td className="px-4 py-2 text-red-500 font-medium">{d.absent}</td>
                       <td className="px-4 py-2 text-gray-500">{d.new_session ? 'New' : 'Updates existing'}</td>
                     </tr>

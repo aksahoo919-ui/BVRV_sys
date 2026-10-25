@@ -245,7 +245,7 @@ export default function AdminClassMentors() {
             </p>
             <input ref={importFileRef} type="file" accept=".csv,text/csv" className="input mb-3" onChange={() => setImportResult(null)} />
             {importResult && (
-              <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : importResult.dry_run ? 'bg-blue-50 text-blue-800' : 'bg-green-50 text-green-700'}`}>
+              <div className={`text-sm mb-3 p-3 rounded-lg ${importResult.error ? 'bg-red-50 text-red-700' : importResult.dry_run ? 'bg-shyama-50 text-shyama-800' : 'bg-green-50 text-green-700'}`}>
                 {importResult.error ? importResult.error : (
                   <>
                     <p className="font-semibold">

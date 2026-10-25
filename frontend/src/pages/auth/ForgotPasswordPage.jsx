@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-shyama-100 flex items-center justify-center p-4">
       <div className="card w-full max-w-sm">
         <h1 className="text-xl font-bold text-gray-900 mb-1">Forgot password</h1>
         <p className="text-sm text-gray-500 mb-5">For teachers, BV Leaders and admins. Enter your email and we'll send a reset link.</p>

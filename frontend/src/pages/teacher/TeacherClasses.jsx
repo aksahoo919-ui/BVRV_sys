@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import Icon from '../../components/Icon';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { classYear, hasSemesters } from '../../utils/classLabel';
@@ -9,7 +10,7 @@ const fmtMonth = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLoca
 function Spinner({ small }) {
   return (
     <div className={`flex justify-center ${small ? 'py-4' : 'py-12'}`}>
-      <div className={`border-4 border-blue-500 border-t-transparent rounded-full animate-spin ${small ? 'w-5 h-5' : 'w-8 h-8'}`} />
+      <div className={`border-4 border-shyama-500 border-t-transparent rounded-full animate-spin ${small ? 'w-5 h-5' : 'w-8 h-8'}`} />
     </div>
   );
 }
@@ -63,7 +64,7 @@ function StudentRow({ index, student, mentors, subjectId, onMentorAssigned, onEd
       <td className="px-3 py-2">
         <div className="flex items-center gap-2 flex-wrap">
           <select
-            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 min-w-[12rem]"
+            className="text-sm border border-gray-200 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-temple-400 min-w-[12rem]"
             value={selectedMentor}
             onChange={e => setSelectedMentor(e.target.value)}
           >
@@ -76,7 +77,7 @@ function StudentRow({ index, student, mentors, subjectId, onMentorAssigned, onEd
             <button
               onClick={assignMentor}
               disabled={assigning}
-              className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="text-xs px-3 py-1 bg-temple-700 text-white rounded hover:bg-temple-800 disabled:opacity-50 transition-colors"
             >
               {assigning ? 'Saving…' : 'Save'}
             </button>
@@ -132,7 +133,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
     <div ref={panelRef} className="card mt-6 scroll-mt-4">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div>
-          <h2 className="font-semibold text-gray-900">{subject.name} <span className="font-mono text-xs text-blue-600 ml-1">{subject.code}</span></h2>
+          <h2 className="font-semibold text-gray-900">{subject.name} <span className="font-mono text-xs text-temple-700 ml-1">{subject.code}</span></h2>
           <p className="text-xs text-gray-500">{[hasSemesters(subject) && subject.semester_label, subject.topic].filter(Boolean).join(' · ')}</p>
           <p className="text-xs text-gray-500">{students.length} students{q ? ` · ${shown.length} match` : ''}</p>
         </div>
@@ -142,7 +143,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, initiated name, phone or BV Leader…"
-            className="w-full sm:w-72 max-w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full sm:w-72 max-w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-temple-400"
           />
           <button onClick={onClose} className="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Close</button>
         </div>
@@ -198,9 +199,9 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
 
 function SubjectCard({ subject, openingId, selected, onStartSession, onToggleStudents }) {
   return (
-    <div className={`card hover:shadow-md transition-shadow ${selected ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`card hover:shadow-md transition-shadow ${selected ? 'ring-2 ring-temple-400' : ''}`}>
       <div className="flex items-start justify-between mb-3">
-        <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+        <span className="font-mono text-xs font-bold text-temple-700 bg-shyama-50 px-2 py-0.5 rounded">
           {subject.code}
         </span>
         <span className="text-xs text-gray-500">{subject.student_count} students</span>
@@ -303,7 +304,7 @@ export default function TeacherClasses() {
 
       {subjects.length === 0 ? (
         <div className="card text-center py-12 text-gray-500">
-          <p className="text-4xl mb-3">📚</p>
+          <Icon name="book" className="w-10 h-10 mx-auto mb-3 text-temple-300" />
           <p className="font-medium">No subjects assigned yet.</p>
           <p className="text-xs mt-1">Contact your administrator to get subjects assigned.</p>
         </div>

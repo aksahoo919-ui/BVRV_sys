@@ -8,9 +8,9 @@ function pctColor(pct) {
 }
 
 function gradeLabel(pct) {
-  if (pct >= 90) return { label: 'S', color: 'bg-purple-100 text-purple-700' };
+  if (pct >= 90) return { label: 'S', color: 'bg-gold-100 text-gold-800' };
   if (pct >= 80) return { label: 'A', color: 'bg-green-100 text-green-700' };
-  if (pct >= 70) return { label: 'B', color: 'bg-blue-100 text-blue-700' };
+  if (pct >= 70) return { label: 'B', color: 'bg-shyama-100 text-shyama-800' };
   if (pct >= 60) return { label: 'C', color: 'bg-yellow-100 text-yellow-700' };
   if (pct >= 50) return { label: 'D', color: 'bg-orange-100 text-orange-700' };
   return { label: 'F', color: 'bg-red-100 text-red-700' };
@@ -18,8 +18,8 @@ function gradeLabel(pct) {
 
 function AssessmentBadge({ type }) {
   const map = {
-    internal:   'bg-blue-100 text-blue-700',
-    external:   'bg-purple-100 text-purple-700',
+    internal:   'bg-shyama-100 text-shyama-800',
+    external:   'bg-gold-100 text-gold-800',
     assignment: 'bg-yellow-100 text-yellow-700',
     practical:  'bg-teal-100 text-teal-700',
     quiz:       'bg-orange-100 text-orange-700',

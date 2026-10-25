@@ -6,9 +6,9 @@ function Spinner() { return <div className="flex justify-center py-12"><div clas
 function GradeBadge({ pct }) {
   if (pct == null) return <span className="text-gray-500">—</span>;
   const p = Number(pct);
-  if (p >= 90) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-temple-800">S</span>;
+  if (p >= 90) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-temple-100 text-temple-800">S</span>;
   if (p >= 80) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">A</span>;
-  if (p >= 70) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">B</span>;
+  if (p >= 70) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-shyama-100 text-shyama-800">B</span>;
   if (p >= 60) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">C</span>;
   if (p >= 50) return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">D</span>;
   return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">F</span>;
@@ -136,7 +136,7 @@ export default function TeacherStudentPerformance() {
                     <td className="px-4 py-3">
                       {s.below_threshold
                         ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">⚠ Low Att.</span>
-                        : <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-temple-800 font-medium">OK</span>}
+                        : <span className="px-2 py-0.5 rounded-full text-xs bg-temple-100 text-temple-800 font-medium">OK</span>}
                     </td>
                   </tr>
                 );

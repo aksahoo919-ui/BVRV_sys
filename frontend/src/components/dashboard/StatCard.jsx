@@ -1,21 +1,21 @@
 export default function StatCard({ label, value, sub, onClick, variant = 'default' }) {
-  const borderClass =
-    variant === 'warning'
-      ? 'border-l-4 border-amber-400'
-      : variant === 'danger'
-      ? 'border-l-4 border-red-500'
-      : '';
+  const accent =
+    variant === 'warning' ? 'before:bg-gold-500'
+    : variant === 'danger' ? 'before:bg-red-600'
+    : 'before:bg-temple-200';
+  const Tag = onClick ? 'button' : 'div';
 
   return (
-    <div
+    <Tag
+      type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`bg-white rounded-xl shadow-sm p-5 flex flex-col gap-1 ${borderClass} ${
-        onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-150' : ''
-      }`}
+      className={`relative overflow-hidden text-left bg-white rounded-xl border border-ivory-300 shadow-sm pl-5 pr-4 py-4 flex flex-col gap-1
+        before:absolute before:inset-y-0 before:left-0 before:w-1 ${accent}
+        ${onClick ? 'cursor-pointer hover:shadow-altar hover:border-gold-300 transition-all duration-150' : ''}`}
     >
-      <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</span>
-      <span className="text-2xl font-bold text-gray-900 leading-tight">{value ?? '—'}</span>
+      <span className="text-[11px] text-gray-600 font-semibold uppercase tracking-wider">{label}</span>
+      <span className="text-3xl font-semibold text-temple-900 leading-tight tabular-nums">{value ?? '—'}</span>
       {sub && <span className="text-xs text-gray-500">{sub}</span>}
-    </div>
+    </Tag>
   );
 }

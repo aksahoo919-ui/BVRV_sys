@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Icon from '../../components/Icon';
 import api from '../../utils/api';
 
 function gpaColor(gpa) {
@@ -8,7 +9,7 @@ function gpaColor(gpa) {
 }
 
 function gpaBadgeColor(gpa) {
-  if (gpa >= 8) return 'bg-emerald-100 text-temple-800 border-emerald-200';
+  if (gpa >= 8) return 'bg-temple-100 text-temple-800 border-temple-200';
   if (gpa >= 6) return 'bg-amber-100 text-amber-700 border-amber-200';
   return 'bg-red-100 text-red-700 border-red-200';
 }
@@ -55,7 +56,7 @@ export default function StudentResults() {
 
       {sortedResults.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-4xl mb-3">📋</div>
+          <Icon name="doc" className="w-10 h-10 mx-auto mb-3 text-temple-300" />
           <p className="text-gray-500 font-medium">No results published yet.</p>
           <p className="text-gray-500 text-sm mt-1">Check back after your semester exams.</p>
         </div>
