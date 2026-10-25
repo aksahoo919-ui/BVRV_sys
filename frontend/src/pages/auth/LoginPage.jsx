@@ -3,7 +3,6 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { jwtDecode } from '../../utils/jwt';
-import { TempleMark } from '../../components/TempleMark';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -37,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-temple-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-temple-900 flex items-center justify-center px-4 pt-16 pb-10 sm:p-4 relative overflow-hidden">
       {/* The mandir's cusped-arch stonework, very faint, as the ground. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-[0.07]"
            style={{
@@ -59,7 +58,21 @@ export default function LoginPage() {
         <div className="toran" aria-hidden="true" />
         <div className="p-6">
         <div className="mb-6 text-center">
-          <TempleMark className="w-20 h-20 mx-auto mb-3" tone="gold" />
+          {/* Sri Sri Radha Madanmohan, set in an arched gold frame like the
+              mandir's altar niches (photo: iskconhyderabad.com darshan page). */}
+          <figure className="mx-auto mb-4 w-40 sm:w-48">
+            <div className="rounded-t-full rounded-b-xl p-[3px] bg-gradient-to-b from-gold-300 via-gold-500 to-gold-700 shadow-altar">
+              <div className="rounded-t-full rounded-b-[10px] overflow-hidden bg-temple-900 ring-1 ring-inset ring-gold-200/40">
+                <img
+                  src="/radha-madanmohan.webp"
+                  alt="Sri Sri Radha Madanmohan on the altar at ISKCON Abids"
+                  width="448"
+                  height="512"
+                  className="block w-full h-auto"
+                />
+              </div>
+            </div>
+          </figure>
           <p className="text-[11px] uppercase tracking-[0.2em] text-temple-600">ISKCON Abids · Hyderabad</p>
           <h1 className="font-temple text-3xl text-temple-800 leading-tight mt-1">Sri Sri Radha Madanmohan</h1>
           <div className="arch-rule my-3" aria-hidden="true" />
