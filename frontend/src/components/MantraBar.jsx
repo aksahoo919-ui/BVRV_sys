@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 const MANTRA = 'Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare · Hare Rāma Hare Rāma Rāma Rāma Hare Hare';
+// Srila Prabhupada chanting the Hare Kṛṣṇa Mahā-mantra (Bhaktivedanta Archives,
+// CD 12-2, "Hare Krishna Mahamantra", 9:54), from prabhupadavani.org. A 2s
+// fade-in was added so the loop does not jolt (the track already fades out).
+// preload="none": ~4.8 MB must not be fetched on every sign-in over mobile data;
+// it downloads only when the visitor's first interaction starts it.
 const KIRTAN_SRC = '/audio/prabhupada-kirtan.mp3';
 const PREF_KEY = 'bvrv.kirtan';           // 'on' | 'off'
 
@@ -41,14 +46,20 @@ export default function MantraBar() {
   );
 }
 
+// Anything a visitor does on the page counts as a cue to start the kirtan.
+// The browser only *accepts* the start after a real tap, click or key press
+// (a scroll or mouse move alone is refused), so we try on every one of these
+// and keep trying until a play() is finally allowed — i.e. the earliest moment
+// the browser permits it. Touch screens start on the very first touch.
+const CUES = ['pointerdown', 'pointerup', 'click', 'touchstart', 'touchend', 'keydown', 'wheel', 'pointermove', 'scroll'];
+
 /**
- * Plays the kirtan on a loop for as long as the portal is open.
- *
- * Browsers refuse to start sound until the visitor has interacted with the
- * page, so it begins on the first click, tap or key press anywhere; after that
- * it keeps going across every page. A visible button lets anyone pause it, and
- * the choice is remembered — a teacher taking attendance in a quiet room must
- * be able to silence it. If the audio file is missing the button hides.
+ * Plays the kirtan on a loop for as long as the portal is open, with no button
+ * to press: it simply begins by itself on the visitor's first interaction and
+ * carries on across every page. A small speaker icon at the end of the strip
+ * lets anyone silence it (a teacher marking attendance in a quiet room must be
+ * able to), and that choice is remembered. If the audio file is missing the
+ * icon hides.
  */
 function KirtanPlayer() {
   const audio = useRef(null);
@@ -58,19 +69,24 @@ function KirtanPlayer() {
 
   const start = useCallback(() => {
     const a = audio.current;
-    if (!a || !wanted()) return;
+    if (!a || !a.paused || !wanted()) return;
     a.volume = 0.5;
-    a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    a.play().then(() => setPlaying(true)).catch(() => {});   // refused → try again on the next cue
   }, []);
 
-  // begin on the first interaction, then stop listening
   useEffect(() => {
     if (!wanted()) return undefined;
-    const go = () => start();
-    const events = ['pointerdown', 'keydown', 'touchstart'];
-    events.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
-    start();                                   // allowed straight away if the browser permits
-    return () => events.forEach((e) => window.removeEventListener(e, go));
+    const a = audio.current;
+    const onPlay = () => { CUES.forEach((e) => document.removeEventListener(e, start, true)); };
+    a?.addEventListener('playing', onPlay);
+    // capture phase on document so scrolling inside the page's own scroll
+    // containers (which do not bubble 'scroll') is seen too
+    CUES.forEach((e) => document.addEventListener(e, start, { capture: true, passive: true }));
+    start();
+    return () => {
+      a?.removeEventListener('playing', onPlay);
+      CUES.forEach((e) => document.removeEventListener(e, start, true));
+    };
   }, [start]);
 
   function toggle() {
@@ -89,25 +105,23 @@ function KirtanPlayer() {
   if (!available) return null;
   return (
     <>
-      <audio ref={audio} src={KIRTAN_SRC} loop preload="auto" onError={() => setAvailable(false)} />
+      <audio ref={audio} src={KIRTAN_SRC} loop preload="none" onError={() => setAvailable(false)} />
       <button
         type="button"
         onClick={toggle}
         aria-pressed={playing}
-        aria-label={playing ? 'Pause kirtan' : 'Play Srila Prabhupada kirtan'}
-        title={playing ? 'Pause kirtan' : 'Play Srila Prabhupada kirtan'}
-        className="relative flex-shrink-0 flex items-center gap-2 h-full min-h-[34px] px-3 border-l border-gold-600/50 bg-temple-800 hover:bg-temple-700 text-gold-200 text-xs font-medium"
+        aria-label={playing ? 'Mute kirtan' : 'Play kirtan'}
+        title={playing ? 'Mute kirtan' : 'Play kirtan'}
+        className="relative flex-shrink-0 flex items-center justify-center h-full min-h-[34px] w-9 border-l border-gold-600/50 bg-temple-800 hover:bg-temple-700 text-gold-200"
       >
         {playing ? (
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" fill="currentColor" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+          </svg>
         ) : (
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-        )}
-        <span className="hidden sm:inline">{playing ? 'Kirtan' : 'Play kirtan'}</span>
-        {playing && (
-          <span className="flex items-end gap-[2px] h-3" aria-hidden="true">
-            <i className="kirtan-eq" /><i className="kirtan-eq" style={{ animationDelay: '.2s' }} /><i className="kirtan-eq" style={{ animationDelay: '.4s' }} />
-          </span>
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M11 5 6 9H3v6h3l5 4V5Z" fill="currentColor" /><path d="m16 9.5 5 5m0-5-5 5" />
+          </svg>
         )}
       </button>
     </>
