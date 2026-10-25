@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as tc from '../controllers/teacher.js';
+import { teacherUpdateDevoteeContact } from '../controllers/devoteeContact.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('teacher')];
@@ -32,5 +33,6 @@ router.get('/attendance-corrections',            ...guard, tc.getMyCorrectionReq
 router.get('/academic-years',                    ...guard, tc.getAcademicYears);
 router.get('/mentors',                           ...guard, tc.getMentors);
 router.post('/students/:student_id/mentor',      ...guard, tc.assignMentorToStudent);
+router.patch('/students/:student_id/contact',    ...guard, teacherUpdateDevoteeContact);
 
 export default router;

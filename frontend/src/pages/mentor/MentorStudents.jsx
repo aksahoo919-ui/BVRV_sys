@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useMemberRequests } from '../../components/MentorAddMember';
+import EditDevoteeContact, { isPlaceholderEmail } from '../../components/EditDevoteeContact';
 
 function AttendanceBar({ pct, label = 'Attendance' }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
@@ -50,7 +51,7 @@ function SkeletonCard() {
   );
 }
 
-function StudentCard({ student }) {
+function StudentCard({ student, onEdit }) {
   const navigate = useNavigate();
   const initial = student.name ? student.name.charAt(0).toUpperCase() : '?';
 
@@ -65,17 +66,17 @@ function StudentCard({ student }) {
               className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xl flex items-center justify-center select-none">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
               {initial}
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900 truncate">{student.name}</p>
-          {student.initiated_name && <p className="text-xs text-emerald-700 truncate">{student.initiated_name}</p>}
+          {student.initiated_name && <p className="text-xs text-temple-800 truncate">{student.initiated_name}</p>}
           <p className="text-xs text-gray-500 truncate">{student.roll_number}</p>
-          <p className="text-xs text-gray-400 truncate">{student.email}</p>
-          <p className="text-xs text-gray-600 truncate">{student.phone ? `📞 ${student.phone}` : <span className="text-gray-300">No phone number</span>}</p>
+          <p className="text-xs text-gray-500 truncate">{isPlaceholderEmail(student.email) ? 'No email on record' : student.email}</p>
+          <p className="text-xs text-gray-600 truncate">{student.phone ? `📞 ${student.phone}` : <span className="text-gray-500">No phone number</span>}</p>
         </div>
         {student.alert_reasons && student.alert_reasons.length > 0 && (
           <span className="flex-shrink-0 inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -93,7 +94,7 @@ function StudentCard({ student }) {
             ))}
           </div>
         ) : (
-          <p className="text-xs text-gray-400 italic">Not registered in any BVRV course</p>
+          <p className="text-xs text-gray-500 italic">Not registered in any BVRV course</p>
         )}
       </div>
 
@@ -102,21 +103,29 @@ function StudentCard({ student }) {
         ? student.course_attendance_semesters.map(s => (
             s.percentage != null
               ? <AttendanceBar key={s.label} pct={s.percentage} label={`BVRV course attendance · ${s.label}`} />
-              : <p key={s.label} className="text-xs text-gray-400">BVRV course attendance · {s.label} — no classes held yet</p>
+              : <p key={s.label} className="text-xs text-gray-500">BVRV course attendance · {s.label} — no classes held yet</p>
           ))
         : student.course_attendance_percentage != null
           ? <AttendanceBar pct={student.course_attendance_percentage} label="BVRV course attendance" />
-          : <p className="text-xs text-gray-400">BVRV course attendance — no classes held yet</p>}
+          : <p className="text-xs text-gray-500">BVRV course attendance — no classes held yet</p>}
       <AttendanceBar pct={student.attendance_percentage} label="BV Leader class attendance" />
 
       <GpaBadge gpa={student.latest_gpa} />
 
-      <button
-        onClick={() => navigate(`/mentor/students/${student.id}`)}
-        className="mt-auto w-full py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
-      >
-        View Details
-      </button>
+      <div className="mt-auto flex gap-2">
+        <button
+          onClick={() => onEdit(student)}
+          className="flex-1 py-2 px-3 rounded-lg border border-temple-300 text-temple-800 hover:bg-temple-50 text-sm font-medium transition-colors"
+        >
+          Edit details
+        </button>
+        <button
+          onClick={() => navigate(`/mentor/students/${student.id}`)}
+          className="flex-1 py-2 px-3 rounded-lg bg-temple-700 hover:bg-temple-800 text-white text-sm font-medium transition-colors"
+        >
+          View Details
+        </button>
+      </div>
     </div>
   );
 }
@@ -127,6 +136,8 @@ export default function MentorStudents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [saved, setSaved] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -160,7 +171,7 @@ export default function MentorStudents() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Students</h1>
           {!loading && !error && (
-            <p className="text-sm text-gray-400 mt-0.5">{students.length} student(s) assigned</p>
+            <p className="text-sm text-gray-500 mt-0.5">{students.length} student(s) assigned</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap sm:justify-end">
@@ -175,6 +186,9 @@ export default function MentorStudents() {
         </div>
       </div>
       {addMember.notices}
+      {saved && (
+        <p className="mb-4 text-sm text-temple-800 bg-temple-50 border border-temple-200 rounded-lg px-3 py-2" role="status">{saved}</p>
+      )}
 
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -189,7 +203,7 @@ export default function MentorStudents() {
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-500">
           <p className="text-lg font-medium">No students assigned</p>
           {search && (
             <p className="text-sm mt-1">No results for "{search}"</p>
@@ -200,13 +214,25 @@ export default function MentorStudents() {
       {!loading && !error && filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((s) => (
-            <StudentCard key={s.id} student={s} />
+            <StudentCard key={s.id} student={s} onEdit={setEditing} />
           ))}
         </div>
       )}
 
       {addMember.list}
       {addMember.modal}
+      {editing && (
+        <EditDevoteeContact
+          devotee={editing}
+          endpoint={`/mentor/students/${editing.id}/contact`}
+          onClose={() => setEditing(null)}
+          onSaved={(u) => {
+            setStudents(list => list.map(x => (x.id === u.id ? { ...x, ...u } : x)));
+            setSaved(`Details updated for ${u.name}.`);
+            setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -3,12 +3,14 @@ import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as mc from '../controllers/mentor.js';
 import * as records from '../controllers/studentRecords.js';
 import * as memberReq from '../controllers/memberRequests.js';
+import { mentorUpdateDevoteeContact } from '../controllers/devoteeContact.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('mentor')];
 
 router.get('/students',                    ...guard, mc.getAssignedStudents);
 router.get('/students/:student_id',        ...guard, mc.getStudentSummary);
+router.patch('/students/:student_id/contact', ...guard, mentorUpdateDevoteeContact);
 
 // Student detail tabs
 router.get('/students/:student_id/overview',       ...guard, mc.getStudentOverview);

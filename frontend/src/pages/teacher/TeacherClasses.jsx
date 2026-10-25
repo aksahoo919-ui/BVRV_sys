@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { classYear, hasSemesters } from '../../utils/classLabel';
+import EditDevoteeContact, { isPlaceholderEmail } from '../../components/EditDevoteeContact';
 
 const fmtMonth = d => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '');
 
@@ -26,7 +27,7 @@ function Toast({ message, type, onDismiss }) {
   );
 }
 
-function StudentRow({ index, student, mentors, subjectId, onMentorAssigned }) {
+function StudentRow({ index, student, mentors, subjectId, onMentorAssigned, onEdit }) {
   const [selectedMentor, setSelectedMentor] = useState(
     () => student.current_mentor_id ? String(student.current_mentor_id) : ''
   );
@@ -50,10 +51,15 @@ function StudentRow({ index, student, mentors, subjectId, onMentorAssigned }) {
 
   return (
     <tr className="hover:bg-gray-50 border-b border-gray-100 last:border-0">
-      <td className="px-3 py-2 text-xs text-gray-400 whitespace-nowrap">{index}</td>
-      <td className="px-3 py-2 text-sm text-gray-900 font-medium">{student.name}</td>
-      <td className="px-3 py-2 text-sm text-gray-700">{student.initiated_name || <span className="text-gray-300">—</span>}</td>
-      <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">{student.phone || <span className="text-gray-300">—</span>}</td>
+      <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{index}</td>
+      <td className="px-3 py-2 text-sm text-gray-900 font-medium">
+        {student.name}
+        <span className="block text-xs font-normal text-gray-500 break-all">
+          {student.email && !isPlaceholderEmail(student.email) ? student.email : 'No email on record'}
+        </span>
+      </td>
+      <td className="px-3 py-2 text-sm text-gray-700">{student.initiated_name || <span className="text-gray-500">—</span>}</td>
+      <td className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">{student.phone || <span className="text-gray-500">—</span>}</td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-2 flex-wrap">
           <select
@@ -78,6 +84,15 @@ function StudentRow({ index, student, mentors, subjectId, onMentorAssigned }) {
           {rowError && <span className="text-xs text-red-600">{rowError}</span>}
         </div>
       </td>
+      <td className="px-3 py-2">
+        <button
+          onClick={() => onEdit(student)}
+          className="text-xs px-3 py-1.5 min-h-[24px] border border-temple-300 text-temple-800 rounded-lg hover:bg-temple-50 whitespace-nowrap"
+          aria-label={`Edit details of ${student.name}`}
+        >
+          Edit
+        </button>
+      </td>
     </tr>
   );
 }
@@ -89,6 +104,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -118,7 +134,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
         <div>
           <h2 className="font-semibold text-gray-900">{subject.name} <span className="font-mono text-xs text-blue-600 ml-1">{subject.code}</span></h2>
           <p className="text-xs text-gray-500">{[hasSemesters(subject) && subject.semester_label, subject.topic].filter(Boolean).join(' · ')}</p>
-          <p className="text-xs text-gray-400">{students.length} students{q ? ` · ${shown.length} match` : ''}</p>
+          <p className="text-xs text-gray-500">{students.length} students{q ? ` · ${shown.length} match` : ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <input
@@ -134,17 +150,18 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
       {loading && <Spinner small />}
       {error && <p className="text-xs text-red-600 text-center py-2">{error}</p>}
       {!loading && !error && (shown.length === 0
-        ? <p className="text-sm text-gray-400 text-center py-6">{students.length === 0 ? 'No students enrolled.' : 'No student matches your search.'}</p>
+        ? <p className="text-sm text-gray-500 text-center py-6">{students.length === 0 ? 'No students enrolled.' : 'No student matches your search.'}</p>
         : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">#</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Name</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Initiated name</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">Phone</th>
-                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase">BV Leader</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">#</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Name</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Initiated name</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Phone</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">BV Leader</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,12 +173,25 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
                     mentors={mentors}
                     subjectId={subject.id}
                     onMentorAssigned={(sid, msg) => { load(); onMentorAssigned(sid, msg); }}
+                    onEdit={setEditing}
                   />
                 ))}
               </tbody>
             </table>
           </div>
         ))}
+      {editing && (
+        <EditDevoteeContact
+          devotee={editing}
+          endpoint={`/teacher/students/${editing.id}/contact`}
+          onClose={() => setEditing(null)}
+          onSaved={(u) => {
+            setStudents(list => list.map(x => (x.id === u.id ? { ...x, ...u } : x)));
+            setEditing(null);
+            onMentorAssigned(subject.id, `Details updated for ${u.name}`);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -173,23 +203,23 @@ function SubjectCard({ subject, openingId, selected, onStartSession, onToggleStu
         <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
           {subject.code}
         </span>
-        <span className="text-xs text-gray-400">{subject.student_count} students</span>
+        <span className="text-xs text-gray-500">{subject.student_count} students</span>
       </div>
-      <h3 className="font-semibold text-gray-900 mb-2">{subject.name}</h3>
+      <h2 className="font-semibold text-gray-900 mb-2">{subject.name}</h2>
       <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-xs mb-3">
-        <dt className="text-gray-400">Year</dt>
+        <dt className="text-gray-500">Year</dt>
         <dd className="text-gray-700">{subject.course_name || subject.course_code || '—'}{classYear(subject.code) ? ` · Year ${classYear(subject.code)}` : ''}</dd>
         {hasSemesters(subject) && (<>
-          <dt className="text-gray-400">Semester</dt>
+          <dt className="text-gray-500">Semester</dt>
           <dd className="text-gray-700">
             {subject.semester_label}
-            {subject.semester_start && <span className="text-gray-400"> ({fmtMonth(subject.semester_start)} – {fmtMonth(subject.semester_end)})</span>}
+            {subject.semester_start && <span className="text-gray-500"> ({fmtMonth(subject.semester_start)} – {fmtMonth(subject.semester_end)})</span>}
           </dd>
         </>)}
-        <dt className="text-gray-400">Subject</dt>
-        <dd className={subject.topic ? 'text-gray-900 font-medium' : 'text-gray-400'}>{subject.topic || 'To be announced'}</dd>
+        <dt className="text-gray-500">Subject</dt>
+        <dd className={subject.topic ? 'text-gray-900 font-medium' : 'text-gray-500'}>{subject.topic || 'To be announced'}</dd>
       </dl>
-      <p className="text-xs text-gray-400 mb-4">
+      <p className="text-xs text-gray-500 mb-4">
         Last session:{' '}
         {subject.last_session_date
           ? new Date(subject.last_session_date).toLocaleDateString()
@@ -272,7 +302,7 @@ export default function TeacherClasses() {
       )}
 
       {subjects.length === 0 ? (
-        <div className="card text-center py-12 text-gray-400">
+        <div className="card text-center py-12 text-gray-500">
           <p className="text-4xl mb-3">📚</p>
           <p className="font-medium">No subjects assigned yet.</p>
           <p className="text-xs mt-1">Contact your administrator to get subjects assigned.</p>
