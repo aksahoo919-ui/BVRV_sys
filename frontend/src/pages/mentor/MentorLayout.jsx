@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import { TempleLockup } from '../../components/TempleMark';
-import { MahaMantra } from '../../components/Devotional';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 
@@ -97,7 +96,6 @@ export default function MentorLayout() {
             </button>
           </div>
         )}
-        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       {/* Main content */}

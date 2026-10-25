@@ -102,3 +102,27 @@
     color: theme('colors.temple.800');
   }
 }
+
+/* ── Maha-mantra strip along the foot of every screen ──────────────────────
+   The strip is fixed, so the app shell is shortened by its height — otherwise
+   it would sit on top of the last rows of every table and the sidebar. */
+:root { --ticker-h: 36px; }
+.h-screen     { height: calc(100vh - var(--ticker-h)); height: calc(100dvh - var(--ticker-h)); }
+.min-h-screen { min-height: calc(100vh - var(--ticker-h)); min-height: calc(100dvh - var(--ticker-h)); }
+aside.fixed   { bottom: var(--ticker-h); }
+
+.mantra-bar { height: var(--ticker-h); }
+.mantra-track { display: flex; width: max-content; white-space: nowrap; animation: mantra-scroll 70s linear infinite; }
+.mantra-half  { display: inline-block; padding-right: 0; }
+.mantra-marquee:hover .mantra-track { animation-play-state: paused; }
+@keyframes mantra-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.kirtan-eq { display: block; width: 2px; height: 100%; background: currentColor; transform-origin: bottom; animation: kirtan-eq 0.9s ease-in-out infinite; }
+@keyframes kirtan-eq { 0%,100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+
+/* Respect "reduce motion": no scrolling or bouncing; the mantra stays readable. */
+@media (prefers-reduced-motion: reduce) {
+  .mantra-track { animation: none; }
+  .mantra-marquee { overflow-x: auto; }
+  .kirtan-eq { animation: none; transform: scaleY(.7); }
+}

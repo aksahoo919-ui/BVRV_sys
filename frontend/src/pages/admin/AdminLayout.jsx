@@ -4,7 +4,6 @@ import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import api from '../../utils/api';
 import { TempleLockup } from '../../components/TempleMark';
-import { MahaMantra } from '../../components/Devotional';
 import Icon from '../../components/Icon';
 
 const NAV = [
@@ -98,7 +97,6 @@ export default function AdminLayout() {
             )
           )}
         </nav>
-        <div className="flex-shrink-0 border-t border-temple-700"><MahaMantra /></div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

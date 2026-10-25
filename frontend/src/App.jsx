@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import MantraBar from './components/MantraBar';
 
 // ── Auth pages ────────────────────────────────────────────────────────────
 import LoginPage from './pages/auth/LoginPage';
@@ -96,6 +97,7 @@ export default function App() {
   }, [logout]);
 
   return (
+    <>
     <Routes>
       {/* ── Auth ── */}
       <Route path="/login" element={<LoginPage />} />
@@ -187,5 +189,7 @@ export default function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
+    <MantraBar />
+    </>
   );
 }
