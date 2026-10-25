@@ -685,7 +685,7 @@ export async function getStudentOverview(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  const userR = await query('SELECT name, email, phone, roll_number FROM users WHERE id=$1', [student_id]);
+  const userR = await query('SELECT name, initiated_name, email, phone, roll_number FROM users WHERE id=$1', [student_id]);
   if (!userR.rows.length) return res.status(404).json({ error: 'Student not found' });
   const user = userR.rows[0];
   const cs = courseSummary((await currentCourses([student_id]))[student_id] || []);
@@ -721,7 +721,7 @@ export async function getStudentOverview(req, res) {
   if (result.gpa != null && Number(result.gpa) < gpaThreshold) alert_reasons.push(`GPA ${result.gpa} < ${gpaThreshold}`);
 
   res.json({
-    name: user.name, email: user.email, phone: user.phone, roll_number: user.roll_number,
+    name: user.name, initiated_name: user.initiated_name, email: user.email, phone: user.phone, roll_number: user.roll_number,
     course_name: cs.courses.length ? cs.courses.map(c => c.label).join(', ') : null,
     courses: cs.courses, course_attendance_percentage: cs.course_attendance_percentage,
     course_attendance_semesters: cs.course_attendance_semesters,

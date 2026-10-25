@@ -3,6 +3,7 @@ import useThreshold from '../../hooks/useThreshold';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import AttendanceTimeline from '../../components/AttendanceTimeline';
+import EditDevoteeContact from '../../components/EditDevoteeContact';
 
 const TABS = ['Overview', 'Attendance', 'Marks', 'Counseling', 'Contacts', 'Leave History'];
 
@@ -54,6 +55,8 @@ function EmptyState({ message }) {
 
 function OverviewTab({ studentId }) {
   const [data, setData] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -84,8 +87,30 @@ function OverviewTab({ studentId }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
+          <button
+            onClick={() => { setSaved(''); setEditing(true); }}
+            className="py-1.5 px-3 rounded-lg border border-temple-300 text-temple-800 hover:bg-temple-50 text-sm font-medium transition-colors"
+          >
+            Edit details
+          </button>
+        </div>
+        {data.initiated_name && <p className="text-sm text-gray-700">Initiated name: {data.initiated_name}</p>}
         <p className="text-sm text-gray-500">{[data.email, data.phone, data.roll_number].filter(Boolean).join(' · ')}</p>
+        {saved && <p role="status" className="text-sm text-green-700 mt-1">{saved}</p>}
+        {editing && (
+          <EditDevoteeContact
+            devotee={{ ...data, id: studentId }}
+            endpoint={`/mentor/students/${studentId}/contact`}
+            onClose={() => setEditing(false)}
+            onSaved={(u) => {
+              setData(d => ({ ...d, name: u.name ?? d.name, email: u.email, phone: u.phone, initiated_name: u.initiated_name }));
+              setSaved(`Details updated for ${u.name || data.name}.`);
+              setEditing(false);
+            }}
+          />
+        )}
         <div className="mt-2">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">BVRV course</p>
           {data.courses && data.courses.length > 0 ? (
