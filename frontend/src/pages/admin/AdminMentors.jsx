@@ -3,13 +3,13 @@ import api from '../../utils/api';
 import { className, classLabel, semText as semLabel, semesterChoices, inSemester } from '../../utils/classLabel';
 import SemesterSelect from '../../components/SemesterSelect';
 
-// Mentors > BVRV Mentors (kind="bvrv": Course ID) and BV Mentors (kind="bv": Language).
+// Mentors > BVRV Mentors (kind="bvrv": Course ID) and BV Leaders (kind="bv": Language).
 // Mentor and coordinator are picked from portal users or typed in.
 
 const LANGUAGES = ['English', 'Hindi', 'Telugu'];
 const TITLES = {
   bvrv: { title: 'BVRV Mentors', first: { key: 'course_code', label: 'Course' }, hint: 'Mentor for each BVRV class (e.g. Bhakti Shastri 1 - English). One row per mentor of each class; remove a row if that devotee is not the mentor of that class.' },
-  bv:   { title: 'BV Mentors',   first: { key: 'language',    label: 'Language' },  hint: 'BV mentors by language, with their coordinator.' },
+  bv:   { title: 'BV Leaders',   first: { key: 'language',    label: 'Language' },  hint: 'BV Leaders by language, with their coordinator.' },
 };
 
 function Spinner() {

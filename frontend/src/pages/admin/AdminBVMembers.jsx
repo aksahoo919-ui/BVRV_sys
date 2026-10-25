@@ -184,7 +184,7 @@ export default function AdminBVMembers() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">BV Members</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Pick a BV Leader to see the students assigned to them. Add a member here or on the Class BV Leaders page. Click a name for the student's timeline.</p>
+        <p className="text-sm text-gray-500 mt-0.5">Pick a BV Leader to see the students assigned to them. Add a member here or on the BV Leader Assignment page. Click a name for the student's timeline.</p>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">{error}</div>}

@@ -17,6 +17,7 @@ import RoleSelectPage from './pages/auth/RoleSelectPage';
 import GuidePage from './pages/GuidePage';
 
 // ── Admin pages ───────────────────────────────────────────────────────────
+import GroupTabs from './components/GroupTabs';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPendingUsers from './pages/admin/AdminPendingUsers';
@@ -117,27 +118,39 @@ export default function App() {
       <Route path="/admin" element={<RequireAuth roles={['admin']}><AdminLayout /></RequireAuth>}>
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<AdminDashboard />} />
-        <Route path="pending" element={<AdminPendingUsers />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="profile-requests" element={<AdminProfileRequests />} />
-        <Route path="mentors/bvrv" element={<AdminMentors key="bvrv" kind="bvrv" />} />
-        <Route path="mentors/bv" element={<AdminMentors key="bv" kind="bv" />} />
-        <Route path="courses" element={<AdminCourses />} />
-        <Route path="academic-years" element={<AdminAcademicYears />} />
-        <Route path="subjects" element={<AdminSubjects />} />
-        <Route path="classes" element={<AdminClasses />} />
-        <Route path="timetable" element={<AdminTimetable />} />
-        <Route path="class-mentors" element={<AdminClassMentors />} />
-        <Route path="bv-members" element={<AdminBVMembers />} />
-        <Route path="semesters" element={<AdminCourseSemesters />} />
-        <Route path="enrollments" element={<AdminEnrollments />} />
-        <Route path="corrections" element={<AdminAttendanceCorrections />} />
-        <Route path="results" element={<AdminResults />} />
-        <Route path="reports" element={<AdminReports />} />
-        <Route path="attendance" element={<AdminAttendancePercentage />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="audit" element={<AdminAuditLogs />} />
-        <Route path="backups" element={<AdminBackups />} />
+        <Route element={<GroupTabs group="people" />}>
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="pending" element={<AdminPendingUsers />} />
+          <Route path="profile-requests" element={<AdminProfileRequests />} />
+          <Route path="mentors/bvrv" element={<AdminMentors key="bvrv" kind="bvrv" />} />
+          <Route path="mentors/bv" element={<AdminMentors key="bv" kind="bv" />} />
+          <Route path="bv-members" element={<AdminBVMembers />} />
+        </Route>
+        <Route element={<GroupTabs group="classes" />}>
+          <Route path="classes" element={<AdminClasses />} />
+          <Route path="subjects" element={<AdminSubjects />} />
+          <Route path="timetable" element={<AdminTimetable />} />
+          <Route path="class-mentors" element={<AdminClassMentors />} />
+          <Route path="enrollments" element={<AdminEnrollments />} />
+        </Route>
+        <Route element={<GroupTabs group="setup" />}>
+          <Route path="courses" element={<AdminCourses />} />
+          <Route path="academic-years" element={<AdminAcademicYears />} />
+          <Route path="semesters" element={<AdminCourseSemesters />} />
+        </Route>
+        <Route element={<GroupTabs group="attendance" />}>
+          <Route path="attendance" element={<AdminAttendancePercentage />} />
+          <Route path="corrections" element={<AdminAttendanceCorrections />} />
+        </Route>
+        <Route element={<GroupTabs group="reports" />}>
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="results" element={<AdminResults />} />
+        </Route>
+        <Route element={<GroupTabs group="system" />}>
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="audit" element={<AdminAuditLogs />} />
+          <Route path="backups" element={<AdminBackups />} />
+        </Route>
       </Route>
 
       {/* ── Teacher ── */}

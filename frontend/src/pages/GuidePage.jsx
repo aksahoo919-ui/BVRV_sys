@@ -188,7 +188,7 @@ const GUIDE_HTML = `
           </div>
           <div class="step">
             <h5>Assign / view each student's BV Leader</h5>
-            <p>Expand a class to see the roster. Each row shows the student's current BV Leader and lets you assign one — this stays in sync with the Admin's Class BV Leaders page.</p>
+            <p>Expand a class to see the roster. Each row shows the student's current BV Leader and lets you assign one — this stays in sync with the Admin's BV Leader Assignment page.</p>
             <span class="where">Classes → ▼ Students</span>
           </div>
           <div class="step">
@@ -302,7 +302,7 @@ const GUIDE_HTML = `
         </details>
         <details>
           <summary>Why does a student show no BV Leader in my teacher view?</summary>
-          <p>They haven't been assigned one for that subject yet. Expand the class roster and pick a BV Leader from the dropdown, then click Assign — it syncs with the admin's Class BV Leaders page instantly.</p>
+          <p>They haven't been assigned one for that subject yet. Expand the class roster and pick a BV Leader from the dropdown, then click Assign — it syncs with the admin's BV Leader Assignment page instantly.</p>
         </details>
         <details>
           <summary>A student's email is missing — can I still import them?</summary>

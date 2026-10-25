@@ -145,7 +145,7 @@ export default function AdminClassMentors() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Class BV Leaders</h1>
+          <h1 className="text-xl font-bold text-gray-900">BV Leader Assignment</h1>
           <p className="text-sm text-gray-500 mt-0.5">Assign a BV Leader to each student in a class. A class can have many BV Leaders. Each semester has its own classes.</p>
         </div>
         <button

@@ -1,47 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import TopNav from '../../components/TopNav';
 import MobileLogout from '../../components/MobileLogout';
 import api from '../../utils/api';
 import { TempleLockup } from '../../components/TempleMark';
 import Icon from '../../components/Icon';
+import { GROUPS, PAGES, groupOf } from './adminNav';
 
-const NAV = [
-  { to: '/admin/home', label: 'Dashboard', icon: 'home' },
-  { section: 'Users' },
-  { to: '/admin/pending', label: 'Approvals', icon: 'clock' },
-  { to: '/admin/users', label: 'All Users', icon: 'users' },
-  { to: '/admin/profile-requests', label: 'Profile Requests', icon: 'inbox' },
-  { section: 'Mentors' },
-  { to: '/admin/mentors/bvrv', label: 'BVRV Mentors', icon: 'cap' },
-  { to: '/admin/mentors/bv', label: 'BV Mentors', icon: 'group' },
-  { section: 'Academic' },
-  { to: '/admin/courses', label: 'Courses', icon: 'book' },
-  { to: '/admin/academic-years', label: 'Academic Years', icon: 'calendar' },
-  { to: '/admin/semesters', label: 'Semesters', icon: 'calendar' },
-{ section: 'Classes' },
-  { to: '/admin/subjects', label: 'Subjects', icon: 'book' },
-  { to: '/admin/classes', label: 'Class Management', icon: 'temple' },
-  { to: '/admin/timetable', label: 'Timetable', icon: 'clock' },
-  { to: '/admin/class-mentors', label: 'Class BV Leaders', icon: 'link' },
-  { to: '/admin/bv-members', label: 'BV Members', icon: 'group' },
-  { to: '/admin/enrollments', label: 'Enrollments', icon: 'clipboard' },
-  { section: 'Operations' },
-  { to: '/admin/corrections', label: 'Attend. Corrections', icon: 'pencil' },
-  { to: '/admin/results', label: 'Results', icon: 'trophy' },
-  { section: 'Reports' },
-  { to: '/admin/attendance', label: 'Attendance %', icon: 'trend' },
-  { to: '/admin/reports', label: 'Reports', icon: 'chart' },
-  { section: 'System' },
-  { to: '/admin/settings', label: 'Settings', icon: 'cog' },
-  { to: '/admin/audit', label: 'Audit Logs', icon: 'doc' },
-  { to: '/admin/backups', label: 'Backups', icon: 'archive' },
-];
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [requestCount, setRequestCount] = useState(0);
+  const { pathname } = useLocation();
+  const activeGroup = groupOf(pathname);
 
   useEffect(() => {
     api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
@@ -67,35 +39,30 @@ export default function AdminLayout() {
         </div>
         <div className="toran flex-shrink-0" aria-hidden="true" />
         <nav className="nav-scroll flex-1 py-2 overflow-y-auto">
-          {NAV.map((item, i) =>
-            item.section ? (
-              <p key={i} className="px-4 pt-3 pb-1 text-xs text-gold-300/90 uppercase tracking-wider font-semibold">
-                {item.section}
-              </p>
-            ) : (
-              <NavLink
-                key={item.to}
-                to={item.to}
+          {GROUPS.map(g => {
+            const active = activeGroup?.key === g.key;
+            const badge = g.key === 'people' ? pendingCount + requestCount : 0;
+            return (
+              <Link
+                key={g.key}
+                to={g.tabs[0].to}
                 onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-4 py-1.5 text-sm transition-colors border-l-[3px] ${
-                    isActive
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-l-[3px] ${
+                    active
                       ? 'bg-temple-700 text-white border-gold-400 font-medium'
                       : 'text-temple-100 hover:bg-temple-700/60 border-transparent'
                   }`
                 }
               >
-                <Icon name={item.icon} className="w-[18px] h-[18px] flex-shrink-0 opacity-90" />
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.to === '/admin/pending' && pendingCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{pendingCount}</span>
+                <Icon name={g.icon} className="w-[18px] h-[18px] flex-shrink-0 opacity-90" />
+                <span className="flex-1 truncate">{g.label}</span>
+                {badge > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{badge}</span>
                 )}
-                {item.to === '/admin/profile-requests' && requestCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{requestCount}</span>
-                )}
-              </NavLink>
-            )
-          )}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
@@ -113,10 +80,10 @@ export default function AdminLayout() {
           <div className="toran" aria-hidden="true" />
         </div>
         <div className="hidden lg:block">
-          <TopNav portal="Admin" nav={NAV} />
+          <TopNav portal="Admin" nav={PAGES} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Outlet context={{ refreshPending }} />
+          <Outlet context={{ refreshPending, pendingCount, requestCount }} />
         </main>
       </div>
     </div>

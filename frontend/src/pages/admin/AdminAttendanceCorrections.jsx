@@ -80,7 +80,7 @@ export default function AdminAttendanceCorrections() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Attendance Correction Requests</h1>
+        <h1 className="text-xl font-bold text-gray-900">Attendance Corrections</h1>
       </div>
 
       {/* Status filter tabs */}

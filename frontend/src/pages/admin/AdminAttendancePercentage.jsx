@@ -15,7 +15,7 @@ export default function AdminAttendancePercentage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Attendance %</h1>
+        <h1 className="text-xl font-bold text-gray-900">Attendance Summary</h1>
         <p className="text-sm text-gray-500 mt-0.5">BVRV class attendance for every student. Several sessions on one day count as one class; "Service" counts as present.</p>
       </div>
 

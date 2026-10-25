@@ -72,7 +72,7 @@ export default function AdminCourseSemesters() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Semesters</h1>
+        <h1 className="text-xl font-bold text-gray-900">Course Semesters</h1>
         <p className="text-sm text-gray-500 mt-0.5">
           Each course has its own semesters and months. Classes, teachers, students and BV leader links belong to one semester,
           so past semesters stay as they were and show on each student's timeline.

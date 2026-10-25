@@ -32,7 +32,7 @@ export default function AdminPendingUsers() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-gray-900 mb-6">Pending Approvals</h1>
+      <h1 className="text-xl font-bold text-gray-900 mb-6">Approvals</h1>
       {users.length === 0 ? (
         <div className="card text-center py-12 text-gray-500">
           <p className="text-lg">No pending approvals</p>
