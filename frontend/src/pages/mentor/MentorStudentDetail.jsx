@@ -54,6 +54,7 @@ function EmptyState({ message }) {
 }
 
 function OverviewTab({ studentId }) {
+  const threshold = useThreshold();
   const [data, setData] = useState(null);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState('');
@@ -178,6 +179,7 @@ function OverviewTab({ studentId }) {
 }
 
 function AttendanceTab({ studentId }) {
+  const threshold = useThreshold();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
