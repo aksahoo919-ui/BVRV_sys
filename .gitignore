@@ -44,6 +44,9 @@ Thumbs.db
 # ── Vite cache ────────────────────────────────────────────────────────────────
 frontend/.vite/
 
+# ── Uploaded devotee photos (local disk only on the VPS, never in git) ────────
+backend/uploads/
+
 # ── Misc ─────────────────────────────────────────────────────────────────────
 *.pem
 coverage/

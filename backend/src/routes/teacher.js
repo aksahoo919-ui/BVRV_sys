@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, requireActive, requireRole } from '../middleware/auth.js';
 import * as tc from '../controllers/teacher.js';
 import { teacherUpdateDevoteeContact } from '../controllers/devoteeContact.js';
+import { teacherUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('teacher')];
@@ -34,5 +35,6 @@ router.get('/academic-years',                    ...guard, tc.getAcademicYears);
 router.get('/mentors',                           ...guard, tc.getMentors);
 router.post('/students/:student_id/mentor',      ...guard, tc.assignMentorToStudent);
 router.patch('/students/:student_id/contact',    ...guard, teacherUpdateDevoteeContact);
+router.post('/students/:student_id/photo',        ...guard, photoUpload.single('photo'), teacherUploadDevoteePhoto);
 
 export default router;

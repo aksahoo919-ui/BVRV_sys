@@ -37,6 +37,8 @@ const migrations = [
   '026_member_add_requests.sql',
   '027_initiated_name.sql',
   '028_class_topic.sql',
+  '029_mentor_attendance_corrections.sql',
+  '030_attendance_status_absent.sql',
 ];
 
 async function migrate() {

@@ -493,7 +493,7 @@ export async function getMentorSessionAttendance(req, res) {
   if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
   const session = sess.rows[0];
   const r = await query(`
-    SELECT u.id, u.name, u.roll_number,
+    SELECT u.id, u.name, u.initiated_name, u.roll_number,
       (SELECT mat.status FROM mentor_attendance mat
          JOIN mentor_sessions ms ON ms.id = mat.session_id
          WHERE ms.mentor_id = $1 AND ms.session_date = $2 AND mat.student_id = u.id
@@ -685,7 +685,7 @@ export async function getStudentOverview(req, res) {
   const attThreshold = settingsR.rows[0]?.min_attendance_threshold || 75;
   const gpaThreshold = settingsR.rows[0]?.mentor_alert_gpa_threshold || 5.0;
 
-  const userR = await query('SELECT name, initiated_name, email, phone, roll_number FROM users WHERE id=$1', [student_id]);
+  const userR = await query('SELECT name, initiated_name, email, phone, roll_number, avatar_url FROM users WHERE id=$1', [student_id]);
   if (!userR.rows.length) return res.status(404).json({ error: 'Student not found' });
   const user = userR.rows[0];
   const cs = courseSummary((await currentCourses([student_id]))[student_id] || []);
@@ -721,7 +721,7 @@ export async function getStudentOverview(req, res) {
   if (result.gpa != null && Number(result.gpa) < gpaThreshold) alert_reasons.push(`GPA ${result.gpa} < ${gpaThreshold}`);
 
   res.json({
-    name: user.name, initiated_name: user.initiated_name, email: user.email, phone: user.phone, roll_number: user.roll_number,
+    name: user.name, initiated_name: user.initiated_name, email: user.email, phone: user.phone, roll_number: user.roll_number, avatar_url: user.avatar_url,
     course_name: cs.courses.length ? cs.courses.map(c => c.label).join(', ') : null,
     courses: cs.courses, course_attendance_percentage: cs.course_attendance_percentage,
     course_attendance_semesters: cs.course_attendance_semesters,
@@ -874,6 +874,48 @@ export async function getStudentLeaveRequests(req, res) {
     `SELECT id, from_date, to_date, reason, status, reviewed_at
      FROM leave_requests WHERE student_id=$1 ORDER BY from_date DESC`,
     [student_id]
+  );
+  res.json(r.rows);
+}
+
+// ── Attendance corrections (BV side) ───────────────────────────────────────
+// Mirrors the teacher's attendance-corrections flow, but against
+// mentor_sessions/mentor_attendance. Requested 27 Oct 2026 by Lakshminadh
+// Prabhu — BV Leaders had no way to correct a wrongly marked BV attendance.
+
+export async function requestMentorAttendanceCorrection(req, res) {
+  const { session_id, student_id, original_status, requested_status, reason } = req.body;
+  if (!session_id || !student_id || !original_status || !requested_status || !reason)
+    return res.status(400).json({ error: 'Missing required fields' });
+  if (!MENTOR_STATUSES.includes(requested_status))
+    return res.status(400).json({ error: 'Invalid requested status' });
+
+  const sess = await query('SELECT id FROM mentor_sessions WHERE id=$1 AND mentor_id=$2', [session_id, req.user.id]);
+  if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
+  if (!(await isMyStudent(req.user.id, student_id))) return res.status(403).json({ error: 'Student not assigned to you' });
+
+  try {
+    const r = await query(
+      `INSERT INTO mentor_attendance_corrections (id,session_id,student_id,requested_by,original_status,requested_status,reason)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [uuidv4(), session_id, student_id, req.user.id, original_status, requested_status, reason]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Correction already requested for this student/session' });
+    throw err;
+  }
+}
+
+export async function getMyMentorCorrectionRequests(req, res) {
+  const r = await query(`
+    SELECT mac.*, u.name AS student_name, u.initiated_name AS student_initiated_name,
+           to_char(ms.session_date, 'YYYY-MM-DD') AS session_date
+    FROM mentor_attendance_corrections mac
+    JOIN users u ON u.id = mac.student_id
+    JOIN mentor_sessions ms ON ms.id = mac.session_id
+    WHERE mac.requested_by = $1 ORDER BY mac.created_at DESC`,
+    [req.user.id]
   );
   res.json(r.rows);
 }

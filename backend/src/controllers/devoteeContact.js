@@ -1,21 +1,28 @@
 import { query } from '../config/db.js';
 import { logAudit } from '../middleware/audit.js';
 
-// A BVRV teacher or BV Leader can correct a devotee's email, phone number and
-// initiated name — the details they hear first and that are most often wrong
-// (621 placeholder emails and 99 missing phones on 24 Oct). Name, role,
+// A BVRV teacher or BV Leader can correct a devotee's material name, email,
+// phone number and initiated name — the details they hear first and that are
+// most often wrong (621 placeholder emails and 99 missing phones on 24 Oct;
+// misspelt material names flagged 27 Oct by Lakshminadh Prabhu). Role,
 // username and password stay admin-only (admin.updateUser).
 //
 // Scope: a teacher only for a devotee enrolled in one of their classes, a
 // BV Leader only for a devotee assigned to them. Every change is audit-logged
 // with the old and new values, since it edits someone else's personal data.
 
-const FIELDS = ['email', 'phone', 'initiated_name'];
+const FIELDS = ['name', 'email', 'phone', 'initiated_name'];
 
 // Same rules as admin.updateUser, plus phone normalisation: digits only, and
 // an Indian mobile is 10 digits (a leading 91 / 0 is dropped).
 function validate(body) {
   const set = {};
+  if (body.name !== undefined) {
+    const n = String(body.name || '').replace(/\s+/g, ' ').trim();
+    if (!n) return { error: 'Name cannot be blank' };
+    if (n.length > 120) return { error: 'Name is too long' };
+    set.name = n;
+  }
   if (body.email !== undefined) {
     const e = String(body.email || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return { error: 'Please enter a valid email address' };

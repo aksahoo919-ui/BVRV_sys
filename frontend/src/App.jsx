@@ -67,6 +67,7 @@ import MentorCounseling from './pages/mentor/MentorCounseling';
 import MentorParentContacts from './pages/mentor/MentorParentContacts';
 import MentorMeetings from './pages/mentor/MentorMeetings';
 import MentorAlerts from './pages/mentor/MentorAlerts';
+import MentorAttendanceCorrections from './pages/mentor/MentorAttendanceCorrections';
 
 // ── Student pages ─────────────────────────────────────────────────────────
 import StudentLayout from './pages/student/StudentLayout';
@@ -183,6 +184,7 @@ export default function App() {
         <Route path="attendance" element={<MentorAttendance />} />
         <Route path="attendance-records" element={<AttendanceRecords role="mentor" />} />
         <Route path="defaulters" element={<MentorDefaulters />} />
+        <Route path="corrections" element={<MentorAttendanceCorrections />} />
       </Route>
 
       {/* ── Student ── */}

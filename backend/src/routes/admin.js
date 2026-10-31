@@ -9,10 +9,13 @@ import * as records from '../controllers/studentRecords.js';
 import * as memberReq from '../controllers/memberRequests.js';
 import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
+import { adminUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('admin')];
+// devoteePhoto's multer filename() and handlers read :student_id; admin's user routes use :id.
+const withStudentIdParam = (req, _res, next) => { req.params.student_id = req.params.id; next(); };
 
 // ── Users ─────────────────────────────────────────────────────────────────
 router.get('/pending-users', ...guard, adminCtrl.getPendingUsers);
@@ -26,6 +29,7 @@ router.delete('/users/:id',         ...guard, adminCtrl.deleteUser);
 router.get('/users', ...guard, adminCtrl.getAllUsers);
 router.post('/users', ...guard, adminCtrl.createUser);
 router.patch('/users/:id', ...guard, adminCtrl.updateUser);
+router.post('/users/:id/photo', ...guard, withStudentIdParam, photoUpload.single('photo'), adminUploadDevoteePhoto);
 router.get('/users/:id/classes', ...guard, studentClasses.getStudentClassesSafe);
 router.post('/users/:id/classes', ...guard, studentClasses.changeStudentClassSafe);
 router.get('/users/:id/timeline', ...guard, semesters.getStudentTimelineSafe);

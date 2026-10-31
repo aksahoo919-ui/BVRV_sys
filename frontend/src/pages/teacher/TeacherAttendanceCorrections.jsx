@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import SearchableSelect from '../../components/SearchableSelect';
+import DevoteeName, { devoteeDisplayLabel } from '../../components/DevoteeName';
 
 const STATUS_BADGE = {
   pending:  'bg-amber-100 text-amber-700',
@@ -7,15 +9,21 @@ const STATUS_BADGE = {
   rejected: 'bg-red-100 text-red-700',
 };
 
+function formatSessionDate(str) {
+  if (!str) return '';
+  return new Date(`${str}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 function Spinner() { return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>; }
 
 export default function TeacherAttendanceCorrections() {
   const [corrections, setCorrections] = useState([]);
-  const [sessions, setSessions] = useState([]);
+  const [recentSessions, setRecentSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [form, setForm] = useState({ session_id:'', student_id:'', original_status:'absent', requested_status:'present', reason:'' });
-  const [sessionStudents, setSessionStudents] = useState([]);
+  const [roster, setRoster] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -25,24 +33,47 @@ export default function TeacherAttendanceCorrections() {
     try {
       const [cr, sr] = await Promise.all([
         api.get('/teacher/attendance-corrections'),
-        api.get('/teacher/subjects'),
+        api.get('/teacher/sessions/recent', { params: { limit: 20 } }),
       ]);
       setCorrections(cr.data);
-      // We'll use session live attendance to build session dropdown
-      setSessions(sr.data); // subjects as proxy for sessions
+      setRecentSessions(sr.data);
     } catch { setError('Failed to load'); }
     finally { setLoading(false); }
   }
 
   useEffect(() => { load(); }, []);
 
-  async function loadSessionStudents(sessionId) {
-    if (!sessionId) { setSessionStudents([]); return; }
+  const sessionOptions = recentSessions.map(s => ({
+    value: s.id,
+    searchText: `${formatSessionDate(s.session_date)} ${s.subject_name} ${s.subject_code || ''}`,
+    label: <span>{formatSessionDate(s.session_date)} — {s.subject_name} ({s.subject_code})</span>,
+    subject_id: s.subject_id,
+    session_date: s.session_date,
+  }));
+
+  async function onSessionChange(sessionId) {
+    const chosen = sessionOptions.find(o => o.value === sessionId);
+    setForm(f => ({ ...f, session_id: sessionId, student_id: '', original_status: 'absent' }));
+    setRoster([]);
+    if (!chosen) return;
+    setRosterLoading(true);
     try {
-      const r = await api.get(`/teacher/sessions/${sessionId}/live`);
-      setSessionStudents(r.data);
-    } catch { setSessionStudents([]); }
+      const r = await api.get('/teacher/attendance/day', { params: { subject_id: chosen.subject_id, date: chosen.session_date } });
+      setRoster(r.data.roster || []);
+    } catch { setRoster([]); }
+    finally { setRosterLoading(false); }
   }
+
+  function onStudentChange(studentId) {
+    const s = roster.find(x => x.id === studentId);
+    setForm(f => ({ ...f, student_id: studentId, original_status: s?.status || 'absent' }));
+  }
+
+  const studentOptions = roster.map(s => ({
+    value: s.id,
+    searchText: `${devoteeDisplayLabel(s.name, s.initiated_name)} ${s.roll_number || ''}`,
+    label: <DevoteeName name={s.name} initiatedName={s.initiated_name} primaryClassName="font-medium text-gray-900" secondaryClassName="text-xs text-gray-500" truncate={false} />,
+  }));
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -51,6 +82,7 @@ export default function TeacherAttendanceCorrections() {
       await api.post('/teacher/attendance-corrections', form);
       setSubmitted(true);
       setForm({ session_id:'', student_id:'', original_status:'absent', requested_status:'present', reason:'' });
+      setRoster([]);
       setTimeout(() => setSubmitted(false), 3000);
       await load();
     } catch (err) { setSubmitError(err.response?.data?.error || 'Failed to submit'); }
@@ -66,32 +98,34 @@ export default function TeacherAttendanceCorrections() {
         <h2 className="font-semibold text-gray-800 mb-4">Submit Correction Request</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Session ID</label>
-            <input className="input" placeholder="Paste session UUID" value={form.session_id}
-              onChange={e => { setForm(f=>({...f, session_id: e.target.value, student_id:''})); loadSessionStudents(e.target.value); }} />
-            <p className="text-xs text-gray-500 mt-0.5">Find session ID in the session view after it closes.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Class session</label>
+            <SearchableSelect
+              options={sessionOptions}
+              value={form.session_id}
+              onChange={onSessionChange}
+              placeholder="Search by date or class…"
+              emptyText="No recent sessions"
+            />
+            <p className="text-xs text-gray-500 mt-0.5">Pick the date the class was held — no need to know the session ID.</p>
           </div>
-          {sessionStudents.length > 0 && (
+          {form.session_id && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-              <select className="input" required value={form.student_id} onChange={e => setForm(f=>({...f, student_id: e.target.value}))}>
-                <option value="">— Select —</option>
-                {sessionStudents.map(s => <option key={s.student_id} value={s.student_id}>{s.name}</option>)}
-              </select>
-            </div>
-          )}
-          {!sessionStudents.length && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-              <input className="input" placeholder="Student UUID" value={form.student_id}
-                onChange={e => setForm(f=>({...f, student_id: e.target.value}))} required />
+              <SearchableSelect
+                options={studentOptions}
+                value={form.student_id}
+                onChange={onStudentChange}
+                placeholder={rosterLoading ? 'Loading roster…' : 'Search by name…'}
+                disabled={rosterLoading}
+                emptyText="No students found for this session"
+              />
             </div>
           )}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Current Status</label>
               <select className="input" value={form.original_status} onChange={e => setForm(f=>({...f, original_status: e.target.value}))}>
-                {['present','absent','late','flagged'].map(s => <option key={s} value={s}>{s}</option>)}
+                {['present','absent','late','flagged','service'].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div className="flex-1">
@@ -108,7 +142,7 @@ export default function TeacherAttendanceCorrections() {
           </div>
           {submitError && <p className="text-red-600 text-sm">{submitError}</p>}
           {submitted && <p className="text-green-600 text-sm">✓ Correction request submitted</p>}
-          <button type="submit" disabled={submitting} className="btn-primary w-full">{submitting ? 'Submitting…' : 'Submit Request'}</button>
+          <button type="submit" disabled={submitting || !form.session_id || !form.student_id} className="btn-primary w-full">{submitting ? 'Submitting…' : 'Submit Request'}</button>
         </form>
       </div>
 
@@ -124,7 +158,7 @@ export default function TeacherAttendanceCorrections() {
               <div key={c.id} className="card">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-medium text-gray-800">{c.student_name}</p>
+                    <DevoteeName name={c.student_name} initiatedName={c.student_initiated_name} primaryClassName="font-medium text-gray-800" truncate={false} />
                     <p className="text-xs text-gray-500">{c.subject_name} · {new Date(c.session_date).toLocaleDateString()}</p>
                     <p className="text-xs text-gray-500 mt-1">{c.original_status} → {c.requested_status}</p>
                     <p className="text-sm text-gray-600 mt-1 italic">"{c.reason}"</p>

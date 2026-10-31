@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import AttendanceTimeline from '../../components/AttendanceTimeline';
 import EditDevoteeContact from '../../components/EditDevoteeContact';
+import DevoteeName from '../../components/DevoteeName';
 
 const TABS = ['Overview', 'Attendance', 'Marks', 'Counseling', 'Contacts', 'Leave History'];
 
@@ -89,7 +90,14 @@ function OverviewTab({ studentId }) {
     <div className="space-y-6">
       <div>
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-900">{data.name}</h2>
+          {data.avatar_url ? (
+            <img src={data.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100" />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-temple-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
+              {(data.name || '?').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <DevoteeName name={data.name} initiatedName={data.initiated_name} primaryClassName="text-lg font-semibold text-gray-900" truncate={false} />
           <button
             onClick={() => { setSaved(''); setEditing(true); }}
             className="py-1.5 px-3 rounded-lg border border-temple-300 text-temple-800 hover:bg-temple-50 text-sm font-medium transition-colors"
@@ -97,16 +105,16 @@ function OverviewTab({ studentId }) {
             Edit details
           </button>
         </div>
-        {data.initiated_name && <p className="text-sm text-gray-700">Initiated name: {data.initiated_name}</p>}
-        <p className="text-sm text-gray-500">{[data.email, data.phone, data.roll_number].filter(Boolean).join(' · ')}</p>
+        <p className="text-sm text-gray-500 mt-1">{[data.email, data.phone, data.roll_number].filter(Boolean).join(' · ')}</p>
         {saved && <p role="status" className="text-sm text-green-700 mt-1">{saved}</p>}
         {editing && (
           <EditDevoteeContact
             devotee={{ ...data, id: studentId }}
             endpoint={`/mentor/students/${studentId}/contact`}
+            photoEndpoint={`/mentor/students/${studentId}/photo`}
             onClose={() => setEditing(false)}
             onSaved={(u) => {
-              setData(d => ({ ...d, name: u.name ?? d.name, email: u.email, phone: u.phone, initiated_name: u.initiated_name }));
+              setData(d => ({ ...d, name: u.name ?? d.name, email: u.email, phone: u.phone, initiated_name: u.initiated_name, avatar_url: u.avatar_url ?? d.avatar_url }));
               setSaved(`Details updated for ${u.name || data.name}.`);
               setEditing(false);
             }}

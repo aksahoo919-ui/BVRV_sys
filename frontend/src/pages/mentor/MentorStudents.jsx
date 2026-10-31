@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { useMemberRequests } from '../../components/MentorAddMember';
 import EditDevoteeContact, { isPlaceholderEmail } from '../../components/EditDevoteeContact';
+import DevoteeName from '../../components/DevoteeName';
 
 function AttendanceBar({ pct, label = 'Attendance', threshold = 75 }) {
   const value = Math.min(Math.max(pct || 0, 0), 100);
@@ -75,8 +76,7 @@ function StudentCard({ student, onEdit, threshold }) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 truncate">{student.name}</p>
-          {student.initiated_name && <p className="text-xs text-temple-800 truncate">{student.initiated_name}</p>}
+          <DevoteeName name={student.name} initiatedName={student.initiated_name} />
           <p className="text-xs text-gray-500 truncate">{student.roll_number}</p>
           <p className="text-xs text-gray-500 truncate">{isPlaceholderEmail(student.email) ? 'No email on record' : student.email}</p>
           <p className="text-xs text-gray-600 truncate">{student.phone ? <span className="inline-flex items-center gap-1"><Icon name="phone" className="w-3.5 h-3.5" />{student.phone}</span> : <span className="text-gray-500">No phone number</span>}</p>
@@ -229,6 +229,7 @@ export default function MentorStudents() {
         <EditDevoteeContact
           devotee={editing}
           endpoint={`/mentor/students/${editing.id}/contact`}
+          photoEndpoint={`/mentor/students/${editing.id}/photo`}
           onClose={() => setEditing(null)}
           onSaved={(u) => {
             setStudents(list => list.map(x => (x.id === u.id ? { ...x, ...u } : x)));

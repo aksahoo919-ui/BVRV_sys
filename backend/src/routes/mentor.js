@@ -4,6 +4,7 @@ import * as mc from '../controllers/mentor.js';
 import * as records from '../controllers/studentRecords.js';
 import * as memberReq from '../controllers/memberRequests.js';
 import { mentorUpdateDevoteeContact } from '../controllers/devoteeContact.js';
+import { mentorUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('mentor')];
@@ -11,6 +12,7 @@ const guard = [requireAuth, requireActive, requireRole('mentor')];
 router.get('/students',                    ...guard, mc.getAssignedStudents);
 router.get('/students/:student_id',        ...guard, mc.getStudentSummary);
 router.patch('/students/:student_id/contact', ...guard, mentorUpdateDevoteeContact);
+router.post('/students/:student_id/photo',    ...guard, photoUpload.single('photo'), mentorUploadDevoteePhoto);
 
 // Student detail tabs
 router.get('/students/:student_id/overview',       ...guard, mc.getStudentOverview);
@@ -56,5 +58,8 @@ router.post('/sessions/:id/attendance',       ...guard, mc.markMentorAttendance)
 router.get('/attendance/day',                 ...guard, mc.getMentorAttendanceDay);
 router.post('/attendance/day',                ...guard, mc.saveMentorAttendanceDay);
 router.get('/defaulters',                     ...guard, mc.getMentorDefaulters);
+
+router.post('/attendance-corrections',        ...guard, mc.requestMentorAttendanceCorrection);
+router.get('/attendance-corrections',         ...guard, mc.getMyMentorCorrectionRequests);
 
 export default router;

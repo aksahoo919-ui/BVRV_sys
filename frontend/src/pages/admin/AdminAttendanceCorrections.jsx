@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import DevoteeName from '../../components/DevoteeName';
+
+const KIND_LABEL = { class: 'Class', bv: 'BV Leader' };
 
 const STATUS_TABS = ['all', 'pending', 'approved', 'rejected'];
 
@@ -114,6 +117,7 @@ export default function AdminAttendanceCorrections() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Type</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Student</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Requested By</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Subject</th>
@@ -127,8 +131,13 @@ export default function AdminAttendanceCorrections() {
               <tbody className="divide-y divide-gray-100">
                 {rows.map(row => (
                   <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
-                      {row.student_name || '—'}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`badge ${row.kind === 'bv' ? 'bg-temple-50 text-temple-800' : 'bg-shyama-50 text-shyama-800'}`}>
+                        {KIND_LABEL[row.kind] || row.kind}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <DevoteeName name={row.student_name} initiatedName={row.student_initiated_name} primaryClassName="font-medium text-gray-900" truncate={false} />
                     </td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                       {row.requested_by_name || '—'}

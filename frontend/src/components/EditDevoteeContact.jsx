@@ -5,19 +5,25 @@ import api from '../utils/api';
 export const isPlaceholderEmail = e => /@noemail\.bvrv$/i.test(String(e || ''));
 
 /**
- * Lets a BVRV teacher or BV Leader correct a devotee's email, phone number and
- * initiated name. `endpoint` is the role's own scoped route, e.g.
- * `/teacher/students/<id>/contact` or `/mentor/students/<id>/contact`; the
- * server refuses devotees who are not in that teacher's class or that leader's
- * group, and audit-logs every change.
+ * Lets a BVRV teacher or BV Leader correct a devotee's material name, email,
+ * phone number, initiated name and profile photo. `endpoint` is the role's
+ * own scoped route, e.g. `/teacher/students/<id>/contact` or
+ * `/mentor/students/<id>/contact`; `photoEndpoint` is the matching
+ * `.../photo` route. The server refuses devotees who are not in that
+ * teacher's class or that leader's group, and audit-logs every change.
  */
-export default function EditDevoteeContact({ devotee, endpoint, onClose, onSaved }) {
+export default function EditDevoteeContact({ devotee, endpoint, photoEndpoint, onClose, onSaved }) {
+  const [name, setName] = useState(devotee.name || '');
   const [email, setEmail] = useState(isPlaceholderEmail(devotee.email) ? '' : devotee.email || '');
   const [phone, setPhone] = useState(devotee.phone || '');
   const [initiated, setInitiated] = useState(devotee.initiated_name || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(devotee.avatar_url || '');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const firstField = useRef(null);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     firstField.current?.focus();
@@ -29,7 +35,8 @@ export default function EditDevoteeContact({ devotee, endpoint, onClose, onSaved
   async function save(e) {
     e.preventDefault();
     setError('');
-    const body = { phone, initiated_name: initiated };
+    if (!name.trim()) { setError('Name cannot be left blank.'); return; }
+    const body = { name: name.trim(), phone, initiated_name: initiated };
     // Leaving the email blank keeps a placeholder address rather than wiping it.
     if (email.trim()) body.email = email.trim();
     else if (devotee.email && !isPlaceholderEmail(devotee.email)) {
@@ -47,6 +54,25 @@ export default function EditDevoteeContact({ devotee, endpoint, onClose, onSaved
     }
   }
 
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file || !photoEndpoint) return;
+    setPhotoError('');
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const r = await api.post(photoEndpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setAvatarUrl(r.data.avatar_url);
+      onSaved({ ...devotee, ...r.data });
+    } catch (err) {
+      setPhotoError(err.response?.data?.error || 'Could not upload photo.');
+    } finally {
+      setPhotoUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:p-4" onClick={onClose}>
       <form
@@ -61,8 +87,34 @@ export default function EditDevoteeContact({ devotee, endpoint, onClose, onSaved
         <div className="p-5 space-y-4">
           <div>
             <h2 id="edit-devotee-title" className="text-lg font-semibold text-temple-800">Update devotee details</h2>
-            <p className="text-sm text-gray-600 mt-0.5">{devotee.name}</p>
+            <p className="text-sm text-gray-600 mt-0.5">{initiated || devotee.name}</p>
           </div>
+
+          {photoEndpoint && (
+            <div className="flex items-center gap-3">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-ivory-300" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-temple-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
+                  {(devotee.name || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={photoUploading}
+                  className="btn-secondary text-sm py-1.5 px-3">
+                  {photoUploading ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload photo'}
+                </button>
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
+                {photoError && <p className="text-xs text-red-700 mt-1" role="alert">{photoError}</p>}
+              </div>
+            </div>
+          )}
+
+          <label className="block">
+            <span className="block text-sm font-medium text-gray-700 mb-1">Name</span>
+            <input className="input" value={name} onChange={e => setName(e.target.value)}
+              placeholder="Legal / material name" maxLength={120} />
+          </label>
 
           <label className="block">
             <span className="block text-sm font-medium text-gray-700 mb-1">Initiated name</span>

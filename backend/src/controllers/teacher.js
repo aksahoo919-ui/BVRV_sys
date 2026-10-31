@@ -385,7 +385,7 @@ export async function requestAttendanceCorrection(req, res) {
 
 export async function getMyCorrectionRequests(req, res) {
   const r = await query(`
-    SELECT ac.*, u.name AS student_name, sess.opened_at AS session_date, sub.name AS subject_name
+    SELECT ac.*, u.name AS student_name, u.initiated_name AS student_initiated_name, sess.opened_at AS session_date, sub.name AS subject_name
     FROM attendance_corrections ac
     JOIN users u ON u.id=ac.student_id
     JOIN sessions sess ON sess.id=ac.session_id
@@ -464,7 +464,7 @@ export async function getAttendanceDay(req, res) {
     [subject_id, date]
   );
   const r = await query(`
-    SELECT u.id, u.name, u.roll_number,
+    SELECT u.id, u.name, u.initiated_name, u.roll_number,
       (SELECT al.status FROM attendance_logs al
          JOIN sessions sess ON sess.id = al.session_id
          WHERE sess.subject_id = $1 AND sess.session_date = $2 AND sess.closed = true

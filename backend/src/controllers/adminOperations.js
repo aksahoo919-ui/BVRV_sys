@@ -7,10 +7,17 @@ import { stringify } from 'csv-stringify/sync';
 
 export async function getAttendanceCorrections(req, res) {
   const { status } = req.query;
+  // attendance_corrections.original_status/requested_status are the
+  // attendance_status ENUM; mentor_attendance_corrections' are TEXT (mentor
+  // statuses are 'present'/'absent'/'service', stored as TEXT everywhere in
+  // the mentor_* tables). UNION ALL needs matching types, so cast both to
+  // text explicitly rather than relying on an implicit enum->text cast.
   const r = await query(`
-    SELECT ac.*,
+    SELECT ac.id, ac.session_id, ac.student_id, ac.requested_by,
+           ac.original_status::text AS original_status, ac.requested_status::text AS requested_status,
+           ac.reason, ac.status, ac.reviewed_by, ac.created_at, 'class' AS kind,
            u_req.name AS requested_by_name,
-           u_stu.name AS student_name, u_stu.email AS student_email,
+           u_stu.name AS student_name, u_stu.initiated_name AS student_initiated_name, u_stu.email AS student_email,
            sess.opened_at AS session_date,
            sub.name AS subject_name
     FROM attendance_corrections ac
@@ -19,7 +26,20 @@ export async function getAttendanceCorrections(req, res) {
     JOIN sessions sess ON sess.id = ac.session_id
     JOIN subjects sub ON sub.id = sess.subject_id
     ${status ? 'WHERE ac.status=$1' : ''}
-    ORDER BY ac.created_at DESC
+    UNION ALL
+    SELECT mac.id, mac.session_id, mac.student_id, mac.requested_by,
+           mac.original_status, mac.requested_status,
+           mac.reason, mac.status, mac.reviewed_by, mac.created_at, 'bv' AS kind,
+           u_req.name AS requested_by_name,
+           u_stu.name AS student_name, u_stu.initiated_name AS student_initiated_name, u_stu.email AS student_email,
+           ms.session_date::timestamptz AS session_date,
+           'BV Leader class' AS subject_name
+    FROM mentor_attendance_corrections mac
+    JOIN users u_req ON u_req.id = mac.requested_by
+    JOIN users u_stu ON u_stu.id = mac.student_id
+    JOIN mentor_sessions ms ON ms.id = mac.session_id
+    ${status ? 'WHERE mac.status=$1' : ''}
+    ORDER BY created_at DESC
   `, status ? [status] : []);
   res.json(r.rows);
 }
@@ -27,18 +47,48 @@ export async function getAttendanceCorrections(req, res) {
 export async function reviewAttendanceCorrection(req, res) {
   const { status } = req.body; // 'approved' | 'rejected'
   if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
-  const r = await query(
+
+  // The id may belong to either the class-side or BV-side correction table —
+  // both use globally-unique UUID primary keys, so try one then the other.
+  let r = await query(
     `UPDATE attendance_corrections SET status=$1, reviewed_by=$2 WHERE id=$3 RETURNING *`,
     [status, req.user.id, req.params.id]
   );
+  let kind = 'class';
+  if (!r.rows.length) {
+    r = await query(
+      `UPDATE mentor_attendance_corrections SET status=$1, reviewed_by=$2 WHERE id=$3 RETURNING *`,
+      [status, req.user.id, req.params.id]
+    );
+    kind = 'bv';
+  }
   if (!r.rows.length) return res.status(404).json({ error: 'Not found' });
 
   if (status === 'approved') {
     const corr = r.rows[0];
-    await query(
-      `UPDATE attendance_logs SET status=$1 WHERE session_id=$2 AND student_id=$3`,
-      [corr.requested_status, corr.session_id, corr.student_id]
-    );
+    if (kind === 'class') {
+      // "Absent" is represented as no attendance_logs row (see markAttendanceManual),
+      // never as a literal status value, so approving a correction to absent deletes
+      // the row instead of writing it.
+      if (corr.requested_status === 'absent') {
+        await query(`DELETE FROM attendance_logs WHERE session_id=$1 AND student_id=$2`, [corr.session_id, corr.student_id]);
+      } else {
+        // The student may have had no row at all (absent), so upsert rather than UPDATE.
+        await query(
+          `INSERT INTO attendance_logs (id, session_id, student_id, status, replayed)
+           VALUES ($1,$2,$3,$4,false)
+           ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, replayed=false`,
+          [uuidv4(), corr.session_id, corr.student_id, corr.requested_status]
+        );
+      }
+    } else {
+      await query(
+        `INSERT INTO mentor_attendance (id, session_id, student_id, status)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (session_id, student_id) DO UPDATE SET status=$4, marked_at=NOW()`,
+        [uuidv4(), corr.session_id, corr.student_id, corr.requested_status]
+      );
+    }
   }
   await logAudit(req.user.id, `correction_${status}`, 'attendance_correction', req.params.id);
   // Email the teacher who submitted the correction

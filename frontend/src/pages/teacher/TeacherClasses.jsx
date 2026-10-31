@@ -185,6 +185,7 @@ function StudentsPanel({ subject, mentors, onMentorAssigned, onClose }) {
         <EditDevoteeContact
           devotee={editing}
           endpoint={`/teacher/students/${editing.id}/contact`}
+          photoEndpoint={`/teacher/students/${editing.id}/photo`}
           onClose={() => setEditing(null)}
           onSaved={(u) => {
             setStudents(list => list.map(x => (x.id === u.id ? { ...x, ...u } : x)));

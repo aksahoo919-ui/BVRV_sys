@@ -1,0 +1,11 @@
+-- Migration 030: the attendance_corrections table stores original_status and
+-- requested_status as attendance_status, but that enum never had 'absent' —
+-- only 'present','late','flagged','service' (019). The teacher correction
+-- form has always offered "absent" as a choice, so submitting one failed with
+-- "invalid input value for enum attendance_status" at the database. Found
+-- while reworking the correction flow per Lakshminadh Prabhu's 27 Oct 2026
+-- feedback ("attendance correction flow need to check, not user friendly").
+-- attendance_logs rows themselves still never use 'absent' — "absent" there
+-- stays "no row for that session/student" — this only lets a correction
+-- *request* say "they were marked absent".
+ALTER TYPE attendance_status ADD VALUE IF NOT EXISTS 'absent';

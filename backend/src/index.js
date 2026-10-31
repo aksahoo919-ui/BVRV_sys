@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import dotenv from 'dotenv';
 import passport from './config/passport.js';
+import { UPLOADS_ROOT } from './controllers/devoteePhoto.js';
 
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
@@ -30,6 +32,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Devotee profile photos uploaded via the teacher/mentor/admin "Edit details"
+// flow. Served under /api/uploads so it rides the existing nginx /api proxy
+// on the VPS without any extra reverse-proxy config.
+app.use('/api/uploads', express.static(UPLOADS_ROOT, { maxAge: '7d' }));
 
 // Log slow requests so we can pinpoint stalls (anything over 800ms)
 app.use((req, res, next) => {
