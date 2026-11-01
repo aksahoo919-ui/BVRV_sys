@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import api from '../../utils/api';
 import { describeRequest } from '../../components/ChangeRequests';
 import { className } from '../../utils/classLabel';
@@ -29,6 +30,7 @@ const STATUS_CHIP = {
 const fmt = d => (d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function AdminProfileRequests() {
+  const { refreshRequests } = useOutletContext();
   const [tab, setTab] = useState('pending');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -47,6 +49,7 @@ export default function AdminProfileRequests() {
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setData({ requests, counts });
     }).catch(e => setError(e.response?.data?.error || 'Failed to load requests'));
+    refreshRequests();
   }, [tab]);
   useEffect(load, [load]);
 

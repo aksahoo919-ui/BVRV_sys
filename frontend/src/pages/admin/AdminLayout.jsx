@@ -15,12 +15,15 @@ export default function AdminLayout() {
   const { pathname } = useLocation();
   const activeGroup = groupOf(pathname);
 
-  useEffect(() => {
-    api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
+  const refreshRequests = () =>
     Promise.all([
       api.get('/admin/profile-requests', { params: { status: 'pending' } }),
       api.get('/admin/member-requests', { params: { status: 'pending' } }),
     ]).then(([p, m]) => setRequestCount((p.data.counts?.pending || 0) + (m.data.counts?.pending || 0))).catch(() => {});
+
+  useEffect(() => {
+    api.get('/admin/pending-users').then(r => setPendingCount(r.data.length)).catch(() => {});
+    refreshRequests();
   }, []);
 
   const refreshPending = () =>
@@ -83,7 +86,7 @@ export default function AdminLayout() {
           <TopNav portal="Admin" nav={PAGES} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <Outlet context={{ refreshPending, pendingCount, requestCount }} />
+          <Outlet context={{ refreshPending, refreshRequests, pendingCount, requestCount }} />
         </main>
       </div>
     </div>

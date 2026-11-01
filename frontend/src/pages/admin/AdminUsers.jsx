@@ -125,6 +125,10 @@ export default function AdminUsers() {
   const [leaderList, setLeaderList] = useState(null);  // BV Leaders for the Edit dropdown
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const editPhotoFileRef = useRef(null);
 
   // Add user
   const [showAdd, setShowAdd] = useState(false);
@@ -259,6 +263,8 @@ export default function AdminUsers() {
     setEditTarget(u);
     setEditForm({ name: u.name || '', initiated_name: u.initiated_name || '', gender: u.gender || '', email: u.email || '', phone: u.phone || '', role: u.role || 'student', username: u.username || '', password: '' });
     setEditError('');
+    setEditAvatarUrl(u.avatar_url || '');
+    setPhotoError('');
     setEditLeader(null);
     if (u.role === 'student') {
       Promise.all([api.get(`/admin/users/${u.id}/bv-leader`), leaderList ? Promise.resolve(null) : api.get('/admin/mentors')])
@@ -268,6 +274,25 @@ export default function AdminUsers() {
           setEditLeader({ original: lr.data.mixed ? '__mixed' : original, value: lr.data.mixed ? '__mixed' : original, mixed: lr.data.mixed, leaders: lr.data.leaders });
         })
         .catch(() => setEditError('Could not load the BV Leader'));
+    }
+  }
+
+  async function handleEditPhotoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file || !editTarget) return;
+    setPhotoError('');
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const r = await api.post(`/admin/users/${editTarget.id}/photo`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setEditAvatarUrl(r.data.avatar_url);
+      load();
+    } catch (err) {
+      setPhotoError(err.response?.data?.error || 'Could not upload photo.');
+    } finally {
+      setPhotoUploading(false);
+      if (editPhotoFileRef.current) editPhotoFileRef.current.value = '';
     }
   }
 
@@ -589,6 +614,23 @@ export default function AdminUsers() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-gray-900">Edit user</h2>
               <button onClick={() => setEditTarget(null)} className="text-gray-500 hover:text-gray-600">✕</button>
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              {editAvatarUrl ? (
+                <img src={editAvatarUrl} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-200" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-temple-100 text-temple-800 font-bold text-xl flex items-center justify-center select-none">
+                  {(editTarget.name || '?').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <button type="button" onClick={() => editPhotoFileRef.current?.click()} disabled={photoUploading}
+                  className="btn-secondary text-sm py-1.5 px-3">
+                  {photoUploading ? 'Uploading…' : editAvatarUrl ? 'Change photo' : 'Upload photo'}
+                </button>
+                <input ref={editPhotoFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleEditPhotoChange} />
+                {photoError && <p className="text-xs text-red-700 mt-1" role="alert">{photoError}</p>}
+              </div>
             </div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input className="input mb-3" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name" />

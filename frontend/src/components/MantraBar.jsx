@@ -70,7 +70,7 @@ function KirtanPlayer() {
   const start = useCallback(() => {
     const a = audio.current;
     if (!a || !a.paused || !wanted()) return;
-    a.volume = 0.5;
+    a.volume = 0.15;
     a.play().then(() => setPlaying(true)).catch(() => {});   // refused → try again on the next cue
   }, []);
 
