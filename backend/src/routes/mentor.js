@@ -5,6 +5,7 @@ import * as records from '../controllers/studentRecords.js';
 import * as memberReq from '../controllers/memberRequests.js';
 import { mentorUpdateDevoteeContact } from '../controllers/devoteeContact.js';
 import { mentorUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
+import * as du from '../controllers/dateUnlocks.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('mentor')];
@@ -61,5 +62,8 @@ router.get('/defaulters',                     ...guard, mc.getMentorDefaulters);
 
 router.post('/attendance-corrections',        ...guard, mc.requestMentorAttendanceCorrection);
 router.get('/attendance-corrections',         ...guard, mc.getMyMentorCorrectionRequests);
+
+router.post('/date-unlocks',                  ...guard, du.requestDateUnlock);
+router.get('/date-unlocks',                   ...guard, du.getMyDateUnlockRequests);
 
 export default router;

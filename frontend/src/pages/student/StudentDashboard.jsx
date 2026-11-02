@@ -59,6 +59,7 @@ export default function StudentDashboard() {
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [attendance, setAttendance] = useState([]);
   const [settings, setSettings] = useState({ attendance_threshold: 75 });
   const [results, setResults] = useState([]);
@@ -85,6 +86,9 @@ export default function StudentDashboard() {
         settle(api.get('/student/attendance/today')),
         settle(api.get('/student/bv-attendance')),
       ]);
+
+      const allFailed = [attendanceRes, settingsRes, resultsRes, marksRes, todayRes, bvRes].every(r => !r);
+      if (allFailed) setLoadError(true);
 
       if (attendanceRes) setAttendance(attendanceRes.data ?? []);
       if (settingsRes) setSettings(settingsRes.data ?? { attendance_threshold: 75 });
@@ -151,6 +155,15 @@ export default function StudentDashboard() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <Skeleton />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 text-center">
+        <p className="text-red-500 text-sm">Failed to load dashboard. Please check your connection and try again.</p>
+        <button onClick={() => window.location.reload()} className="mt-3 text-sm text-temple-700 underline">Reload</button>
       </div>
     );
   }
@@ -223,9 +236,9 @@ export default function StudentDashboard() {
       </div>
 
       {/* ── Today's sessions ── */}
-      {todaySessions.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-2">Today's Sessions</h2>
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">Today's Sessions</h2>
+        {todaySessions.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {todaySessions.map((s) => {
               let status = 'none';
@@ -238,15 +251,17 @@ export default function StudentDashboard() {
                   status={status}
                   onClick={
                     status === 'pending'
-                      ? () => navigate('/student/mark-attendance')
+                      ? () => navigate('/student/attendance')
                       : undefined
                   }
                 />
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-gray-500">No classes scheduled today.</p>
+        )}
+      </div>
 
       {/* ── Subject attendance ── */}
       <div className="bg-white rounded-xl shadow-sm p-5">

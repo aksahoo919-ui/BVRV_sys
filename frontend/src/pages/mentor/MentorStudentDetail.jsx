@@ -518,12 +518,13 @@ function ContactsTab({ studentId }) {
   }
 
   async function handleDelete(id) {
+    if (!window.confirm('Remove this contact?')) return;
     setDeleting(id);
     try {
       await api.delete(`/mentor/students/${studentId}/contacts/${id}`);
       await load();
     } catch {
-      // silently fail
+      alert('Failed to delete contact. Please try again.');
     } finally {
       setDeleting(null);
     }

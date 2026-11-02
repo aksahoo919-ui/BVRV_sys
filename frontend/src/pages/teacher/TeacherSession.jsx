@@ -57,6 +57,7 @@ export default function TeacherSession() {
   }, [expiresAt]);
 
   async function closeSession() {
+    if (!window.confirm('Close this session? Students will no longer be able to mark attendance.')) return;
     setClosing(true);
     try {
       const r = await api.post(`/teacher/sessions/${id}/close`);

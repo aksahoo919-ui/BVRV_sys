@@ -5,6 +5,7 @@ import { query } from '../config/db.js';
 import { requireAuth, requireActive } from '../middleware/auth.js';
 import { verifyPassword, hashPassword, makeResetToken, hashToken } from '../utils/password.js';
 import { emailPasswordReset } from '../services/emailService.js';
+import { selfUploadPhoto, photoUpload } from '../controllers/devoteePhoto.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
@@ -237,5 +238,8 @@ router.post('/switch-role', requireAuth, requireActive, (req, res) => {
   });
   res.json({ token, role: target });
 });
+
+// ── Self profile photo upload (any authenticated user) ─────────────────────
+router.post('/profile/photo', requireAuth, requireActive, photoUpload.single('photo'), selfUploadPhoto);
 
 export default router;

@@ -32,7 +32,7 @@ export default function TeacherLayout() {
       const r = await api.post('/auth/select-role', { role: 'mentor' });
       login(r.data.token);
       navigate('/mentor', { replace: true });
-    } catch { /* ignore */ } finally {
+    } catch (e) { alert(e.response?.data?.error || 'Could not switch role. Please try again.'); } finally {
       setSwitching(false);
     }
   }

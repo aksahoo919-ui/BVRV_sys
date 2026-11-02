@@ -37,6 +37,7 @@ import AdminCourseSemesters from './pages/admin/AdminCourseSemesters';
 import AdminMentors from './pages/admin/AdminMentors';
 import AdminResults from './pages/admin/AdminResults';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
+import AdminDateUnlocks from './pages/admin/AdminDateUnlocks';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
 import AdminBackups from './pages/admin/AdminBackups';
 import AdminEnrollments from './pages/admin/AdminEnrollments';
@@ -142,6 +143,7 @@ export default function App() {
         <Route element={<GroupTabs group="attendance" />}>
           <Route path="attendance" element={<AdminAttendancePercentage />} />
           <Route path="corrections" element={<AdminAttendanceCorrections />} />
+          <Route path="date-unlocks" element={<AdminDateUnlocks />} />
         </Route>
         <Route element={<GroupTabs group="reports" />}>
           <Route path="reports" element={<AdminReports />} />

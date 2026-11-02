@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
 import SearchableSelect from '../../components/SearchableSelect';
 import DevoteeName, { devoteeDisplayLabel } from '../../components/DevoteeName';
+import DateUnlockRequest from '../../components/DateUnlockRequest';
 
 const STATUS_BADGE = {
   pending:  'bg-amber-100 text-amber-700',
@@ -172,6 +173,8 @@ export default function MentorAttendanceCorrections() {
           </div>
         )}
       </div>
+
+      <DateUnlockRequest role="mentor" />
     </div>
   );
 }

@@ -29,6 +29,7 @@ export const GROUPS = [
   { key: 'attendance', label: 'Attendance', icon: 'trend', tabs: [
     { to: '/admin/attendance', label: 'Attendance Summary' },
     { to: '/admin/corrections', label: 'Attendance Corrections' },
+    { to: '/admin/date-unlocks', label: 'Date Unlocks' },
   ] },
   { key: 'reports', label: 'Reports', icon: 'chart', tabs: [
     { to: '/admin/reports', label: 'Reports' },

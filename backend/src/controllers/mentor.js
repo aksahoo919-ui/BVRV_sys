@@ -4,8 +4,14 @@ import { calculateGrade } from '../services/gradeService.js';
 import { generatePin } from '../utils/pin.js';
 import { pool } from '../config/db.js';
 import { SQL_TODAY_IST, istDateString, isDateLocked, lockCutoffDate, isValidYmd } from '../utils/istDate.js';
+import { hasApprovedUnlock } from './dateUnlocks.js';
 
 const MENTOR_STATUSES = ['present', 'absent', 'service'];
+
+async function isLockedForUser(date, userId) {
+  if (!isDateLocked(date)) return false;
+  return !(await hasApprovedUnlock(userId, date));
+}
 
 // A student is "mine" if I mentor them in at least one class.
 async function isMyStudent(mentorId, studentId) {
@@ -418,12 +424,14 @@ async function mentorHasStudents(mentorId) {
   return r.rows.length > 0;
 }
 
-// Resolve the day for a new session: defaults to today (IST); locked days are refused.
-function resolveSessionDate(session_date) {
+// Resolve the day for a new session: defaults to today (IST); locked days are refused
+// unless the user has an approved date unlock.
+async function resolveSessionDate(session_date, userId) {
   const date = session_date || istDateString();
   if (!isValidYmd(date)) return { error: 'Invalid date' };
   if (date > istDateString()) return { error: 'Attendance cannot be recorded for a future date' };
-  if (isDateLocked(date)) return { error: `Attendance for ${date} is locked (attendance can only be changed within 7 days)` };
+  if (await isLockedForUser(date, userId))
+    return { error: `Attendance for ${date} is locked (attendance can only be changed within 7 days). You can request a date unlock from the Corrections page.` };
   return { date };
 }
 
@@ -432,7 +440,7 @@ export async function createMentorSession(req, res) {
   const { title } = req.body;
   if (!(await mentorHasStudents(req.user.id)))
     return res.status(403).json({ error: 'You have no students assigned yet' });
-  const { date, error } = resolveSessionDate(req.body.session_date);
+  const { date, error } = await resolveSessionDate(req.body.session_date, req.user.id);
   if (error) return res.status(400).json({ error });
 
   const existing = await query(
@@ -504,7 +512,7 @@ export async function getMentorSessionAttendance(req, res) {
     ORDER BY u.name`,
     [req.user.id, session.session_date]
   );
-  res.json({ session: { ...session, locked: isDateLocked(session.session_date) }, roster: r.rows });
+  res.json({ session: { ...session, locked: await isLockedForUser(session.session_date, req.user.id) }, roster: r.rows });
 }
 
 // Open a code-based (PIN) attendance session — students submit the PIN to mark present.
@@ -512,7 +520,7 @@ export async function openMentorCodeSession(req, res) {
   const { title } = req.body;
   if (!(await mentorHasStudents(req.user.id)))
     return res.status(403).json({ error: 'You have no students assigned yet' });
-  const { date, error } = resolveSessionDate(req.body.session_date);
+  const { date, error } = await resolveSessionDate(req.body.session_date, req.user.id);
   if (error) return res.status(400).json({ error });
 
   const { pin } = generatePin(req.user.id, req.user.id);
@@ -549,8 +557,8 @@ export async function markMentorAttendance(req, res) {
   );
   if (!sess.rows.length) return res.status(404).json({ error: 'Session not found' });
   const day = sess.rows[0].session_date;
-  if (isDateLocked(day))
-    return res.status(423).json({ error: `Attendance for ${day} is locked (attendance can only be changed within 7 days)` });
+  if (await isLockedForUser(day, req.user.id))
+    return res.status(423).json({ error: `Attendance for ${day} is locked (attendance can only be changed within 7 days). You can request a date unlock from the Corrections page.` });
 
   const mine = await query(
     'SELECT DISTINCT student_id FROM class_mentor_assignments WHERE mentor_id=$1', [req.user.id]
@@ -618,7 +626,7 @@ export async function getMentorAttendanceDay(req, res) {
   const marks = r.rows.map(x => x.marked_at).filter(Boolean).map(d => new Date(d).getTime());
   res.json({
     date,
-    locked: isDateLocked(date),
+    locked: await isLockedForUser(date, req.user.id),
     has_record: hasRecord,
     session_count: sessR.rows.length,
     recorded_at: marks.length ? new Date(Math.max(...marks)) : (hasRecord ? sessR.rows[0].created_at : null),
@@ -628,7 +636,7 @@ export async function getMentorAttendanceDay(req, res) {
 
 // POST /mentor/attendance/day { date, entries } — save/edit the day's record
 export async function saveMentorAttendanceDay(req, res) {
-  const { error, date } = resolveSessionDate(req.body.date);
+  const { error, date } = await resolveSessionDate(req.body.date, req.user.id);
   if (error) return res.status(error.includes('locked') ? 423 : 400).json({ error });
   if (!Array.isArray(req.body.entries)) return res.status(400).json({ error: 'entries array required' });
   let s = await query(

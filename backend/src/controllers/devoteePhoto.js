@@ -21,7 +21,9 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
   filename: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '.jpg').toLowerCase().slice(0, 5);
-    cb(null, `${req.params.student_id}-${Date.now()}${ext}`);
+    // Self-upload uses req.user.id; other-upload uses req.params.student_id
+    const userId = req.params.student_id || req.user?.id || 'unknown';
+    cb(null, `${userId}-${Date.now()}${ext}`);
   },
 });
 
@@ -36,19 +38,20 @@ export const photoUpload = multer({
   },
 });
 
-async function applyPhotoUpload(req, res, studentId) {
+async function applyPhotoUpload(req, res, userId, { anyRole = false } = {}) {
   if (!req.file) return res.status(400).json({ error: 'No photo uploaded' });
 
-  const before = await query(`SELECT avatar_url FROM users WHERE id=$1 AND role='student'`, [studentId]);
+  const roleFilter = anyRole ? '' : `AND role='student'`;
+  const before = await query(`SELECT avatar_url FROM users WHERE id=$1 ${roleFilter}`, [userId]);
   if (!before.rows.length) {
     fs.unlink(req.file.path, () => {});
-    return res.status(404).json({ error: 'Devotee not found' });
+    return res.status(404).json({ error: 'User not found' });
   }
 
   const url = `/api/uploads/avatars/${req.file.filename}`;
   const r = await query(
     `UPDATE users SET avatar_url=$1 WHERE id=$2 RETURNING id, name, avatar_url`,
-    [url, studentId]
+    [url, userId]
   );
 
   // Clean up the previous file, but only ever delete our own uploads.
@@ -58,7 +61,7 @@ async function applyPhotoUpload(req, res, studentId) {
     fs.unlink(oldPath, () => {});
   }
 
-  await logAudit(req.user.id, 'update_devotee_photo', 'user', studentId, { by_role: req.user.role });
+  await logAudit(req.user.id, 'update_devotee_photo', 'user', userId, { by_role: req.user.role });
   res.json(r.rows[0]);
 }
 
@@ -94,5 +97,10 @@ export async function mentorUploadDevoteePhoto(req, res) {
 
 // POST /api/admin/users/:student_id/photo
 export async function adminUploadDevoteePhoto(req, res) {
-  return applyPhotoUpload(req, res, req.params.student_id);
+  return applyPhotoUpload(req, res, req.params.student_id, { anyRole: true });
+}
+
+// POST /api/auth/profile/photo  (self-upload, any authenticated user)
+export async function selfUploadPhoto(req, res) {
+  return applyPhotoUpload(req, res, req.user.id, { anyRole: true });
 }

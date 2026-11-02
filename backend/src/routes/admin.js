@@ -10,6 +10,7 @@ import * as memberReq from '../controllers/memberRequests.js';
 import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
 import { adminUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
+import * as du from '../controllers/dateUnlocks.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -150,6 +151,10 @@ router.patch('/profile-requests/:id', ...guard, records.reviewProfileRequestSafe
 router.get('/attendance-corrections', ...guard, ops.getAttendanceCorrections);
 router.patch('/attendance-corrections/:id', ...guard, ops.reviewAttendanceCorrection);
 router.post('/attendance/reset', ...guard, ops.resetAttendance);
+
+router.get('/date-unlocks',                ...guard, du.getDateUnlockRequests);
+router.patch('/date-unlocks/:id',          ...guard, du.reviewDateUnlock);
+router.get('/date-unlocks/count',          ...guard, du.getPendingUnlockCount);
 
 router.get('/leave-requests', ...guard, ops.getLeaveRequests);
 router.patch('/leave-requests/:id', ...guard, ops.reviewLeaveRequest);

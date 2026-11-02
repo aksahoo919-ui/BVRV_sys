@@ -33,6 +33,7 @@ export default function StudentProfile() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   // Editable field state
   const [phone, setPhone] = useState('');
@@ -53,6 +54,26 @@ export default function StudentProfile() {
     }
     load();
   }, []);
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) { setToast('Photo must be under 4 MB'); return; }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setToast('Only JPG, PNG or WEBP allowed'); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await api.post('/auth/profile/photo', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setProfile((prev) => ({ ...prev, avatar_url: res.data.avatar_url }));
+      setToast('Profile photo updated');
+    } catch {
+      setToast('Failed to upload photo. Please try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
 
   function handleEdit() {
     setPhone(profile.phone || '');
@@ -112,17 +133,33 @@ export default function StudentProfile() {
 
       {/* Avatar + name card */}
       <div className="card mb-4 flex items-center gap-4">
-        {profile.profile_photo_url ? (
-          <img
-            src={profile.profile_photo_url}
-            alt={profile.name}
-            className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xl font-bold flex-shrink-0">
-            {initials}
-          </div>
-        )}
+        <div className="relative flex-shrink-0 group">
+          {(profile.avatar_url || profile.profile_photo_url) ? (
+            <img
+              src={profile.avatar_url || profile.profile_photo_url}
+              alt={profile.name}
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xl font-bold">
+              {initials}
+            </div>
+          )}
+          <label
+            className={`absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${uploading ? 'opacity-100' : ''}`}
+            title="Change photo"
+          >
+            {uploading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+          </label>
+        </div>
         <div className="min-w-0">
           <p className="text-lg font-bold text-gray-900 truncate">{profile.name}</p>
           <p className="text-sm text-gray-500 truncate">{profile.email}</p>

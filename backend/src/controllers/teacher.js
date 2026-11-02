@@ -4,9 +4,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { generatePin } from '../utils/pin.js';
 import { logAudit } from '../middleware/audit.js';
 import { istDateString, isDateLocked, lockCutoffDate, isValidYmd } from '../utils/istDate.js';
+import { hasApprovedUnlock } from './dateUnlocks.js';
 
 const LOG_STATUSES = ['present', 'late', 'flagged', 'service'];
-const LOCK_MSG = d => `Attendance for ${d} is locked (attendance can only be changed within 7 days)`;
+const LOCK_MSG = d => `Attendance for ${d} is locked (attendance can only be changed within 7 days). You can request a date unlock from the Corrections page.`;
+
+// Check both the 7-day lock and any approved unlock
+async function isLockedForUser(date, userId) {
+  if (!isDateLocked(date)) return false;
+  return !(await hasApprovedUnlock(userId, date));
+}
 
 // ── Subjects ──────────────────────────────────────────────────────────────
 
@@ -193,7 +200,7 @@ export async function overrideAttendance(req, res) {
     [req.params.log_id, req.user.id]
   );
   if (!day.rows.length) return res.status(404).json({ error: 'Not found' });
-  if (isDateLocked(day.rows[0].d)) return res.status(423).json({ error: LOCK_MSG(day.rows[0].d) });
+  if (await isLockedForUser(day.rows[0].d, req.user.id)) return res.status(423).json({ error: LOCK_MSG(day.rows[0].d) });
   const r = await query(
     `UPDATE attendance_logs al SET status=$1
      FROM sessions sess WHERE al.id=$2 AND al.session_id=sess.id AND sess.instructor_id=$3 RETURNING al.*`,
@@ -482,7 +489,7 @@ export async function getAttendanceDay(req, res) {
   const hasRecord = sessR.rows.length > 0;
   res.json({
     date,
-    locked: isDateLocked(date),
+    locked: await isLockedForUser(date, req.user.id),
     lock_cutoff: lockCutoffDate(),
     has_record: hasRecord,
     session_count: sessR.rows.length,
@@ -532,7 +539,7 @@ export async function markAttendanceManual(req, res) {
     return res.status(400).json({ error: 'subject_id and entries are required' });
   if (!isValidYmd(date)) return res.status(400).json({ error: 'Invalid date' });
   if (date > istDateString()) return res.status(400).json({ error: 'Attendance cannot be recorded for a future date' });
-  if (isDateLocked(date)) return res.status(423).json({ error: LOCK_MSG(date) });
+  if (await isLockedForUser(date, req.user.id)) return res.status(423).json({ error: LOCK_MSG(date) });
   if (!(await ownsSubject(subject_id, req.user.id))) return res.status(403).json({ error: 'Not your subject' });
   subject_id = await classForDate(subject_id, date);
 
