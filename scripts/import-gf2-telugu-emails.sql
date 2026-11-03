@@ -17,12 +17,11 @@ RETURNS TABLE(user_id UUID, user_name TEXT, old_email TEXT, new_email TEXT) AS $
   SET email = p_new_email
   FROM class_enrollments ce
   JOIN subjects s ON s.id = ce.subject_id
-  JOIN courses c ON c.id = s.course_id
   WHERE ce.student_id = u.id
     AND u.role = 'student'
     AND LOWER(TRIM(u.name)) = LOWER(TRIM(p_name))
     AND u.email LIKE '%@noemail.bvrv'
-    AND LOWER(c.name) LIKE '%gita foundation 2%'
+    AND LOWER(s.name) LIKE '%gita foundation 2%telugu%'
   RETURNING u.id, u.name, u.email AS old_email, p_new_email AS new_email
 $$ LANGUAGE sql;
 
