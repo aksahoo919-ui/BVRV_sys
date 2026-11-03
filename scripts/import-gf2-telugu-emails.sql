@@ -8,9 +8,7 @@
 -- enrolled in the current GF2 Telugu subject. Review the output: each row prints
 -- old email -> new email so you can verify before committing.
 
-BEGIN;
-
--- Helper: update email only if currently a placeholder
+-- Helper: update email only if currently a placeholder and new email is not taken
 CREATE OR REPLACE FUNCTION _update_gf2_email(p_name TEXT, p_new_email TEXT)
 RETURNS TABLE(user_id UUID, user_name TEXT, old_email TEXT, new_email TEXT) AS $$
   UPDATE users u
@@ -22,7 +20,8 @@ RETURNS TABLE(user_id UUID, user_name TEXT, old_email TEXT, new_email TEXT) AS $
     AND LOWER(TRIM(u.name)) = LOWER(TRIM(p_name))
     AND u.email LIKE '%@noemail.bvrv'
     AND LOWER(s.name) LIKE '%gita foundation 2%telugu%'
-  RETURNING u.id, u.name, u.email AS old_email, p_new_email AS new_email
+    AND NOT EXISTS(SELECT 1 FROM users u2 WHERE LOWER(u2.email) = LOWER(p_new_email))
+  RETURNING u.id, u.name, p_new_email AS old_email, p_new_email AS new_email
 $$ LANGUAGE sql;
 
 -- The 50 devotees with real emails from the spreadsheet:
@@ -78,8 +77,4 @@ SELECT * FROM _update_gf2_email('Devara Setti Krishna Kumar', 'radekrsana@gmail.
 SELECT * FROM _update_gf2_email('MALATHI LATHA POTLURI MJI', 'malathilatha6363@gmail.com');
 
 -- Cleanup
-DROP FUNCTION _update_gf2_email(TEXT, TEXT);
-
--- Review the output above, then:
--- COMMIT;   -- to keep changes
--- ROLLBACK; -- to undo
+DROP FUNCTION IF EXISTS _update_gf2_email(TEXT, TEXT);
