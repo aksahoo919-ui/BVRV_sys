@@ -24,6 +24,7 @@ export async function getSubjects(req, res) {
       ay.label AS academic_year_label, ay.is_current AS academic_year_is_current,
       c.name AS course_name, c.code AS course_code, s.topic,
       COALESCE(sem.label, 'Sem ' || sem.number) AS semester_label,
+      COALESCE(sem.is_current, true) AS semester_is_current,
       to_char(sem.start_date, 'YYYY-MM-DD') AS semester_start, to_char(sem.end_date, 'YYYY-MM-DD') AS semester_end,
       COUNT(DISTINCT ce2.student_id) AS student_count,
       MAX(sess.opened_at) AS last_session_date
@@ -34,7 +35,9 @@ export async function getSubjects(req, res) {
     LEFT JOIN academic_years ay ON ay.id = s.academic_year_id
     LEFT JOIN courses c ON c.id = s.course_id
     LEFT JOIN semesters sem ON sem.id = s.semester_id
-    WHERE sem.id IS NULL OR sem.is_current   -- past-semester classes are history only
+    WHERE sem.id IS NULL OR sem.is_current OR EXISTS(
+      SELECT 1 FROM sessions s2 WHERE s2.subject_id = s.id AND s2.closed = true
+    )
     GROUP BY s.id, ay.label, ay.is_current, c.name, c.code, sem.id
     ORDER BY s.name`,
     [req.user.id]

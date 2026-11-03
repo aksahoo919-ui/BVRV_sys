@@ -27,7 +27,9 @@ export async function getSubjects(req, res) {
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
       LEFT JOIN semesters sem ON sem.id = s.semester_id
       LEFT JOIN courses c ON c.id = s.course_id
-      WHERE sem.id IS NULL OR sem.is_current
+      WHERE sem.id IS NULL OR sem.is_current OR EXISTS(
+        SELECT 1 FROM sessions s2 WHERE s2.subject_id = s.id AND s2.closed = true
+      )
       GROUP BY s.id, sem.id, c.code
       ORDER BY s.name
     `, [req.user.id]);
@@ -150,7 +152,9 @@ export async function getAttendanceSummary(req, res) {
       LEFT JOIN attendance_logs al ON al.session_id = sess.id AND al.student_id = $1
       LEFT JOIN semesters sem ON sem.id = s.semester_id
       LEFT JOIN courses c ON c.id = s.course_id
-      WHERE sem.id IS NULL OR sem.is_current
+      WHERE sem.id IS NULL OR sem.is_current OR EXISTS(
+        SELECT 1 FROM sessions s2 WHERE s2.subject_id = s.id AND s2.closed = true
+      )
       GROUP BY s.id, sem.id, c.code
       ORDER BY s.name
     `, [req.user.id]);
