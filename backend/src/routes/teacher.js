@@ -4,6 +4,7 @@ import * as tc from '../controllers/teacher.js';
 import { teacherUpdateDevoteeContact } from '../controllers/devoteeContact.js';
 import { teacherUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
 import * as du from '../controllers/dateUnlocks.js';
+import * as cp from '../controllers/correctedPapers.js';
 
 const router = Router();
 const guard = [requireAuth, requireActive, requireRole('teacher')];
@@ -40,5 +41,11 @@ router.post('/students/:student_id/photo',        ...guard, photoUpload.single('
 
 router.post('/date-unlocks',                      ...guard, du.requestDateUnlock);
 router.get('/date-unlocks',                       ...guard, du.getMyDateUnlockRequests);
+
+router.post('/corrected-papers',                   ...guard, cp.papersUpload.array('files', 10), cp.uploadCorrectedPapers);
+router.get('/corrected-papers/mark/:mark_id',       ...guard, cp.listCorrectedPapersForMark);
+router.get('/corrected-papers/:id/file',            ...guard, cp.downloadCorrectedPaper);
+router.delete('/corrected-papers/:id',              ...guard, cp.deleteCorrectedPaper);
+router.post('/corrected-papers/replace',            ...guard, cp.papersUpload.array('files', 10), cp.replaceCorrectedPapers);
 
 export default router;

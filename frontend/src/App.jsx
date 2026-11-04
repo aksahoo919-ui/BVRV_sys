@@ -36,6 +36,7 @@ import AdminProfileRequests from './pages/admin/AdminProfileRequests';
 import AdminCourseSemesters from './pages/admin/AdminCourseSemesters';
 import AdminMentors from './pages/admin/AdminMentors';
 import AdminResults from './pages/admin/AdminResults';
+import AdminCorrectedPapers from './pages/admin/AdminCorrectedPapers';
 import AdminAttendanceCorrections from './pages/admin/AdminAttendanceCorrections';
 import AdminDateUnlocks from './pages/admin/AdminDateUnlocks';
 import AdminAuditLogs from './pages/admin/AdminAuditLogs';
@@ -148,6 +149,7 @@ export default function App() {
         <Route element={<GroupTabs group="reports" />}>
           <Route path="reports" element={<AdminReports />} />
           <Route path="results" element={<AdminResults />} />
+          <Route path="corrected-papers" element={<AdminCorrectedPapers />} />
         </Route>
         <Route element={<GroupTabs group="system" />}>
           <Route path="settings" element={<AdminSettings />} />

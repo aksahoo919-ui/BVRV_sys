@@ -40,6 +40,7 @@ const migrations = [
   '029_mentor_attendance_corrections.sql',
   '030_attendance_status_absent.sql',
   '031_attendance_date_unlocks.sql',
+  '032_corrected_papers.sql',
 ];
 
 async function migrate() {

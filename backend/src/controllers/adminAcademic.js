@@ -319,6 +319,31 @@ export async function setCurrentSemester(req, res) {
   res.json(r.rows[0]);
 }
 
+// ── Marks (admin view — same shape as teacher's getMarksForSubject, no
+// instructor-ownership check, used to find a mark row to attach a corrected
+// paper to) ──────────────────────────────────────────────────────────────
+
+export async function getMarksAdmin(req, res) {
+  const { subject_id, academic_year_id, semester_id } = req.query;
+  if (!subject_id) return res.status(400).json({ error: 'subject_id required' });
+
+  const params = [subject_id];
+  let filterClause = '';
+  if (academic_year_id) {
+    filterClause = `AND m.academic_year_id=$${params.push(academic_year_id)}`;
+  } else if (semester_id) {
+    filterClause = `AND m.semester_id=$${params.push(semester_id)}`;
+  }
+  const r = await query(`
+    SELECT m.*, u.name AS student_name, u.email AS student_email, u.roll_number
+    FROM marks m JOIN users u ON u.id=m.student_id
+    WHERE m.subject_id=$1 ${filterClause}
+    ORDER BY m.assessment_type, u.name`,
+    params
+  );
+  res.json(r.rows);
+}
+
 // ── Course Enrollments ────────────────────────────────────────────────────
 
 export async function enrollInCourse(req, res) {

@@ -11,6 +11,7 @@ import * as semesters from '../controllers/adminSemesters.js';
 import multer from 'multer';
 import { adminUploadDevoteePhoto, photoUpload } from '../controllers/devoteePhoto.js';
 import * as du from '../controllers/dateUnlocks.js';
+import * as cp from '../controllers/correctedPapers.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -170,5 +171,13 @@ router.post('/email-jobs/:type', ...guard, adminCtrl.runEmailJob);
 router.get('/backups', ...guard, ops.getBackups);
 router.post('/backups', ...guard, ops.createBackup);
 router.get('/backups/:id/download', ...guard, ops.downloadBackup);
+
+router.get('/marks', ...guard, acad.getMarksAdmin);
+
+router.post('/corrected-papers',                   ...guard, cp.papersUpload.array('files', 10), cp.uploadCorrectedPapers);
+router.get('/corrected-papers/mark/:mark_id',       ...guard, cp.listCorrectedPapersForMark);
+router.get('/corrected-papers/:id/file',            ...guard, cp.downloadCorrectedPaper);
+router.delete('/corrected-papers/:id',              ...guard, cp.deleteCorrectedPaper);
+router.post('/corrected-papers/replace',            ...guard, cp.papersUpload.array('files', 10), cp.replaceCorrectedPapers);
 
 export default router;

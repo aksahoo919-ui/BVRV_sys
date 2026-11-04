@@ -34,6 +34,7 @@ export const GROUPS = [
   { key: 'reports', label: 'Reports', icon: 'chart', tabs: [
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/results', label: 'Results' },
+    { to: '/admin/corrected-papers', label: 'Corrected Papers' },
   ] },
   { key: 'system', label: 'System', icon: 'cog', tabs: [
     { to: '/admin/settings', label: 'Settings' },

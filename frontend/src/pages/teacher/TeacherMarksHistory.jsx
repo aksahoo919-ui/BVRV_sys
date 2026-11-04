@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
+import CorrectedPapersModal from '../../components/CorrectedPapersModal';
 
 function Spinner() {
   return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -21,6 +22,7 @@ export default function TeacherMarksHistory() {
   const [edits, setEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
   const [savedId, setSavedId] = useState(null);
+  const [paperMark, setPaperMark] = useState(null);
 
   useEffect(() => {
     api.get('/teacher/subjects').then(r => { setSubjects(r.data); if (r.data[0]) setSubjectId(String(r.data[0].id)); }).catch(() => {});
@@ -115,6 +117,7 @@ export default function TeacherMarksHistory() {
                       <th className="text-left px-6 py-2.5 text-xs font-semibold text-gray-500 uppercase">Roll No</th>
                       <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Student</th>
                       <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Score / {g.max_marks}</th>
+                      <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Corrected Paper</th>
                       <th className="text-right px-6 py-2.5 text-xs font-semibold text-gray-500 uppercase">Action</th>
                     </tr>
                   </thead>
@@ -132,6 +135,14 @@ export default function TeacherMarksHistory() {
                               value={edits[m.id] != null ? edits[m.id] : (m.scored_marks ?? '')}
                               onChange={e => setEdits(prev => ({ ...prev, [m.id]: e.target.value }))}
                             />
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <button
+                              onClick={() => setPaperMark(m)}
+                              className="text-xs font-medium px-3 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              📎 Manage
+                            </button>
                           </td>
                           <td className="px-6 py-2.5 text-right">
                             {savedId === m.id ? (
@@ -155,6 +166,15 @@ export default function TeacherMarksHistory() {
             </div>
           ))}
         </div>
+      )}
+
+      {paperMark && (
+        <CorrectedPapersModal
+          mark={paperMark}
+          apiBase="/teacher"
+          onClose={() => setPaperMark(null)}
+          onMarkUpdated={(markId, newScore) => setMarks(prev => prev.map(x => x.id === markId ? { ...x, scored_marks: newScore } : x))}
+        />
       )}
     </div>
   );
