@@ -72,8 +72,41 @@ router.get(
 // Accepts: student | teacher | mentor | admin
 // admin goes to pending when multi_admin_enabled=true (default)
 
+// Pre-auth lookups for the onboarding picker (a pending user has no JWT yet).
+// Only current-semester classes and active BV Leaders — nothing sensitive.
+router.get('/onboarding/classes', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT s.id,
+        COALESCE(c.name || ' (' || s.code || ')', s.code) ||
+          CASE WHEN sem.id IS NOT NULL AND COALESCE(c.code, '') <> 'BV'
+               THEN ' · ' || COALESCE(sem.label, 'Sem ' || sem.number) ELSE '' END AS label
+      FROM subjects s
+      LEFT JOIN courses c ON c.id = s.course_id
+      LEFT JOIN semesters sem ON sem.id = s.semester_id
+      WHERE sem.id IS NULL OR sem.is_current
+      ORDER BY label`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.get('/onboarding/leaders', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, name FROM users WHERE role = 'mentor' AND status = 'active' ORDER BY name`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.post('/onboarding', async (req, res) => {
-  const { email, role } = req.body;
+  const { email, role, subject_id, mentor_id } = req.body;
   const allowedRoles = ['student', 'teacher', 'mentor', 'admin'];
   if (!email || !allowedRoles.includes(role)) {
     return res.status(400).json({ error: 'Invalid email or role' });
@@ -90,9 +123,15 @@ router.post('/onboarding', async (req, res) => {
       // Admin requests go into pending queue just like other roles
     }
 
+    // Intended class / BV Leader are only meaningful for a student signup —
+    // ignored for other roles so a crafted request can't tag a teacher/mentor/admin.
+    const subjectId = role === 'student' ? (subject_id || null) : null;
+    const mentorId = role === 'student' ? (mentor_id || null) : null;
+
     const result = await query(
-      `UPDATE users SET role=$1 WHERE email=$2 AND status='pending' AND role IS NULL RETURNING *`,
-      [role, email]
+      `UPDATE users SET role=$1, onboarding_subject_id=$3, onboarding_mentor_id=$4
+       WHERE email=$2 AND status='pending' AND role IS NULL RETURNING *`,
+      [role, email, subjectId, mentorId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found or already assigned a role' });

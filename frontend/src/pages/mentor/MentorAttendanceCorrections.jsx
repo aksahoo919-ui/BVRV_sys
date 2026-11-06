@@ -90,10 +90,34 @@ export default function MentorAttendanceCorrections() {
     finally { setSubmitting(false); }
   }
 
+  const [tab, setTab] = useState('corrections');
+  const tabs = [
+    { id: 'corrections', label: 'Corrections' },
+    { id: 'unlocks', label: 'Date Unlock Requests' },
+  ];
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">Attendance Corrections</h1>
 
+      {/* Lakshminadh Prabhu, 6 Nov: Date Unlock Requests was below the fold and
+          many BV Leaders couldn't find it. Split into tabs so it's always one click away. */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'unlocks' ? (
+        <DateUnlockRequest role="mentor" />
+      ) : (
+      <>
       {/* Submit form */}
       <div className="card max-w-lg">
         <h2 className="font-semibold text-gray-800 mb-4">Submit Correction Request</h2>
@@ -173,8 +197,8 @@ export default function MentorAttendanceCorrections() {
           </div>
         )}
       </div>
-
-      <DateUnlockRequest role="mentor" />
+      </>
+      )}
     </div>
   );
 }

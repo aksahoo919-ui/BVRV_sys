@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../components/Icon';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
+import SearchableSelect from '../../components/SearchableSelect';
 
 const ROLES = [
   { value: 'student',    label: 'Student',    icon: 'cap', desc: 'I am enrolled in courses' },
@@ -18,12 +19,32 @@ export default function OnboardingPage() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [classes, setClasses] = useState([]);
+  const [leaders, setLeaders] = useState([]);
+  const [subjectId, setSubjectId] = useState('');
+  const [mentorId, setMentorId] = useState('');
+
+  // Lakshminadh Prabhu, 6 Nov: the Approvals screen had nothing to show admins
+  // deciding a new student signup — no class or BV Leader. Ask for both here,
+  // as intent only (admin still enrolls them for real after approving).
+  useEffect(() => {
+    if (selected !== 'student') return;
+    api.get('/auth/onboarding/classes').then(r => setClasses(r.data)).catch(() => {});
+    api.get('/auth/onboarding/leaders').then(r => setLeaders(r.data)).catch(() => {});
+  }, [selected]);
+
+  const classOptions = classes.map(c => ({ value: c.id, label: c.label, searchText: c.label }));
+  const leaderOptions = leaders.map(l => ({ value: l.id, label: l.name, searchText: l.name }));
 
   async function handleSubmit() {
     if (!selected) return;
     setLoading(true); setError('');
     try {
-      await api.post('/auth/onboarding', { email, role: selected });
+      await api.post('/auth/onboarding', {
+        email, role: selected,
+        subject_id: selected === 'student' ? (subjectId || null) : undefined,
+        mentor_id: selected === 'student' ? (mentorId || null) : undefined,
+      });
       navigate('/auth/pending', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong');
@@ -61,6 +82,32 @@ export default function OnboardingPage() {
             </button>
           ))}
         </div>
+
+        {selected === 'student' && (
+          <div className="space-y-3 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Which class are you joining? (optional)</label>
+              <SearchableSelect
+                options={classOptions}
+                value={subjectId}
+                onChange={setSubjectId}
+                placeholder="Search by class or course…"
+                emptyText="No classes found"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Who is your BV Leader? (optional)</label>
+              <SearchableSelect
+                options={leaderOptions}
+                value={mentorId}
+                onChange={setMentorId}
+                placeholder="Search by name…"
+                emptyText="No BV Leaders found"
+              />
+            </div>
+            <p className="text-xs text-gray-500">This just helps the admin reviewing your request — you'll be enrolled properly once approved.</p>
+          </div>
+        )}
 
         {error && <p className="text-red-600 text-sm mb-4 text-center">{error}</p>}
 

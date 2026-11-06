@@ -44,6 +44,8 @@ export default function AdminPendingUsers() {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">User</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Role</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Intended class</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Requested BV Leader</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Joined</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
               </tr>
@@ -65,6 +67,8 @@ export default function AdminPendingUsers() {
                       {u.role || 'unknown'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{u.intended_class || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{u.requested_leader || '—'}</td>
                   <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>

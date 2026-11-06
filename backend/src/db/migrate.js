@@ -41,6 +41,7 @@ const migrations = [
   '030_attendance_status_absent.sql',
   '031_attendance_date_unlocks.sql',
   '032_corrected_papers.sql',
+  '033_onboarding_intent.sql',
 ];
 
 async function migrate() {

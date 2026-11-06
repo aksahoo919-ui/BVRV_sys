@@ -14,8 +14,13 @@ const CURRENT_CLASS_BY_CODE = `SELECT s.id FROM subjects s LEFT JOIN semesters s
 export async function getPendingUsers(req, res) {
   try {
     const result = await query(
-      `SELECT id, name, email, role, status, avatar_url, created_at
-       FROM users WHERE status = 'pending' ORDER BY created_at DESC`
+      `SELECT u.id, u.name, u.email, u.role, u.status, u.avatar_url, u.created_at,
+              COALESCE(s.name || ' (' || s.code || ')', s.code) AS intended_class,
+              m.name AS requested_leader
+       FROM users u
+       LEFT JOIN subjects s ON s.id = u.onboarding_subject_id
+       LEFT JOIN users m ON m.id = u.onboarding_mentor_id
+       WHERE u.status = 'pending' ORDER BY u.created_at DESC`
     );
     res.json(result.rows);
   } catch (err) {
